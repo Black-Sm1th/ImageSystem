@@ -1,37 +1,74 @@
-import QtQuick 2.12
-import QtQuick.Controls 2.12
-import QtQuick.Window 2.12
-// import the VTK module
-import VTK 9.2
+import QtQuick 2.9
+import QtQuick.Window 2.2
+import QtQuick.Layouts 1.3
+import com.vtk.dicom 1.0
 
+Window {
+    id: win
+    visible: true
+    width: 1280
+    height: 960
+    title: qsTr("DICOM Viewer - 三视图 + 3D")
 
-
-ApplicationWindow {
-    // title of the application
-    title: qsTr("VTK QtQuick App")
-    width: 800
-    height: 800
-    color: palette.window
-
-    Component.onCompleted: {
-        console.log("ApplicationWindow has been loaded successfully.")
-    }
-
-    SystemPalette {
-        id: palette
-        colorGroup: SystemPalette.Active
-    }
-
-    VTKRenderWindow {
-        id: vtkwindow
+    GridLayout {
         anchors.fill: parent
-    }
+        anchors.margins: 5
+        rows: 2
+        columns: 2
+        rowSpacing: 5
+        columnSpacing: 5
 
-    VTKRenderItem {
-        id: coneView
-        objectName: "ConeView"
-        anchors.fill: vtkwindow
-        renderWindow: vtkwindow
-        focus: true
+        // 左上：轴向视图
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            color: "transparent"
+
+            AxialView {
+                id: axialView
+                anchors.fill: parent
+                anchors.margins: 2
+            }
+        }
+
+        // 右上：矢状视图
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            color: "transparent"
+
+            SagittalView {
+                id: sagittalView
+                anchors.fill: parent
+                anchors.margins: 2
+            }
+        }
+
+        // 左下：冠状视图
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            color: "transparent"
+
+            CoronalView {
+                id: coronalView
+                anchors.fill: parent
+                anchors.margins: 2
+            }
+        }
+
+        // 右下：3D体渲染视图
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            color: "transparent"
+
+            VolumeView {
+                id: volumeView
+                anchors.fill: parent
+                anchors.margins: 2
+            }
+        }
     }
 }
+

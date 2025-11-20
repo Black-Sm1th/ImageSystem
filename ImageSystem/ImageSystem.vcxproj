@@ -75,7 +75,7 @@
       <Optimization>Disabled</Optimization>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -92,15 +92,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="CustomInteractorStyle.cpp" />
-    <ClCompile Include="CustomVTKItem.cpp" />
     <ClCompile Include="main.cpp" />
     <QtRcc Include="qml.qrc" />
     <None Include="main.qml" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="CustomInteractorStyle.h" />
-    <QtMoc Include="CustomVTKItem.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">
