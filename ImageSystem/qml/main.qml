@@ -604,11 +604,12 @@ Window {
 
                     Text {
                         width: parent.width
-                        text: "• 鼠标左键：平移图像\n" +
-                              "• 鼠标右键：缩放图像\n" +
+                        text: "• 三视图左键拖动：调整窗宽窗位\n" +
+                              "  (横向-窗宽, 纵向-窗位)\n" +
                               "• 鼠标滚轮：切片浏览\n" +
                               "• 3D视图：旋转查看\n" +
-                              "• 预设窗口：快速切换"
+                              "• 预设窗口：快速切换\n" +
+                              "• 右下角实时显示窗宽窗位"
                         color: "#aaaaaa"
                         font.pixelSize: 11
                         wrapMode: Text.WordWrap

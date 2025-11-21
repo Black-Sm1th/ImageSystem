@@ -171,12 +171,14 @@ private:
     double m_windowLevel;
     QString m_dicomInfo;
 };
-// 自定义交互样式 - 轴向视图（滚轮调整切片）
+// 自定义交互样式 - 轴向视图（滚轮调整切片，左键调整窗宽窗位）
 class AxialInteractorStyle : public vtkInteractorStyleImage
 {
 public:
     static AxialInteractorStyle* New();
     vtkTypeMacro(AxialInteractorStyle, vtkInteractorStyleImage);
+
+    AxialInteractorStyle() : m_isDragging(false), m_lastX(0), m_lastY(0) {}
 
     void OnMouseWheelForward() override {
         int currentSlice = DicomDataManager::instance().axialSlice();
@@ -192,15 +194,56 @@ public:
             DicomDataManager::instance().setAxialSlice(currentSlice - 1);
         }
     }
+
+    void OnLeftButtonDown() override {
+        m_isDragging = true;
+        int* pos = this->GetInteractor()->GetEventPosition();
+        m_lastX = pos[0];
+        m_lastY = pos[1];
+    }
+
+    void OnLeftButtonUp() override {
+        m_isDragging = false;
+    }
+
+    void OnMouseMove() override {
+        if (m_isDragging) {
+            int* pos = this->GetInteractor()->GetEventPosition();
+            int dx = pos[0] - m_lastX;
+            int dy = pos[1] - m_lastY;
+            
+            // 水平拖动调整窗宽，垂直拖动调整窗位
+            double currentWidth = DicomDataManager::instance().windowWidth();
+            double currentLevel = DicomDataManager::instance().windowLevel();
+            
+            double newWidth = currentWidth + dx * 4.0;  // 调整灵敏度
+            double newLevel = currentLevel + dy * 4.0;
+            
+            if (newWidth < 1) newWidth = 1;
+            
+            DicomDataManager::instance().setWindowWidth(newWidth);
+            DicomDataManager::instance().setWindowLevel(newLevel);
+            
+            m_lastX = pos[0];
+            m_lastY = pos[1];
+        }
+    }
+
+private:
+    bool m_isDragging;
+    int m_lastX;
+    int m_lastY;
 };
 vtkStandardNewMacro(AxialInteractorStyle);
 
-// 自定义交互样式 - 矢状视图（滚轮调整切片）
+// 自定义交互样式 - 矢状视图（滚轮调整切片，左键调整窗宽窗位）
 class SagittalInteractorStyle : public vtkInteractorStyleImage
 {
 public:
     static SagittalInteractorStyle* New();
     vtkTypeMacro(SagittalInteractorStyle, vtkInteractorStyleImage);
+
+    SagittalInteractorStyle() : m_isDragging(false), m_lastX(0), m_lastY(0) {}
 
     void OnMouseWheelForward() override {
         int currentSlice = DicomDataManager::instance().sagittalSlice();
@@ -216,15 +259,56 @@ public:
             DicomDataManager::instance().setSagittalSlice(currentSlice - 1);
         }
     }
+
+    void OnLeftButtonDown() override {
+        m_isDragging = true;
+        int* pos = this->GetInteractor()->GetEventPosition();
+        m_lastX = pos[0];
+        m_lastY = pos[1];
+    }
+
+    void OnLeftButtonUp() override {
+        m_isDragging = false;
+    }
+
+    void OnMouseMove() override {
+        if (m_isDragging) {
+            int* pos = this->GetInteractor()->GetEventPosition();
+            int dx = pos[0] - m_lastX;
+            int dy = pos[1] - m_lastY;
+            
+            // 水平拖动调整窗宽，垂直拖动调整窗位
+            double currentWidth = DicomDataManager::instance().windowWidth();
+            double currentLevel = DicomDataManager::instance().windowLevel();
+            
+            double newWidth = currentWidth + dx * 4.0;
+            double newLevel = currentLevel + dy * 4.0;
+            
+            if (newWidth < 1) newWidth = 1;
+            
+            DicomDataManager::instance().setWindowWidth(newWidth);
+            DicomDataManager::instance().setWindowLevel(newLevel);
+            
+            m_lastX = pos[0];
+            m_lastY = pos[1];
+        }
+    }
+
+private:
+    bool m_isDragging;
+    int m_lastX;
+    int m_lastY;
 };
 vtkStandardNewMacro(SagittalInteractorStyle);
 
-// 自定义交互样式 - 冠状视图（滚轮调整切片）
+// 自定义交互样式 - 冠状视图（滚轮调整切片，左键调整窗宽窗位）
 class CoronalInteractorStyle : public vtkInteractorStyleImage
 {
 public:
     static CoronalInteractorStyle* New();
     vtkTypeMacro(CoronalInteractorStyle, vtkInteractorStyleImage);
+
+    CoronalInteractorStyle() : m_isDragging(false), m_lastX(0), m_lastY(0) {}
 
     void OnMouseWheelForward() override {
         int currentSlice = DicomDataManager::instance().coronalSlice();
@@ -240,6 +324,45 @@ public:
             DicomDataManager::instance().setCoronalSlice(currentSlice - 1);
         }
     }
+
+    void OnLeftButtonDown() override {
+        m_isDragging = true;
+        int* pos = this->GetInteractor()->GetEventPosition();
+        m_lastX = pos[0];
+        m_lastY = pos[1];
+    }
+
+    void OnLeftButtonUp() override {
+        m_isDragging = false;
+    }
+
+    void OnMouseMove() override {
+        if (m_isDragging) {
+            int* pos = this->GetInteractor()->GetEventPosition();
+            int dx = pos[0] - m_lastX;
+            int dy = pos[1] - m_lastY;
+            
+            // 水平拖动调整窗宽，垂直拖动调整窗位
+            double currentWidth = DicomDataManager::instance().windowWidth();
+            double currentLevel = DicomDataManager::instance().windowLevel();
+            
+            double newWidth = currentWidth + dx * 4.0;
+            double newLevel = currentLevel + dy * 4.0;
+            
+            if (newWidth < 1) newWidth = 1;
+            
+            DicomDataManager::instance().setWindowWidth(newWidth);
+            DicomDataManager::instance().setWindowLevel(newLevel);
+            
+            m_lastX = pos[0];
+            m_lastY = pos[1];
+        }
+    }
+
+private:
+    bool m_isDragging;
+    int m_lastX;
+    int m_lastY;
 };
 vtkStandardNewMacro(CoronalInteractorStyle);
 
@@ -292,7 +415,7 @@ private slots:
         m_renderer->AddViewProp(m_imageSlice);
         m_renderer->SetBackground(0, 0, 0);
 
-        // 添加文本标签
+        // 添加标题文本标签
         vtkSmartPointer<vtkTextMapper> textMapper = vtkSmartPointer<vtkTextMapper>::New();
         textMapper->SetInput("Axial View");
         textMapper->GetTextProperty()->SetFontSize(20);
@@ -302,6 +425,19 @@ private slots:
         textActor->SetMapper(textMapper);
         textActor->SetPosition(10, 10);
         m_renderer->AddActor2D(textActor);
+
+        // 添加窗宽窗位显示文本（右下角）
+        m_wwwlTextMapper = vtkSmartPointer<vtkTextMapper>::New();
+        updateWWWLText();
+        m_wwwlTextMapper->GetTextProperty()->SetFontSize(16);
+        m_wwwlTextMapper->GetTextProperty()->SetColor(0.0, 1.0, 0.0);
+        m_wwwlTextMapper->GetTextProperty()->SetJustificationToRight();
+        
+        m_wwwlTextActor = vtkSmartPointer<vtkActor2D>::New();
+        m_wwwlTextActor->SetMapper(m_wwwlTextMapper);
+        m_wwwlTextActor->GetPositionCoordinate()->SetCoordinateSystemToNormalizedViewport();
+        m_wwwlTextActor->SetPosition(0.98, 0.02);  // 右下角
+        m_renderer->AddActor2D(m_wwwlTextActor);
 
         m_renderWindow->AddRenderer(m_renderer);
         
@@ -333,7 +469,18 @@ private slots:
             m_imageSlice->GetProperty()->SetColorWindow(DicomDataManager::instance().windowWidth());
             m_imageSlice->GetProperty()->SetColorLevel(DicomDataManager::instance().windowLevel());
             m_imageSlice->GetProperty()->Modified();
+            updateWWWLText();
             scheduleRender();
+        }
+    }
+
+    void updateWWWLText() {
+        if (m_wwwlTextMapper) {
+            char buffer[64];
+            snprintf(buffer, sizeof(buffer), "W: %.0f  L: %.0f", 
+                     DicomDataManager::instance().windowWidth(),
+                     DicomDataManager::instance().windowLevel());
+            m_wwwlTextMapper->SetInput(buffer);
         }
     }
 
@@ -342,6 +489,8 @@ private:
     vtkSmartPointer<vtkRenderer> m_renderer;
     vtkSmartPointer<vtkImageSliceMapper> m_imageMapper;
     vtkSmartPointer<vtkImageSlice> m_imageSlice;
+    vtkSmartPointer<vtkTextMapper> m_wwwlTextMapper;
+    vtkSmartPointer<vtkActor2D> m_wwwlTextActor;
 };
 
 // 矢状视图（Sagittal - YZ平面）
@@ -381,6 +530,7 @@ private slots:
 
         m_imageSlice = vtkSmartPointer<vtkImageSlice>::New();
         m_imageSlice->SetMapper(m_imageMapper);
+        m_imageSlice->GetProperty()->SetColorWindow(DicomDataManager::instance().windowWidth());
         m_imageSlice->GetProperty()->SetColorLevel(DicomDataManager::instance().windowLevel());
 
         vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
@@ -396,6 +546,19 @@ private slots:
         textActor->SetMapper(textMapper);
         textActor->SetPosition(10, 10);
         renderer->AddActor2D(textActor);
+
+        // 添加窗宽窗位显示文本（右下角）
+        m_wwwlTextMapper = vtkSmartPointer<vtkTextMapper>::New();
+        updateWWWLText();
+        m_wwwlTextMapper->GetTextProperty()->SetFontSize(16);
+        m_wwwlTextMapper->GetTextProperty()->SetColor(0.0, 1.0, 0.0);
+        m_wwwlTextMapper->GetTextProperty()->SetJustificationToRight();
+        
+        m_wwwlTextActor = vtkSmartPointer<vtkActor2D>::New();
+        m_wwwlTextActor->SetMapper(m_wwwlTextMapper);
+        m_wwwlTextActor->GetPositionCoordinate()->SetCoordinateSystemToNormalizedViewport();
+        m_wwwlTextActor->SetPosition(0.98, 0.02);  // 右下角
+        renderer->AddActor2D(m_wwwlTextActor);
 
         m_renderWindow->AddRenderer(renderer);
         
@@ -426,7 +589,18 @@ private slots:
             m_imageSlice->GetProperty()->SetColorWindow(DicomDataManager::instance().windowWidth());
             m_imageSlice->GetProperty()->SetColorLevel(DicomDataManager::instance().windowLevel());
             m_imageSlice->GetProperty()->Modified();
+            updateWWWLText();
             scheduleRender();
+        }
+    }
+
+    void updateWWWLText() {
+        if (m_wwwlTextMapper) {
+            char buffer[64];
+            snprintf(buffer, sizeof(buffer), "W: %.0f  L: %.0f", 
+                     DicomDataManager::instance().windowWidth(),
+                     DicomDataManager::instance().windowLevel());
+            m_wwwlTextMapper->SetInput(buffer);
         }
     }
 
@@ -434,6 +608,8 @@ private:
     vtkRenderWindow* m_renderWindow = nullptr;
     vtkSmartPointer<vtkImageSliceMapper> m_imageMapper;
     vtkSmartPointer<vtkImageSlice> m_imageSlice;
+    vtkSmartPointer<vtkTextMapper> m_wwwlTextMapper;
+    vtkSmartPointer<vtkActor2D> m_wwwlTextActor;
 };
 
 // 冠状视图（Coronal - XZ平面）
@@ -490,6 +666,19 @@ private slots:
         textActor->SetPosition(10, 10);
         renderer->AddActor2D(textActor);
 
+        // 添加窗宽窗位显示文本（右下角）
+        m_wwwlTextMapper = vtkSmartPointer<vtkTextMapper>::New();
+        updateWWWLText();
+        m_wwwlTextMapper->GetTextProperty()->SetFontSize(16);
+        m_wwwlTextMapper->GetTextProperty()->SetColor(0.0, 1.0, 0.0);
+        m_wwwlTextMapper->GetTextProperty()->SetJustificationToRight();
+        
+        m_wwwlTextActor = vtkSmartPointer<vtkActor2D>::New();
+        m_wwwlTextActor->SetMapper(m_wwwlTextMapper);
+        m_wwwlTextActor->GetPositionCoordinate()->SetCoordinateSystemToNormalizedViewport();
+        m_wwwlTextActor->SetPosition(0.98, 0.02);  // 右下角
+        renderer->AddActor2D(m_wwwlTextActor);
+
         m_renderWindow->AddRenderer(renderer);
         
         // 设置自定义交互样式（滚轮调整切片）
@@ -518,7 +707,18 @@ private slots:
             m_imageSlice->GetProperty()->SetColorWindow(DicomDataManager::instance().windowWidth());
             m_imageSlice->GetProperty()->SetColorLevel(DicomDataManager::instance().windowLevel());
             m_imageSlice->GetProperty()->Modified();
+            updateWWWLText();
             scheduleRender();
+        }
+    }
+
+    void updateWWWLText() {
+        if (m_wwwlTextMapper) {
+            char buffer[64];
+            snprintf(buffer, sizeof(buffer), "W: %.0f  L: %.0f", 
+                     DicomDataManager::instance().windowWidth(),
+                     DicomDataManager::instance().windowLevel());
+            m_wwwlTextMapper->SetInput(buffer);
         }
     }
 
@@ -526,6 +726,8 @@ private:
     vtkRenderWindow* m_renderWindow = nullptr;
     vtkSmartPointer<vtkImageSliceMapper> m_imageMapper;
     vtkSmartPointer<vtkImageSlice> m_imageSlice;
+    vtkSmartPointer<vtkTextMapper> m_wwwlTextMapper;
+    vtkSmartPointer<vtkActor2D> m_wwwlTextActor;
 };
 
 // 3D体渲染视图
