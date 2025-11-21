@@ -6,7 +6,7 @@ TEMPLATE = app
 TARGET = ImageSystem
 DESTDIR = ../x64/Debug
 CONFIG += debug
-LIBS += -L"../../../VTK-9.4.2/install/lib" \
+LIBS += -L"../../../VTK-9.4.2/install-debug/lib" \
     -lvtkCommonCore-9.4d \
     -lvtkCommonDataModel-9.4d \
     -lvtkCommonExecutionModel-9.4d \
@@ -42,9 +42,5 @@ MOC_DIR += .
 OBJECTS_DIR += debug
 UI_DIR += .
 RCC_DIR += .
-HEADERS += ./CustomInteractorStyle.h \
-    ./CustomVTKItem.h
-SOURCES += ./main.cpp \
-    ./CustomInteractorStyle.cpp \
-    ./CustomVTKItem.cpp
+SOURCES += ./main.cpp
 RESOURCES += qml.qrc

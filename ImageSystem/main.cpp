@@ -32,7 +32,7 @@
 #include <vtkTextProperty.h>
 #include <vtkTextMapper.h>
 #include <vtkActor2D.h>
-
+#include <vtkResliceCursor.h>
 #include <vtkAutoInit.h>
 VTK_MODULE_INIT(vtkRenderingVolumeOpenGL2);
 
@@ -125,11 +125,6 @@ public:
         m_imageData = reader->GetOutput();
         m_imageData->GetDimensions(m_dims);
 
-        // 设置默认切片为中间位置
-        m_axialSlice = m_dims[2] / 2;
-        m_sagittalSlice = m_dims[0] / 2;
-        m_coronalSlice = m_dims[1] / 2;
-
         // 设置默认窗宽窗位
         m_windowWidth = 2000;
         m_windowLevel = 0;
@@ -146,12 +141,11 @@ public:
             .arg(origin[0]).arg(origin[1]).arg(origin[2]);
 
         emit dataLoaded();
+        // 设置默认切片为中间位置
+        setAxialSlice(m_dims[2] / 2);
+        setSagittalSlice(m_dims[0] / 2);
+        setCoronalSlice(m_dims[1] / 2);
         return true;
-    }
-
-    Q_INVOKABLE QString openFolderDialog() {
-        QString defaultPath = "C:/Users/71455/Desktop/Dicom/SLC";
-        return defaultPath;
     }
 
 signals:
@@ -380,7 +374,6 @@ private slots:
         if (!imageData) return;
         
         m_renderWindow->GetRenderers()->RemoveAllItems();
-        vtkNew<vtkResliceImageViewer> imageviewer;
         m_imageMapper = vtkSmartPointer<vtkImageSliceMapper>::New();
         m_imageMapper->SetInputData(imageData);
         m_imageMapper->SetOrientationToX(); // 矢状视图
@@ -626,7 +619,7 @@ private slots:
         
         renderer->ResetCamera();
         
-        update();
+        scheduleRender();;
     }
 
 private:
