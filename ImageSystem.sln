@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36408.4 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageSystem", "ImageSystem\ImageSystem.vcxproj", "{2C72115C-40C7-48A5-95FE-615CC5B6F169}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageSystem", "ImageSystem\ImageSystem.vcxproj", "{1CD56799-B592-4F54-8942-6FECFA8687D6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +11,15 @@ Global
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{2C72115C-40C7-48A5-95FE-615CC5B6F169}.Debug|x64.ActiveCfg = Debug|x64
-		{2C72115C-40C7-48A5-95FE-615CC5B6F169}.Debug|x64.Build.0 = Debug|x64
-		{2C72115C-40C7-48A5-95FE-615CC5B6F169}.Release|x64.ActiveCfg = Release|x64
-		{2C72115C-40C7-48A5-95FE-615CC5B6F169}.Release|x64.Build.0 = Release|x64
+		{1CD56799-B592-4F54-8942-6FECFA8687D6}.Debug|x64.ActiveCfg = Debug|x64
+		{1CD56799-B592-4F54-8942-6FECFA8687D6}.Debug|x64.Build.0 = Debug|x64
+		{1CD56799-B592-4F54-8942-6FECFA8687D6}.Release|x64.ActiveCfg = Release|x64
+		{1CD56799-B592-4F54-8942-6FECFA8687D6}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {5C1F969A-A2A9-4B7C-873E-1614ED3ECEB6}
+		SolutionGuid = {8F2D1313-2687-4BC7-9814-D6379F5C1607}
 	EndGlobalSection
 EndGlobal
