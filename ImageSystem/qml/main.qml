@@ -4,7 +4,7 @@ import QtQuick.Window 2.2
 import QtQml 2.15
 import QtQuick.Dialogs 1.3
 import com.vtk.dicom 1.0
-
+import "./components"
 Window {
     id: win
     visible: true
@@ -23,7 +23,7 @@ Window {
         color: "#1e1e1e"
         
         // 文件选择按钮
-        Button {
+        CustomButton {
             id: openButton
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
@@ -31,20 +31,7 @@ Window {
             width: 160
             height: 40
             text: "打开 DICOM 文件夹"
-
-            background: Rectangle {
-                color: parent.pressed ? "#0078d4" : (parent.hovered ? "#005a9e" : "#004578")
-                radius: 4
-            }
-
-            contentItem: Text {
-                text: parent.text
-                color: "white"
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                font.pixelSize: 13
-                font.bold: true
-            }
+            backgroundColor: "#004578"
 
             onClicked: {
                 fileDialog.open()
@@ -55,7 +42,7 @@ Window {
             title: qsTr("选择要上传的文件")
             selectFolder: true
             onAccepted: {
-                dicomManager.loadDicomDirectory(fileDialog.fileUrls[0])
+                $DicomDataModel.loadDicomDirectory(fileDialog.fileUrls[0])
             }
         }
         Rectangle {
@@ -75,14 +62,14 @@ Window {
             anchors.verticalCenter: parent.verticalCenter
             anchors.leftMargin: 20
             anchors.rightMargin: 15
-            text: dicomManager.hasData ? dicomManager.dicomInfo : "未加载 DICOM 数据"
+            text: $DicomDataModel.hasData ? $DicomDataModel.dicomInfo : "未加载 DICOM 数据"
             color: "#cccccc"
             font.pixelSize: 12
             elide: Text.ElideRight
         }
 
         // 预设窗宽窗位按钮
-        Button {
+        CustomButton {
             id: lungWindowButton
             anchors.right: boneWindowButton.left
             anchors.verticalCenter: parent.verticalCenter
@@ -90,25 +77,14 @@ Window {
             width: 70
             height: 35
             text: "肺窗"
-            
-            background: Rectangle {
-                color: parent.pressed ? "#3d3d3d" : (parent.hovered ? "#505050" : "#383838")
-                radius: 3
-            }
-            contentItem: Text {
-                text: parent.text
-                color: "white"
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                font.pixelSize: 11
-            }
+            backgroundColor: "#383838"
             onClicked: {
-                dicomManager.windowWidth = 1500
-                dicomManager.windowLevel = -600
+                $DicomDataModel.windowWidth = 1500
+                $DicomDataModel.windowLevel = -600
             }
         }
 
-        Button {
+        CustomButton {
             id: boneWindowButton
             anchors.right: brainWindowButton.left
             anchors.verticalCenter: parent.verticalCenter
@@ -116,25 +92,14 @@ Window {
             width: 70
             height: 35
             text: "骨窗"
-            
-            background: Rectangle {
-                color: parent.pressed ? "#3d3d3d" : (parent.hovered ? "#505050" : "#383838")
-                radius: 3
-            }
-            contentItem: Text {
-                text: parent.text
-                color: "white"
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                font.pixelSize: 11
-            }
+            backgroundColor: "#383838"
             onClicked: {
-                dicomManager.windowWidth = 2000
-                dicomManager.windowLevel = 300
+                $DicomDataModel.windowWidth = 2000
+                $DicomDataModel.windowLevel = 300
             }
         }
 
-        Button {
+        CustomButton {
             id: brainWindowButton
             anchors.right: abdomenWindowButton.left
             anchors.verticalCenter: parent.verticalCenter
@@ -142,25 +107,14 @@ Window {
             width: 70
             height: 35
             text: "脑窗"
-            
-            background: Rectangle {
-                color: parent.pressed ? "#3d3d3d" : (parent.hovered ? "#505050" : "#383838")
-                radius: 3
-            }
-            contentItem: Text {
-                text: parent.text
-                color: "white"
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                font.pixelSize: 11
-            }
+            backgroundColor: "#383838"
             onClicked: {
-                dicomManager.windowWidth = 80
-                dicomManager.windowLevel = 40
+                $DicomDataModel.windowWidth = 80
+                $DicomDataModel.windowLevel = 40
             }
         }
 
-        Button {
+        CustomButton {
             id: abdomenWindowButton
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
@@ -168,21 +122,10 @@ Window {
             width: 70
             height: 35
             text: "腹窗"
-            
-            background: Rectangle {
-                color: parent.pressed ? "#3d3d3d" : (parent.hovered ? "#505050" : "#383838")
-                radius: 3
-            }
-            contentItem: Text {
-                text: parent.text
-                color: "white"
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                font.pixelSize: 11
-            }
+            backgroundColor: "#383838"
             onClicked: {
-                dicomManager.windowWidth = 400
-                dicomManager.windowLevel = 40
+                $DicomDataModel.windowWidth = 400
+                $DicomDataModel.windowLevel = 40
             }
         }
     }
@@ -250,7 +193,7 @@ Window {
                             spacing: 5
 
                             Label {
-                                text: "轴向切片: " + dicomManager.axialSlice + " / " + dicomManager.maxAxialSlice
+                                text: "轴向切片: " + $DicomDataModel.axialSlice + " / " + $DicomDataModel.maxAxialSlice
                                 color: "#ffff00"
                                 font.pixelSize: 12
                             }
@@ -259,16 +202,16 @@ Window {
                                 id: axialSlider
                                 width: parent.width
                                 from: 0
-                                to: dicomManager.maxAxialSlice
+                                to: $DicomDataModel.maxAxialSlice
                                 stepSize: 1
-                                enabled: dicomManager.hasData
+                                enabled: $DicomDataModel.hasData
                                 
                                 Component.onCompleted: {
-                                    value = dicomManager.axialSlice
+                                    value = $DicomDataModel.axialSlice
                                 }
                                 
                                 Connections {
-                                    target: dicomManager
+                                    target: $DicomDataModel
                                     function onAxialSliceChanged(slice) {
                                         if (!axialSlider.pressed) {
                                             axialSlider.value = slice
@@ -277,7 +220,7 @@ Window {
                                 }
                                 
                                 onMoved: {
-                                    dicomManager.axialSlice = value
+                                    $DicomDataModel.axialSlice = value
                                 }
                                 
                                 background: Rectangle {
@@ -315,7 +258,7 @@ Window {
                             spacing: 5
 
                             Label {
-                                text: "矢状切片: " + dicomManager.sagittalSlice + " / " + dicomManager.maxSagittalSlice
+                                text: "矢状切片: " + $DicomDataModel.sagittalSlice + " / " + $DicomDataModel.maxSagittalSlice
                                 color: "#ffff00"
                                 font.pixelSize: 12
                             }
@@ -324,16 +267,16 @@ Window {
                                 id: sagittalSlider
                                 width: parent.width
                                 from: 0
-                                to: dicomManager.maxSagittalSlice
+                                to: $DicomDataModel.maxSagittalSlice
                                 stepSize: 1
-                                enabled: dicomManager.hasData
+                                enabled: $DicomDataModel.hasData
                                 
                                 Component.onCompleted: {
-                                    value = dicomManager.sagittalSlice
+                                    value = $DicomDataModel.sagittalSlice
                                 }
                                 
                                 Connections {
-                                    target: dicomManager
+                                    target: $DicomDataModel
                                     function onSagittalSliceChanged(slice) {
                                         if (!sagittalSlider.pressed) {
                                             sagittalSlider.value = slice
@@ -342,7 +285,7 @@ Window {
                                 }
                                 
                                 onMoved: {
-                                    dicomManager.sagittalSlice = value
+                                    $DicomDataModel.sagittalSlice = value
                                 }
                                 
                                 background: Rectangle {
@@ -380,7 +323,7 @@ Window {
                             spacing: 5
 
                             Label {
-                                text: "冠状切片: " + dicomManager.coronalSlice + " / " + dicomManager.maxCoronalSlice
+                                text: "冠状切片: " + $DicomDataModel.coronalSlice + " / " + $DicomDataModel.maxCoronalSlice
                                 color: "#ffff00"
                                 font.pixelSize: 12
                             }
@@ -389,14 +332,14 @@ Window {
                                 id: coronalSlider
                                 width: parent.width
                                 from: 0
-                                to: dicomManager.maxCoronalSlice
+                                to: $DicomDataModel.maxCoronalSlice
                                 stepSize: 1
-                                enabled: dicomManager.hasData
+                                enabled: $DicomDataModel.hasData
                                 
-                                value: dicomManager.coronalSlice
+                                value: $DicomDataModel.coronalSlice
                                 
                                 onMoved: {
-                                    dicomManager.coronalSlice = value
+                                    $DicomDataModel.coronalSlice = value
                                 }
                                 
                                 background: Rectangle {
@@ -458,7 +401,7 @@ Window {
                             spacing: 5
 
                             Label {
-                                text: "窗宽 (Width): " + Math.round(dicomManager.windowWidth)
+                                text: "窗宽 (Width): " + Math.round($DicomDataModel.windowWidth)
                                 color: "#00ff00"
                                 font.pixelSize: 12
                             }
@@ -469,14 +412,14 @@ Window {
                                 from: 1
                                 to: 4000
                                 stepSize: 10
-                                enabled: dicomManager.hasData
+                                enabled: $DicomDataModel.hasData
                                 
                                 Component.onCompleted: {
-                                    value = dicomManager.windowWidth
+                                    value = $DicomDataModel.windowWidth
                                 }
                                 
                                 Connections {
-                                    target: dicomManager
+                                    target: $DicomDataModel
                                     function onWindowWidthChanged(width) {
                                         if (!windowWidthSlider.pressed) {
                                             windowWidthSlider.value = width
@@ -485,7 +428,7 @@ Window {
                                 }
                                 
                                 onMoved: {
-                                    dicomManager.windowWidth = value
+                                    $DicomDataModel.windowWidth = value
                                 }
                                 
                                 background: Rectangle {
@@ -523,7 +466,7 @@ Window {
                             spacing: 5
 
                             Label {
-                                text: "窗位 (Level): " + Math.round(dicomManager.windowLevel)
+                                text: "窗位 (Level): " + Math.round($DicomDataModel.windowLevel)
                                 color: "#ff6600"
                                 font.pixelSize: 12
                             }
@@ -534,14 +477,14 @@ Window {
                                 from: -1024
                                 to: 3071
                                 stepSize: 10
-                                enabled: dicomManager.hasData
+                                enabled: $DicomDataModel.hasData
                                 
                                 Component.onCompleted: {
-                                    value = dicomManager.windowLevel
+                                    value = $DicomDataModel.windowLevel
                                 }
                                 
                                 Connections {
-                                    target: dicomManager
+                                    target: $DicomDataModel
                                     function onWindowLevelChanged(level) {
                                         if (!windowLevelSlider.pressed) {
                                             windowLevelSlider.value = level
@@ -550,7 +493,7 @@ Window {
                                 }
                                 
                                 onMoved: {
-                                    dicomManager.windowLevel = value
+                                    $DicomDataModel.windowLevel = value
                                 }
                                 
                                 background: Rectangle {

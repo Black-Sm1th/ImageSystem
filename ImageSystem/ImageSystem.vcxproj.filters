@@ -28,13 +28,32 @@
     </QtRcc>
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="main.cpp">
-      <Filter>Source Files</Filter>
+    <QtMoc Include="DicomDataModel.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="MainViewController.h">
+      <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>
   <ItemGroup>
     <None Include="qml\main.qml">
       <Filter>Source Files</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CommonFunc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="MainViewController.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DicomDataModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
