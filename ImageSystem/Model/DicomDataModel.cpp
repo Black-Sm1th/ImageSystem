@@ -1,4 +1,4 @@
-#include "DicomDataModel.h"
+ï»¿#include "DicomDataModel.h"
 
 DicomDataModel::DicomDataModel(QObject* parent)
     : QObject(parent) {
@@ -25,11 +25,11 @@ bool DicomDataModel::loadDicomDirectory(const QString& path) {
     m_imageData = reader->GetOutput();
     m_imageData->GetDimensions(m_dims);
 
-    // ÉèÖÃÄ¬ÈÏ´°¿í´°Î»
+    // è®¾ç½®é»˜è®¤çª—å®½çª—ä½
     m_windowWidth = 2000;
     m_windowLevel = 0;
 
-    // »ñÈ¡DICOMĞÅÏ¢
+    // è·å–DICOMä¿¡æ¯
     double* spacing = m_imageData->GetSpacing();
     double* origin = m_imageData->GetOrigin();
 
@@ -41,7 +41,7 @@ bool DicomDataModel::loadDicomDirectory(const QString& path) {
         .arg(origin[0]).arg(origin[1]).arg(origin[2]);
 
     emit dataLoaded();
-    // ÉèÖÃÄ¬ÈÏÇĞÆ¬ÎªÖĞ¼äÎ»ÖÃ
+    // è®¾ç½®é»˜è®¤åˆ‡ç‰‡ä¸ºä¸­é—´ä½ç½®
     setAxialSlice(m_dims[2] / 2);
     setSagittalSlice(m_dims[0] / 2);
     setCoronalSlice(m_dims[1] / 2);

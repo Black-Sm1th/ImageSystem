@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include "DicomDataModel.h"
-#include "CommonFunc.h"
+#include "Model/DicomDataModel.h"
+#include "Modules/CommonFunc.h"
 #include <vtkInteractorStyleImage.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkObjectFactory.h>

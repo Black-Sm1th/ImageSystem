@@ -1,7 +1,7 @@
-#pragma once
+﻿#pragma once
 #include <QObject.h>
 #include <QDebug.h>
-#include "CommonFunc.h"
+#include "Modules/CommonFunc.h"
 #include <vtkSmartPointer.h>
 #include <vtkImageData.h>
 #include <vtkDICOMImageReader.h>

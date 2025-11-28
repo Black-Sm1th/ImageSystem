@@ -3,9 +3,9 @@
 #include <QQmlContext>
 #include <QQuickVTKItem.h>
 #include <vtkAutoInit.h>
-#include "CommonFunc.h"
-#include "MainViewController.h"
-#include "DicomDataModel.h"
+#include "Modules/CommonFunc.h"
+#include "ViewController/MainViewController.h"
+#include "Model/DicomDataModel.h"
 
 
 VTK_MODULE_INIT(vtkRenderingVolumeOpenGL2);
