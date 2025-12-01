@@ -520,8 +520,17 @@ private:
     }
 };
 
-class MainViewController
+class MainViewController : public QObject
 {
-	
+    Q_OBJECT
+        SINGLETON_CLASS(MainViewController)
+        QUICK_PROPERTY(int, t2)
+        QUICK_PROPERTY(int, skin)
+        QUICK_PROPERTY(int, micro)
+        QUICK_PROPERTY(int, sei)
+        QUICK_PROPERTY(int, ader)
+        QUICK_PROPERTY(int, disp)
+public:
+    Q_INVOKABLE void calculate();
 };
 

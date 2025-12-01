@@ -1,18 +1,19 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Window 2.2
-import QtQml 2.15
 import QtQuick.Dialogs 1.3
 import com.vtk.dicom 1.0
 import "./components"
-Window {
+ApplicationWindow {
     id: win
     visible: true
     width: 1600
     height: 1000
     title: qsTr("DICOM 医学影像查看器")
-    color: "#2b2b2b"
-
+    color: "#18191C"
+    property int analysisPanelIndex: 0
+    font.family: "Alibaba PuHuiTi 3.0"
+    font.pixelSize: 14
     // 顶部工具栏
     Rectangle {
         id: topToolbar
@@ -20,7 +21,7 @@ Window {
         anchors.left: parent.left
         anchors.right: parent.right
         height: 60
-        color: "#1e1e1e"
+        color: "transparent"
         
         // 文件选择按钮
         CustomButton {
@@ -55,7 +56,7 @@ Window {
         }
 
         // DICOM信息显示
-        Text {
+        Label {
             id: infoText
             anchors.left: openButton.right
             anchors.right: lungWindowButton.left
@@ -66,6 +67,54 @@ Window {
             color: "#cccccc"
             font.pixelSize: 12
             elide: Text.ElideRight
+        }
+
+        // 预设窗宽窗位按钮
+        CustomButton {
+            id: kidneyButton
+            anchors.right: brainButton.left
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.rightMargin: 10
+            width: 70
+            height: 35
+            text: "肾功能"
+            backgroundColor: analysisPanelIndex === 1 ? "green" : "#383838"
+            onClicked: {
+                if(analysisPanelIndex === 1){
+                    analysisPanelIndex = 0
+                }else{
+                    analysisPanelIndex = 1
+                }
+            }
+        }
+
+        // 预设窗宽窗位按钮
+        CustomButton {
+            id: brainButton
+            anchors.right: split1.left
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.rightMargin: 10
+            width: 70
+            height: 35
+            text: "脑功能"
+            backgroundColor: analysisPanelIndex === 2 ? "green" : "#383838"
+            onClicked: {
+                if(analysisPanelIndex === 2){
+                    analysisPanelIndex = 0
+                }else{
+                    analysisPanelIndex = 2
+                }
+            }
+        }
+
+        Rectangle {
+            id: split1
+            anchors.right: lungWindowButton.left
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.rightMargin: 10
+            width: 1
+            height: parent.height - 20
+            color: "#404040"
         }
 
         // 预设窗宽窗位按钮
@@ -137,13 +186,12 @@ Window {
         anchors.left: parent.left
         anchors.right: parent.right
         height: 30
-        color: "#1e1e1e"
+        color: "transparent"
         
-        Text {
+        Label {
             anchors.centerIn: parent
             text: "DICOM 医学影像查看器 v1.0"
             color: "#888888"
-            font.pixelSize: 11
         }
     }
 
@@ -154,7 +202,7 @@ Window {
         anchors.bottom: bottomStatusBar.top
         anchors.right: parent.right
         width: 280
-        color: "#1e1e1e"
+        color: "transparent"
 
         ScrollView {
             anchors.fill: parent
@@ -545,7 +593,7 @@ Window {
                         font.pixelSize: 14
                     }
 
-                    Text {
+                    Label {
                         width: parent.width
                         text: "• 三视图左键拖动：调整窗宽窗位\n" +
                               "  (横向-窗宽, 纵向-窗位)\n" +
@@ -554,7 +602,7 @@ Window {
                               "• 预设窗口：快速切换\n" +
                               "• 右下角实时显示窗宽窗位"
                         color: "#aaaaaa"
-                        font.pixelSize: 11
+                        font.pixelSize: 12
                         wrapMode: Text.WordWrap
                         lineHeight: 1.5
                     }
@@ -563,11 +611,25 @@ Window {
         }
     }
 
+    //左侧功能区域
+    Rectangle {
+        id: leftAnalysisPanel
+        anchors.top: topToolbar.bottom
+        anchors.bottom: bottomStatusBar.top
+        anchors.left: parent.left
+        width: 300
+        color: "transparent"
+        visible: analysisPanelIndex !== 0
+        KidneyPanel {
+            id: kidneypanel
+        }
+    }
+
     // 左侧：四视图显示区域
     Item {
         anchors.top: topToolbar.bottom
         anchors.bottom: bottomStatusBar.top
-        anchors.left: parent.left
+        anchors.left: analysisPanelIndex !== 0 ? leftAnalysisPanel.right : parent.left
         anchors.right: rightPanel.left
         
         // 左上：轴向视图

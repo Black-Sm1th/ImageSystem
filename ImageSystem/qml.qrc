@@ -1,9 +1,11 @@
 <RCC>
     <qresource prefix="/">
         <file>qml/components/CustomButton.qml</file>
+        <file>qml/components/CustomComboBox.qml</file>
         <file>qml/main.qml</file>
         <file>fonts/AlibabaPuHuiTi-3-55-Regular.ttf</file>
         <file>fonts/AlibabaPuHuiTi-3-65-Medium.ttf</file>
         <file>fonts/AlibabaPuHuiTi-3-85-Bold.ttf</file>
+        <file>qml/KidneyPanel.qml</file>
     </qresource>
 </RCC>
