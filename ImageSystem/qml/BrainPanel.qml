@@ -6,6 +6,7 @@ import "./components"
 
 Rectangle {
     id: rootPanel
-    anchors.fill: parent
     color: "transparent"
+
+
 }

@@ -202,6 +202,7 @@ ApplicationWindow {
         anchors.bottom: bottomStatusBar.top
         anchors.right: parent.right
         width: 280
+        visible: analysisPanelIndex !== 2
         color: "transparent"
 
         ScrollView {
@@ -619,15 +620,20 @@ ApplicationWindow {
         anchors.left: parent.left
         width: 300
         color: "transparent"
-        visible: analysisPanelIndex !== 0
+        visible: analysisPanelIndex !== 0 && analysisPanelIndex !== 2
         KidneyPanel {
             id: kidneypanel
             visible: analysisPanelIndex === 1
         }
-        BrainPanel{
-            id: brainpanel
-            visible: analysisPanelIndex === 2
-        }
+    }
+
+    BrainPanel{
+        id: brainpanel
+        visible: analysisPanelIndex === 2
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: topToolbar.bottom
+        anchors.bottom: bottomStatusBar.top
     }
 
     // 左侧：四视图显示区域
@@ -636,7 +642,7 @@ ApplicationWindow {
         anchors.bottom: bottomStatusBar.top
         anchors.left: analysisPanelIndex !== 0 ? leftAnalysisPanel.right : parent.left
         anchors.right: rightPanel.left
-        
+        visible: analysisPanelIndex !== 2
         // 左上：轴向视图
         Rectangle {
             anchors.top: parent.top
