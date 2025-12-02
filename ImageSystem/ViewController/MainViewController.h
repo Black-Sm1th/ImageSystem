@@ -19,6 +19,7 @@
 #include <vtkColorTransferFunction.h>
 #include <vtkPiecewiseFunction.h>
 #include <vtkVolumeProperty.h>
+#include <QProcess.h>
 
 // 枚举类型：切片方向
 enum class SliceOrientation {
@@ -530,6 +531,8 @@ class MainViewController : public QObject
         QUICK_PROPERTY(int, sei)
         QUICK_PROPERTY(int, ader)
         QUICK_PROPERTY(int, disp)
+        QUICK_PROPERTY(double, cclsResult)
+        QUICK_PROPERTY(double, ccrccResult)
 public:
     Q_INVOKABLE void calculate();
 };

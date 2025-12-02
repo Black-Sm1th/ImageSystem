@@ -115,6 +115,8 @@
   <ItemGroup>
     <None Include="ImageSystem.pro" />
     <None Include="qml\components\CustomButton.qml" />
+    <None Include="qml\components\CustomComboBox.qml" />
+    <None Include="qml\KidneyPanel.qml" />
     <None Include="qml\main.qml" />
   </ItemGroup>
   <ItemGroup>

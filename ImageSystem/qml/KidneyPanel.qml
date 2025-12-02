@@ -29,8 +29,14 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
             }
             CustomComboBox {
+                id: t2ComboBox
                 width: rootPanel.width - 20 - 8 - colWidth
                 model: ["低信号", "中信号", "高信号"]
+                onSelectionChanged: function(selectedIndices, selectedItems) {
+                    if (selectedIndices.length > 0) {
+                        $MainViewController.t2 = selectedIndices[0]
+                    }
+                }
             }
         }
 
@@ -45,8 +51,14 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
             }
             CustomComboBox {
+                id: skinComboBox
                 width: rootPanel.width - 20 - 8 - colWidth
                 model: ["轻度强化", "中度强化", "明显强化"]
+                onSelectionChanged: function(selectedIndices, selectedItems) {
+                    if (selectedIndices.length > 0) {
+                        $MainViewController.skin = selectedIndices[0]
+                    }
+                }
             }
         }
 
@@ -61,8 +73,14 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
             }
             CustomComboBox {
+                id: microComboBox
                 width: rootPanel.width - 20 - 8 - colWidth
                 model: ["无", "有"]
+                onSelectionChanged: function(selectedIndices, selectedItems) {
+                    if (selectedIndices.length > 0) {
+                        $MainViewController.micro = selectedIndices[0]
+                    }
+                }
             }
         }
 
@@ -77,8 +95,14 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
             }
             CustomComboBox {
+                id: seiComboBox
                 width: rootPanel.width - 20 - 8 - colWidth
                 model: ["无", "有"]
+                onSelectionChanged: function(selectedIndices, selectedItems) {
+                    if (selectedIndices.length > 0) {
+                        $MainViewController.sei = selectedIndices[0]
+                    }
+                }
             }
         }
 
@@ -93,8 +117,14 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
             }
             CustomComboBox {
+                id: aderComboBox
                 width: rootPanel.width - 20 - 8 - colWidth
                 model: ["无", "有"]
+                onSelectionChanged: function(selectedIndices, selectedItems) {
+                    if (selectedIndices.length > 0) {
+                        $MainViewController.ader = selectedIndices[0]
+                    }
+                }
             }
         }
 
@@ -109,28 +139,36 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
             }
             CustomComboBox {
+                id: dispComboBox
                 width: rootPanel.width - 20 - 8 - colWidth
                 model: ["无", "有"]
+                onSelectionChanged: function(selectedIndices, selectedItems) {
+                    if (selectedIndices.length > 0) {
+                        $MainViewController.disp = selectedIndices[0]
+                    }
+                }
             }
         }
         CustomButton {
-            id: openButton
+            id: calculateButton
             buttonWidth: parent.width - 20
             text: "计算"
             backgroundColor: "#004578"
             onClicked: {
-
+                $MainViewController.calculate()
             }
         }
-        Label{
-            text: qsTr("CCLS：")
+        Label {
+            text: qsTr("CCLS：") + $MainViewController.cclsResult.toFixed(4)
             font.pixelSize: 14
-            color: "#ffffff"
+            color: "#00ff00"
+            font.bold: true
         }
-        Label{
-            text: qsTr("CCRCC：")
+        Label {
+            text: qsTr("CCRCC：") + $MainViewController.ccrccResult.toFixed(4)
             font.pixelSize: 14
-            color: "#ffffff"
+            color: "#00ff00"
+            font.bold: true
         }
     }
 }

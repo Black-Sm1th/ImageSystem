@@ -35,6 +35,12 @@
       <Filter>Source Files</Filter>
     </None>
     <None Include="ImageSystem.pro" />
+    <None Include="qml\components\CustomComboBox.qml">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="qml\KidneyPanel.qml">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">

@@ -46,4 +46,5 @@ bool DicomDataModel::loadDicomDirectory(const QString& path) {
     setSagittalSlice(m_dims[0] / 2);
     setCoronalSlice(m_dims[1] / 2);
     return true;
+    
 }

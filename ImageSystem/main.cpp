@@ -7,6 +7,7 @@
 #include "Modules/CommonFunc.h"
 #include "ViewController/MainViewController.h"
 #include "Model/DicomDataModel.h"
+
 VTK_MODULE_INIT(vtkRenderingVolumeOpenGL2);
 
 int main(int argc, char* argv[])
@@ -29,6 +30,8 @@ int main(int argc, char* argv[])
 
     // 将DicomDataManager暴露给QML
     engine.rootContext()->setContextProperty("$DicomDataModel", GET_SINGLETON(DicomDataModel));
+    // 将MainViewController暴露给QML
+    engine.rootContext()->setContextProperty("$MainViewController", GET_SINGLETON(MainViewController));
     int fontId1 = QFontDatabase::addApplicationFont(":/fonts/AlibabaPuHuiTi-3-55-Regular.ttf");
     int fontId2 = QFontDatabase::addApplicationFont(":/fonts/AlibabaPuHuiTi-3-65-Medium.ttf");
     int fontId3 = QFontDatabase::addApplicationFont(":/fonts/AlibabaPuHuiTi-3-85-Bold.ttf");

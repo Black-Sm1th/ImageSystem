@@ -7,5 +7,6 @@
         <file>fonts/AlibabaPuHuiTi-3-65-Medium.ttf</file>
         <file>fonts/AlibabaPuHuiTi-3-85-Bold.ttf</file>
         <file>qml/KidneyPanel.qml</file>
+        <file>qml/BrainPanel.qml</file>
     </qresource>
 </RCC>

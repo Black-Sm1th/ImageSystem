@@ -622,6 +622,11 @@ ApplicationWindow {
         visible: analysisPanelIndex !== 0
         KidneyPanel {
             id: kidneypanel
+            visible: analysisPanelIndex === 1
+        }
+        BrainPanel{
+            id: brainpanel
+            visible: analysisPanelIndex === 2
         }
     }
 
