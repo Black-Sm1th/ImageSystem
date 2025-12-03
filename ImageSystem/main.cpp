@@ -27,6 +27,9 @@ int main(int argc, char* argv[])
     qmlRegisterType<VolumeVtkItem>("com.vtk.dicom", 1, 0, "VolumeView");
 
     QQmlApplicationEngine engine;
+    DicomDataModel* dicomModel = GET_SINGLETON(DicomDataModel);
+    dicomModel->setBrainSegColorTablePath(
+        QCoreApplication::applicationDirPath() + "/desc-aseg_dseg.tsv");
 
     // 将DicomDataManager暴露给QML
     engine.rootContext()->setContextProperty("$DicomDataModel", GET_SINGLETON(DicomDataModel));
