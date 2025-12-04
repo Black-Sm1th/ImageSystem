@@ -155,11 +155,11 @@ Rectangle {
             text: "计算"
             backgroundColor: "#004578"
             onClicked: {
-                $MainViewController.calculate()
+                $MainViewController.calculateKidney()
             }
         }
         Label {
-            text: qsTr("CCLS：") + $MainViewController.cclsResult.toFixed(4)
+            text: qsTr("CCLS：") + $MainViewController.cclsResult.toFixed(2)
             font.pixelSize: 14
             color: "#00ff00"
             font.bold: true

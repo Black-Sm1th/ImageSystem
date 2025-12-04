@@ -32,13 +32,13 @@
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
     <QtInstall>5.15.2_msvc2019_64</QtInstall>
-    <QtModules>quick</QtModules>
+    <QtModules>quick;webengine;webenginewidgets</QtModules>
     <QtBuildConfig>debug</QtBuildConfig>
     <QtQMLDebugEnable>false</QtQMLDebugEnable>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
     <QtInstall>5.15.2_msvc2019_64</QtInstall>
-    <QtModules>quick</QtModules>
+    <QtModules>quick;webengine;webenginewidgets</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
   </PropertyGroup>
   <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') or !Exists('$(QtMsBuild)\qt.props')">
@@ -70,7 +70,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>  E:\VTK-9.4.2\install-release\include\vtk-9.4;%(AdditionalIncludeDirectories)   </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\VTK-9.4.2\install-release\include\vtk-9.4;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>E:\VTK-9.4.2\install-release\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -109,6 +109,7 @@
       <QtMocFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(Filename).moc</QtMocFileName>
     </ClCompile>
     <ClCompile Include="Model\DicomDataModel.cpp" />
+    <ClCompile Include="Modules\BrainNetworkData.cpp" />
     <ClCompile Include="ViewController\MainViewController.cpp" />
     <QtRcc Include="qml.qrc" />
   </ItemGroup>
@@ -120,6 +121,7 @@
     <None Include="qml\main.qml" />
   </ItemGroup>
   <ItemGroup>
+    <QtMoc Include="Modules\BrainNetworkData.h" />
     <ClInclude Include="Modules\CommonFunc.h" />
     <QtMoc Include="ViewController\MainViewController.h" />
     <QtMoc Include="Model\DicomDataModel.h" />

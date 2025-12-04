@@ -533,7 +533,24 @@ class MainViewController : public QObject
         QUICK_PROPERTY(int, disp)
         QUICK_PROPERTY(double, cclsResult)
         QUICK_PROPERTY(double, ccrccResult)
+
+        QUICK_PROPERTY(double, globalEfficiency)
+        QUICK_PROPERTY(double, averageLocalEfficiency)
+        QUICK_PROPERTY(double, averageClusteringCoefficient)
+        QUICK_PROPERTY(double, richClubConnections)
+        QUICK_PROPERTY(double, bridgeConnections)
+        QUICK_PROPERTY(double, localConnections)
+
+        QUICK_PROPERTY(QString, currentAlffUrl)
+        QUICK_PROPERTY(QString, currentCovarianceUrl)
+        QUICK_PROPERTY(QString, currentRegionplotsUrl)
+        QUICK_PROPERTY(QString, currentViewConnectomeUrl)
 public:
-    Q_INVOKABLE void calculate();
+    Q_INVOKABLE void calculateKidney();
+    Q_INVOKABLE void importBrainData(const QString& url);
+signals:
+    void errorMsg(const QString& warning);
+private:
+    bool loadOutputData(const QString& path);
 };
 

@@ -1,5 +1,6 @@
 ﻿#include <QtQml/QQmlApplicationEngine>
 #include <QtGui/QGuiApplication>
+#include <QtWebEngine/QtWebEngine>
 #include <QQmlContext>
 #include <QFontDatabase>
 #include <QQuickVTKItem.h>
@@ -18,6 +19,13 @@ int main(int argc, char* argv[])
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
 
+    //// 强制使用 OpenGL 3.3 兼容模式
+    QSurfaceFormat format;
+    format.setRenderableType(QSurfaceFormat::OpenGL);
+    format.setVersion(3, 3);
+    format.setProfile(QSurfaceFormat::CompatibilityProfile);
+    QSurfaceFormat::setDefaultFormat(format);
+    QtWebEngine::initialize();
     QGuiApplication app(argc, argv);
 
     // 注册四个视图类型
