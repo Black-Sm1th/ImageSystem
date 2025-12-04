@@ -29,50 +29,21 @@ ApplicationWindow {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             anchors.margins: 10
-            width: 200
+            width: 160
             height: 40
-            text: "打开 DICOM/NIfTI 数据"
+            text: "打开 DICOM 文件夹"
             backgroundColor: "#004578"
 
             onClicked: {
-                openMenu.open()
-            }
-        }
-        Menu {
-            id: openMenu
-            y: openButton.height
-            MenuItem {
-                text: "选择 DICOM 文件夹"
-                onTriggered: {
-                    fileDialog.requestType = "dicom"
-                    fileDialog.title = qsTr("选择 DICOM 文件夹")
-                    fileDialog.selectFolder = true
-                    fileDialog.nameFilters = []
-                    fileDialog.open()
-                }
-            }
-            MenuItem {
-                text: "选择 NIfTI 文件 (.nii/.nii.gz)"
-                onTriggered: {
-                    fileDialog.requestType = "niftiPrimary"
-                    fileDialog.title = qsTr("选择 NIfTI 文件")
-                    fileDialog.selectFolder = false
-                    fileDialog.nameFilters = ["NIfTI Files (*.nii *.nii.gz)", qsTr("All Files (*)")]
-                    fileDialog.open()
-                }
+                fileDialog.open()
             }
         }
         FileDialog {
             id: fileDialog
-            property string requestType: ""
-            selectExisting: true
-            selectMultiple: false
+            title: qsTr("选择要上传的文件")
+            selectFolder: true
             onAccepted: {
-                var target = fileDialog.fileUrls[0]
-                if (fileDialog.requestType === "dicom" || fileDialog.requestType === "niftiPrimary") {
-                    $DicomDataModel.loadDicomDirectory(target)
-                }
-                fileDialog.requestType = ""
+                $DicomDataModel.loadDicomDirectory(fileDialog.fileUrls[0])
             }
         }
         Rectangle {

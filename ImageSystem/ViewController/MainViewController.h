@@ -144,8 +144,6 @@ public:
     vtkSmartPointer<vtkRenderer> renderer;
     vtkSmartPointer<vtkImageSliceMapper> imageMapper;
     vtkSmartPointer<vtkImageSlice> imageSlice;
-    vtkSmartPointer<vtkImageSliceMapper> segMapper;
-    vtkSmartPointer<vtkImageSlice> segSlice;
     vtkSmartPointer<vtkTextMapper> wwwlTextMapper;
     vtkSmartPointer<vtkActor2D> wwwlTextActor;
 
@@ -220,10 +218,6 @@ private slots:
                     data->imageMapper->SetSliceNumber(getCurrentSlice());
                     data->imageMapper->Modified();
                 }
-                if (data->segMapper) {
-                    data->segMapper->SetSliceNumber(getCurrentSlice());
-                    data->segMapper->Modified();
-                }
             }
             });
         scheduleRender();
@@ -252,8 +246,6 @@ private:
     void setupView(vtkRenderWindow* renderWindow, SliceViewData* data, vtkImageData* imageData) {
         // 清除旧的渲染器
         renderWindow->GetRenderers()->RemoveAllItems();
-        data->segMapper = nullptr;
-        data->segSlice = nullptr;
 
         // 创建图像切片
         data->imageMapper = vtkSmartPointer<vtkImageSliceMapper>::New();
@@ -269,22 +261,6 @@ private:
         // 创建渲染器
         data->renderer = vtkSmartPointer<vtkRenderer>::New();
         data->renderer->AddViewProp(data->imageSlice);
-
-        if (m_dataModel->isBrainSegmentationActive()) {
-            vtkImageData* segColor = m_dataModel->getBrainSegmentationColorizedData();
-            if (segColor) {
-                data->segMapper = vtkSmartPointer<vtkImageSliceMapper>::New();
-                data->segMapper->SetInputData(segColor);
-                setMapperOrientation(data->segMapper);
-                data->segMapper->SetSliceNumber(getCurrentSlice());
-
-                data->segSlice = vtkSmartPointer<vtkImageSlice>::New();
-                data->segSlice->SetMapper(data->segMapper);
-                data->segSlice->GetProperty()->SetInterpolationTypeToNearest();
-                data->segSlice->GetProperty()->SetOpacity(0.7);
-                data->renderer->AddViewProp(data->segSlice);
-            }
-        }
         data->renderer->SetBackground(0, 0, 0);
 
         // 添加标题文本标签
@@ -472,64 +448,46 @@ private:
         // 创建体渲染映射器
         vtkSmartPointer<vtkGPUVolumeRayCastMapper> volumeMapper =
             vtkSmartPointer<vtkGPUVolumeRayCastMapper>::New();
-        DicomDataModel* model = GET_SINGLETON(DicomDataModel);
-        const bool segMode = model->isBrainSegmentationActive();
-        vtkImageData* mapperInput = segMode && model->getBrainSegmentationRawData()
-            ? model->getBrainSegmentationRawData()
-            : imageData;
-        if (!mapperInput) {
-            return;
-        }
-        volumeMapper->SetInputData(mapperInput);
+        volumeMapper->SetInputData(imageData);
 
+        // 颜色传输函数
+        vtkSmartPointer<vtkColorTransferFunction> colorFunc =
+            vtkSmartPointer<vtkColorTransferFunction>::New();
+        colorFunc->AddRGBPoint(-3024, 0.0, 0.0, 0.0);
+        colorFunc->AddRGBPoint(-77, 0.54902, 0.25098, 0.14902);
+        colorFunc->AddRGBPoint(94, 0.882353, 0.603922, 0.290196);
+        colorFunc->AddRGBPoint(179, 1.0, 0.937033, 0.954531);
+        colorFunc->AddRGBPoint(260, 0.615686, 0.0, 0.0);
+        colorFunc->AddRGBPoint(3071, 0.827451, 0.658824, 1.0);
+
+        // 不透明度传输函数
+        vtkSmartPointer<vtkPiecewiseFunction> opacityFunc =
+            vtkSmartPointer<vtkPiecewiseFunction>::New();
+        opacityFunc->AddPoint(-3024, 0.0);
+        opacityFunc->AddPoint(-77, 0.0);
+        opacityFunc->AddPoint(94, 0.29);
+        opacityFunc->AddPoint(179, 0.55);
+        opacityFunc->AddPoint(260, 0.84);
+        opacityFunc->AddPoint(3071, 0.875);
+
+        // 梯度不透明度函数
+        vtkSmartPointer<vtkPiecewiseFunction> gradientFunc =
+            vtkSmartPointer<vtkPiecewiseFunction>::New();
+        gradientFunc->AddPoint(0, 0.0);
+        gradientFunc->AddPoint(90, 0.5);
+        gradientFunc->AddPoint(100, 1.0);
+
+        // 体属性
         vtkSmartPointer<vtkVolumeProperty> volumeProperty =
             vtkSmartPointer<vtkVolumeProperty>::New();
-
-        if (segMode) {
-            vtkColorTransferFunction* colorFunc = model->brainSegColorTransfer();
-            vtkPiecewiseFunction* opacityFunc = model->brainSegOpacityTransfer();
-            if (!colorFunc || !opacityFunc) {
-                return;
-            }
-            volumeProperty->SetColor(colorFunc);
-            volumeProperty->SetScalarOpacity(opacityFunc);
-            volumeProperty->SetInterpolationTypeToNearest();
-            volumeProperty->ShadeOff();
-        }
-        else {
-            vtkSmartPointer<vtkColorTransferFunction> colorFunc =
-                vtkSmartPointer<vtkColorTransferFunction>::New();
-            colorFunc->AddRGBPoint(-3024, 0.0, 0.0, 0.0);
-            colorFunc->AddRGBPoint(-77, 0.54902, 0.25098, 0.14902);
-            colorFunc->AddRGBPoint(94, 0.882353, 0.603922, 0.290196);
-            colorFunc->AddRGBPoint(179, 1.0, 0.937033, 0.954531);
-            colorFunc->AddRGBPoint(260, 0.615686, 0.0, 0.0);
-            colorFunc->AddRGBPoint(3071, 0.827451, 0.658824, 1.0);
-
-            vtkSmartPointer<vtkPiecewiseFunction> opacityFunc =
-                vtkSmartPointer<vtkPiecewiseFunction>::New();
-            opacityFunc->AddPoint(-3024, 0.0);
-            opacityFunc->AddPoint(-77, 0.0);
-            opacityFunc->AddPoint(94, 0.29);
-            opacityFunc->AddPoint(179, 0.55);
-            opacityFunc->AddPoint(260, 0.84);
-            opacityFunc->AddPoint(3071, 0.875);
-
-            vtkSmartPointer<vtkPiecewiseFunction> gradientFunc =
-                vtkSmartPointer<vtkPiecewiseFunction>::New();
-            gradientFunc->AddPoint(0, 0.0);
-            gradientFunc->AddPoint(90, 0.5);
-            gradientFunc->AddPoint(100, 1.0);
-
-            volumeProperty->SetColor(colorFunc);
-            volumeProperty->SetScalarOpacity(opacityFunc);
-            volumeProperty->SetGradientOpacity(gradientFunc);
-            volumeProperty->SetInterpolationTypeToLinear();
-            volumeProperty->ShadeOn();
-            volumeProperty->SetAmbient(0.4);
-            volumeProperty->SetDiffuse(0.6);
-            volumeProperty->SetSpecular(0.2);
-        }
+        volumeProperty->SetColor(colorFunc);
+        volumeProperty->SetScalarOpacity(opacityFunc);
+        volumeProperty->SetGradientOpacity(gradientFunc);
+        volumeProperty->SetInterpolationTypeToLinear();
+        volumeProperty->ShadeOn();
+        volumeProperty->SetAmbient(0.4);
+        volumeProperty->SetDiffuse(0.6);
+        volumeProperty->SetSpecular(0.2);
 
         vtkSmartPointer<vtkVolume> volume = vtkSmartPointer<vtkVolume>::New();
         volume->SetMapper(volumeMapper);
