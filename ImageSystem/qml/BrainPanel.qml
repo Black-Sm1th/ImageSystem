@@ -10,12 +10,27 @@ Rectangle {
     color: "transparent"
     property int currentIndex: 1
     
+    // 接收从外部传入的 FourViewPanel 实例
+    property var fourViewPanel: null
+    
+    // 四视图容器（当在脑分割面板时使用）
+    property alias fourViewContainer: brainSegmentationContainer
+    
     FileDialog {
         id: fileDialog
         title: qsTr("选择要上传的文件")
         selectFolder: true
         onAccepted: {
             $MainViewController.importBrainData(fileDialog.fileUrls[0])
+        }
+    }
+
+    FileDialog {
+        id: segFileDialog
+        title: qsTr("选择要上传的文件")
+        selectFolder: true
+        onAccepted: {
+            $MainViewController.importBrainSegData(fileDialog.fileUrls[0])
         }
     }
     
@@ -77,10 +92,6 @@ Rectangle {
         function onBrainAnalysisStarted() {
             analysisProgressDialog.visible = true
             progressText.text = qsTr("开始脑网络分析...")
-        }
-        
-        function onBrainAnalysisProgress(message) {
-            progressText.text = message
         }
         
         function onBrainAnalysisFinished(success) {
@@ -158,11 +169,50 @@ Rectangle {
             width: parent.width
             visible: currentIndex === 1
         }
-        Rectangle {
+        // 脑区分割面板
+        Rectangle{
             height: rootPanel.height - 10 - 60
             width: parent.width
             visible: currentIndex === 2
+            color: "transparent"
+            Item {
+                id: brainSegmentationContainer
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: segmentationAnalysis.left
+                anchors.left: parent.left
+            }
+            Rectangle{
+                id: segmentationAnalysis
+                width: 380
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: parent.right
+                color: "transparent"
+                Row {
+                    spacing: 5
+                    height: 40
+                    Label{
+                        text: qsTr("导入数据：")
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: "#ffffff"
+                        font.pixelSize: 16
+                    }
+                    // 文件选择按钮
+                    CustomButton {
+                        id: openButton
+                        width: 160
+                        height: 40
+                        text: "选择预处理后数据"
+                        backgroundColor: "#004578"
+                        onClicked: {
+                            segFileDialog.open()
+                        }
+                    }
+                }
+            }
         }
+
         Rectangle {
             height: rootPanel.height - 10 - 60
             width: parent.width
@@ -246,7 +296,6 @@ Rectangle {
                         }
                         // 文件选择按钮
                         CustomButton {
-                            id: openButton
                             width: 160
                             height: 40
                             text: "选择预处理后数据"

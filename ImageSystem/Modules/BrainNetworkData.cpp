@@ -18,30 +18,20 @@ bool BrainNetworkData::loadFromFolder(const QString& folderPath)
 {
     QDir dir(folderPath);
     if (!dir.exists()) {
-        emit errorOccurred("文件夹不存在: " + folderPath);
         return false;
     }
 
     QString jsonPath = dir.filePath("brain_network_results.json");
     if (!QFile::exists(jsonPath)) {
-        emit errorOccurred("未找到 brain_network_results.json");
         return false;
     }
-
-    emit loadProgress(5);
-
     if (!loadJson(jsonPath)) {
         return false;
     }
 
-    emit loadProgress(60);
-
     if (!loadImages(folderPath)) {
         return false;
     }
-
-    emit loadProgress(100);
-    emit loadFinished(true);
     return true;
 }
 
@@ -49,14 +39,12 @@ bool BrainNetworkData::loadJson(const QString& jsonPath)
 {
     QFile file(jsonPath);
     if (!file.open(QIODevice::ReadOnly)) {
-        emit errorOccurred("无法打开JSON文件");
         return false;
     }
 
     QJsonParseError err{};
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &err);
     if (err.error != QJsonParseError::NoError) {
-        emit errorOccurred("JSON解析错误: " + err.errorString());
         return false;
     }
 
@@ -71,17 +59,11 @@ bool BrainNetworkData::loadJson(const QString& jsonPath)
         regionArray = root.value("regions").toArray();
         globalMetrics = root.value("global_metrics").toObject();
         if (regionArray.isEmpty()) {
-            emit errorOccurred("JSON格式错误：缺少 regions 数组");
             return false;
         }
     }
     else {
-        emit errorOccurred("JSON格式错误：根必须是数组或对象");
         return false;
-    }
-
-    if (regionArray.size() != 116) {
-        qWarning() << "警告：脑区数量不是116，实际为" << regionArray.size();
     }
 
     m_regions.clear();
@@ -162,14 +144,7 @@ bool BrainNetworkData::loadImages(const QString& folderPath)
         QImage img(covPath);                     // 先用 QImage 读取（任何线程都安全）
         if (!img.isNull()) {
             m_covariancePixmap = QPixmap::fromImage(img);
-            qDebug() << "covariance.png 加载成功";
-        }
-        else {
-            qWarning() << "covariance.png 读取失败（文件损坏或格式不支持）:" << covPath;
-        }
-    }
-    else {
-        qWarning() << "covariance.png 不存在:" << covPath;
+        } 
     }
 
     // ============ alff.png ============
@@ -178,9 +153,6 @@ bool BrainNetworkData::loadImages(const QString& folderPath)
         QImage img(alffPath);
         if (!img.isNull()) {
             m_alffPixmap = QPixmap::fromImage(img);
-        }
-        else {
-            qWarning() << "alff.png 读取失败:" << alffPath;
         }
     }
 
@@ -201,9 +173,6 @@ bool BrainNetworkData::loadImages(const QString& folderPath)
                 QImage img(fullPath);
                 if (!img.isNull()) {
                     r.timeSeriesPixmap = QPixmap::fromImage(img);
-                }
-                else {
-                    qWarning() << "时间序列图读取失败:" << fullPath;
                 }
             }
         }

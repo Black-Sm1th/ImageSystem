@@ -67,11 +67,6 @@ public:
     //局部连接
     double  localPercentage()    const { return m_localPercentage; }
 
-signals:
-    void loadProgress(int percent);                 // 0~100
-    void loadFinished(bool success);
-    void errorOccurred(const QString& msg);
-
 private:
     bool loadJson(const QString& jsonPath);
     bool loadImages(const QString& folderPath);

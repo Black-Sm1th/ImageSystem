@@ -34,11 +34,17 @@
     <None Include="qml\components\CustomButton.qml">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="ImageSystem.pro" />
     <None Include="qml\components\CustomComboBox.qml">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="qml\components\FourViewPanel.qml">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="ImageSystem.pro" />
     <None Include="qml\KidneyPanel.qml">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="qml\BrainPanel.qml">
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>

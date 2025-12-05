@@ -549,6 +549,7 @@ class MainViewController : public QObject
 public:
     Q_INVOKABLE void calculateKidney();
     Q_INVOKABLE void importBrainData(const QString& url);
+    Q_INVOKABLE void importBrainSegData(const QString& url);
     Q_INVOKABLE void selectBrainRegion(int row);
     
     // 获取表格模型
@@ -557,7 +558,6 @@ public:
 signals:
     void errorMsg(const QString& warning);
     void brainAnalysisStarted();
-    void brainAnalysisProgress(const QString& message);
     void brainAnalysisFinished(bool success);
     
 private:

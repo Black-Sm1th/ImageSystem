@@ -162,9 +162,7 @@ void MainViewController::importBrainData(const QString& url)
                 
                 if (imageFiles.count() == 116) {
                     // ========== 符合逻辑一：已有完整的处理结果 ==========
-                    qDebug() << QStringLiteral("检测到完整的脑网络分析结果");
-                    qDebug() << QStringLiteral("输出目录:") << outputDir.absolutePath();
-                    qDebug() << QStringLiteral("region_plots 图片数量:") << imageFiles.count();
+                    qDebug() << QStringLiteral("检测到完整的脑网络分析结果!!!");
                     
                     if (loadOutputData(outputDir.absolutePath())) {
                         return;
@@ -186,10 +184,7 @@ void MainViewController::importBrainData(const QString& url)
     
     if (QFile::exists(boldPath) && QFile::exists(confoundsPath)) {
         // ========== 符合逻辑二：原始数据文件存在，需要处理 ==========
-        qDebug() << QStringLiteral("检测到原始脑功能数据文件");
-        qDebug() << QStringLiteral("BOLD 文件:") << boldPath;
-        qDebug() << QStringLiteral("混淆变量文件:") << confoundsPath;
-        
+        qDebug() << QStringLiteral("检测到原始脑功能数据文件!!!");
         // 创建输出目录
         QString outputDir = baseDir.filePath("outputDir");
         QDir outputDirObj(outputDir);
@@ -207,19 +202,18 @@ void MainViewController::importBrainData(const QString& url)
     }
     
     // ========== 不符合任何逻辑，发出错误信号 ==========
-    QString errorMessage = QStringLiteral("未找到有效的脑功能数据。\n\n"
-                                         "请确保选择的文件夹包含以下内容之一：\n\n"
-                                         "1. 已处理的结果（outputDir 文件夹包含所有必需文件）\n"
-                                         "2. 原始数据文件：\n"
-                                         "   - sub-01/func/sub-01_task-rest_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz\n"
-                                         "   - sub-01/func/sub-01_task-rest_desc-confounds_timeseries.tsv");
+    QString errorMessage = QStringLiteral("未找到有效的脑功能数据!!!");
     
     emit errorMsg(errorMessage);
 }
 
+void MainViewController::importBrainSegData(const QString& url)
+{
+    
+}
+
 bool MainViewController::loadOutputData(const QString& path)
 {
-    qDebug() << path;
     BrainNetworkData networkData;
     if (networkData.loadFromFolder(path)) {
         setcurrentAlffUrl("file:///" + path + "/alff.png");
@@ -277,32 +271,12 @@ void MainViewController::processBrainNetworkAnalysis(const QString& boldPath, co
     
     // 发出开始信号
     emit brainAnalysisStarted();
-    emit brainAnalysisProgress(QStringLiteral("开始脑网络分析..."));
-    
-    // 连接标准输出以实时显示进度
-    connect(process, &QProcess::readyReadStandardOutput, [=]() {
-        QString output = QString::fromUtf8(process->readAllStandardOutput());
-        if (!output.isEmpty()) {
-            qDebug() << QStringLiteral("分析进度:") << output.trimmed();
-            emit brainAnalysisProgress(output.trimmed());
-        }
-    });
-    
-    // 连接标准错误输出
-    connect(process, &QProcess::readyReadStandardError, [=]() {
-        QString error = QString::fromUtf8(process->readAllStandardError());
-        if (!error.isEmpty()) {
-            qDebug() << QStringLiteral("分析信息:") << error.trimmed();
-            emit brainAnalysisProgress(error.trimmed());
-        }
-    });
     
     // 连接完成信号
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
         [=](int exitCode, QProcess::ExitStatus exitStatus) {
             if (exitStatus == QProcess::NormalExit && exitCode == 0) {
                 qDebug() << QStringLiteral("脑网络分析完成！");
-                emit brainAnalysisProgress(QStringLiteral("分析完成，正在加载结果..."));
                 
                 // 分析成功，加载结果
                 if (loadOutputData(outputDir)) {
@@ -352,8 +326,6 @@ void MainViewController::processBrainNetworkAnalysis(const QString& boldPath, co
     
     // 启动进程
     qDebug() << QStringLiteral("启动脑网络分析程序:") << scriptPath;
-    qDebug() << QStringLiteral("参数:") << arguments;
-    qDebug() << QStringLiteral("输出目录:") << outputDir;
     
     process->start(scriptPath, arguments);
 }
