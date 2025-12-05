@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Model/DicomDataModel.h"
+#include "Model/BrainRegionTableModel.h"
 #include "Modules/CommonFunc.h"
 #include <vtkInteractorStyleImage.h>
 #include <vtkRenderWindowInteractor.h>
@@ -548,9 +549,21 @@ class MainViewController : public QObject
 public:
     Q_INVOKABLE void calculateKidney();
     Q_INVOKABLE void importBrainData(const QString& url);
+    Q_INVOKABLE void selectBrainRegion(int row);
+    
+    // 获取表格模型
+    BrainRegionTableModel* getBrainRegionTableModel() const { return m_brainRegionTableModel; }
+    
 signals:
     void errorMsg(const QString& warning);
+    void brainAnalysisStarted();
+    void brainAnalysisProgress(const QString& message);
+    void brainAnalysisFinished(bool success);
+    
 private:
     bool loadOutputData(const QString& path);
+    void processBrainNetworkAnalysis(const QString& boldPath, const QString& confoundsPath, const QString& outputDir);
+    
+    BrainRegionTableModel* m_brainRegionTableModel;
 };
 

@@ -109,6 +109,7 @@
       <QtMocFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(Filename).moc</QtMocFileName>
     </ClCompile>
     <ClCompile Include="Model\DicomDataModel.cpp" />
+    <ClCompile Include="Model\BrainRegionTableModel.cpp" />
     <ClCompile Include="Modules\BrainNetworkData.cpp" />
     <ClCompile Include="ViewController\MainViewController.cpp" />
     <QtRcc Include="qml.qrc" />
@@ -125,6 +126,7 @@
     <ClInclude Include="Modules\CommonFunc.h" />
     <QtMoc Include="ViewController\MainViewController.h" />
     <QtMoc Include="Model\DicomDataModel.h" />
+    <QtMoc Include="Model\BrainRegionTableModel.h" />
     <ClInclude Include="Module\CommonFunc.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

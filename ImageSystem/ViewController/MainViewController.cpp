@@ -30,6 +30,9 @@ MainViewController::MainViewController(QObject* parent)
     setrichClubConnections(0.0);
     setbridgeConnections(0.0);
     setlocalConnections(0.0);
+    
+    // 初始化表格模型
+    m_brainRegionTableModel = new BrainRegionTableModel(this);
 }
 
 void MainViewController::calculateKidney() {
@@ -187,8 +190,18 @@ void MainViewController::importBrainData(const QString& url)
         qDebug() << QStringLiteral("BOLD 文件:") << boldPath;
         qDebug() << QStringLiteral("混淆变量文件:") << confoundsPath;
         
-        // TODO: 在这里添加处理原始数据的逻辑
-        // 例如：调用 Python 脚本进行脑网络分析
+        // 创建输出目录
+        QString outputDir = baseDir.filePath("outputDir");
+        QDir outputDirObj(outputDir);
+        if (!outputDirObj.exists()) {
+            if (!outputDirObj.mkpath(".")) {
+                emit errorMsg(QStringLiteral("无法创建输出目录: ") + outputDir);
+                return;
+            }
+        }
+        
+        // 调用 Python 脚本进行脑网络分析
+        processBrainNetworkAnalysis(boldPath, confoundsPath, outputDir);
         
         return;
     }
@@ -219,8 +232,128 @@ bool MainViewController::loadOutputData(const QString& path)
         setrichClubConnections(networkData.richClubPercentage());
         setbridgeConnections(networkData.bridgePercentage());
         setlocalConnections(networkData.localPercentage());
+        
+        // 加载表格数据
+        m_brainRegionTableModel->loadRegions(networkData.allRegions(), path);
+        
+        // 默认选中第一个脑区
+        if (networkData.regionCount() > 0) {
+            selectBrainRegion(0);
+        }
+        
         return true;
     }else{
         return false;
     }
+}
+
+void MainViewController::selectBrainRegion(int row)
+{
+    if (!m_brainRegionTableModel || row < 0 || row >= m_brainRegionTableModel->rowCount())
+        return;
+    
+    // 获取该行的图片路径
+    QModelIndex index = m_brainRegionTableModel->index(row, 0);
+    QString imagePath = m_brainRegionTableModel->data(index, BrainRegionTableModel::ImagePathRole).toString();
+    
+    qDebug() << QStringLiteral("选中脑区:") << row << imagePath;
+    setcurrentRegionplotsUrl(imagePath);
+}
+
+void MainViewController::processBrainNetworkAnalysis(const QString& boldPath, const QString& confoundsPath, const QString& outputDir)
+{
+    // 构建 Python 脚本路径
+    QString scriptPath = "Scripts/brain_network.exe";
+    
+    // 准备参数
+    QStringList arguments;
+    arguments << "--bold" << boldPath
+              << "--confounds" << confoundsPath
+              << "--tr" << "2.0"
+              << "--output" << outputDir;
+    
+    // 创建进程
+    QProcess* process = new QProcess(this);
+    
+    // 发出开始信号
+    emit brainAnalysisStarted();
+    emit brainAnalysisProgress(QStringLiteral("开始脑网络分析..."));
+    
+    // 连接标准输出以实时显示进度
+    connect(process, &QProcess::readyReadStandardOutput, [=]() {
+        QString output = QString::fromUtf8(process->readAllStandardOutput());
+        if (!output.isEmpty()) {
+            qDebug() << QStringLiteral("分析进度:") << output.trimmed();
+            emit brainAnalysisProgress(output.trimmed());
+        }
+    });
+    
+    // 连接标准错误输出
+    connect(process, &QProcess::readyReadStandardError, [=]() {
+        QString error = QString::fromUtf8(process->readAllStandardError());
+        if (!error.isEmpty()) {
+            qDebug() << QStringLiteral("分析信息:") << error.trimmed();
+            emit brainAnalysisProgress(error.trimmed());
+        }
+    });
+    
+    // 连接完成信号
+    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        [=](int exitCode, QProcess::ExitStatus exitStatus) {
+            if (exitStatus == QProcess::NormalExit && exitCode == 0) {
+                qDebug() << QStringLiteral("脑网络分析完成！");
+                emit brainAnalysisProgress(QStringLiteral("分析完成，正在加载结果..."));
+                
+                // 分析成功，加载结果
+                if (loadOutputData(outputDir)) {
+                    qDebug() << QStringLiteral("结果加载成功");
+                    emit brainAnalysisFinished(true);
+                } else {
+                    qWarning() << QStringLiteral("结果加载失败");
+                    emit errorMsg(QStringLiteral("脑网络分析完成，但加载结果失败"));
+                    emit brainAnalysisFinished(false);
+                }
+            } else {
+                QString errorOutput = QString::fromUtf8(process->readAllStandardError());
+                qWarning() << QStringLiteral("脑网络分析失败！退出代码:") << exitCode;
+                qWarning() << QStringLiteral("错误信息:") << errorOutput;
+                
+                emit errorMsg(QStringLiteral("脑网络分析失败！\n错误代码: %1\n\n%2")
+                    .arg(exitCode)
+                    .arg(errorOutput.isEmpty() ? QStringLiteral("未知错误") : errorOutput));
+                emit brainAnalysisFinished(false);
+            }
+            process->deleteLater();
+        });
+    
+    // 连接错误信号
+    connect(process, &QProcess::errorOccurred, [=](QProcess::ProcessError error) {
+        QString errorMsg;
+        switch (error) {
+            case QProcess::FailedToStart:
+                errorMsg = QStringLiteral("脚本启动失败！请检查脚本路径: ") + scriptPath;
+                break;
+            case QProcess::Crashed:
+                errorMsg = QStringLiteral("脚本运行时崩溃");
+                break;
+            case QProcess::Timedout:
+                errorMsg = QStringLiteral("脚本运行超时");
+                break;
+            default:
+                errorMsg = QStringLiteral("脚本运行错误: ") + process->errorString();
+                break;
+        }
+        
+        qWarning() << QStringLiteral("进程错误:") << errorMsg;
+        emit this->errorMsg(errorMsg);
+        emit brainAnalysisFinished(false);
+        process->deleteLater();
+    });
+    
+    // 启动进程
+    qDebug() << QStringLiteral("启动脑网络分析程序:") << scriptPath;
+    qDebug() << QStringLiteral("参数:") << arguments;
+    qDebug() << QStringLiteral("输出目录:") << outputDir;
+    
+    process->start(scriptPath, arguments);
 }
