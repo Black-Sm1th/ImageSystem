@@ -100,6 +100,10 @@ Rectangle {
                 progressText.text = qsTr("分析完成！")
             }
         }
+
+        function onNetworkTableIndexChanged(index){
+            regionTableView.currentIndex = index
+        }
     }
     Column{
         spacing: 10
@@ -165,65 +169,24 @@ Rectangle {
             }
         }
         Rectangle {
-            height: rootPanel.height - 10 - 60
+            height: rootPanel.height - 60 - 10
             width: parent.width
-            visible: currentIndex === 1
-        }
-        // 脑区分割面板
-        Rectangle{
-            height: rootPanel.height - 10 - 60
-            width: parent.width
-            visible: currentIndex === 2
             color: "transparent"
             Item {
                 id: brainSegmentationContainer
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                anchors.right: segmentationAnalysis.left
                 anchors.left: parent.left
+                width: parent.width - 380
+                visible: currentIndex === 1 || currentIndex === 2 || currentIndex === 4 || currentIndex === 5
             }
-            Rectangle{
-                id: segmentationAnalysis
-                width: 380
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                anchors.right: parent.right
-                color: "transparent"
-                Row {
-                    spacing: 5
-                    height: 40
-                    Label{
-                        text: qsTr("导入数据：")
-                        anchors.verticalCenter: parent.verticalCenter
-                        color: "#ffffff"
-                        font.pixelSize: 16
-                    }
-                    // 文件选择按钮
-                    CustomButton {
-                        id: openButton
-                        width: 160
-                        height: 40
-                        text: "选择预处理后数据"
-                        backgroundColor: "#004578"
-                        onClicked: {
-                            segFileDialog.open()
-                        }
-                    }
-                }
-            }
-        }
-
-        Rectangle {
-            height: rootPanel.height - 10 - 60
-            width: parent.width
-            visible: currentIndex === 3
-            color: "transparent"
             Rectangle{
                 id: networkMain
                 anchors.left: parent.left
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                anchors.right: networkAnalysis.left
+                width: parent.width - 380
+                visible: currentIndex === 3
                 color: "transparent"
                 Rectangle {
                     anchors.top: parent.top
@@ -275,12 +238,55 @@ Rectangle {
                 }
             }
             Rectangle{
+                id: preAnalysis
+                width: 380
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: parent.right
+                color: "transparent"
+                visible: currentIndex === 1
+                Column{
+                    spacing: 10
+                }
+            }
+            Rectangle{
+                id: segmentationAnalysis
+                width: 380
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: parent.right
+                color: "transparent"
+                visible: currentIndex === 2
+                Row {
+                    spacing: 5
+                    height: 40
+                    Label{
+                        text: qsTr("导入数据：")
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: "#ffffff"
+                        font.pixelSize: 16
+                    }
+                    // 文件选择按钮
+                    CustomButton {
+                        id: openButton
+                        width: 160
+                        height: 40
+                        text: "选择预处理后数据"
+                        backgroundColor: "#004578"
+                        onClicked: {
+                            segFileDialog.open()
+                        }
+                    }
+                }
+            }
+            Rectangle{
                 id: networkAnalysis
                 width: 380
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
                 anchors.right: parent.right
                 color: "transparent"
+                visible: currentIndex === 3
                 Column {
                     padding: 10
                     width: parent.width
@@ -352,7 +358,7 @@ Rectangle {
                             }
                         }
                     }
-                    
+
                     // 脑区数据表格
                     Rectangle {
                         width: parent.width - 20
@@ -360,30 +366,30 @@ Rectangle {
                         color: "#1a1a1a"
                         border.color: "#404040"
                         border.width: 1
-                        
+
                         Column {
                             id: tableColumn
                             anchors.fill: parent
                             anchors.margins: 5
                             spacing: 0
-                            
+
                             // 定义列宽常量
                             readonly property int colIndexWidth: 40
                             readonly property int colChineseWidth: 80
                             readonly property int colEnglishWidth: 80
                             readonly property int colDegreeWidth: 40
                             readonly property int colClusteringWidth: 45
-                            
+
                             // 表格标题
                             Rectangle {
                                 id: tableHeader
                                 width: parent.width
                                 height: 35
                                 color: "#2a2a2a"
-                                
+
                                 Row {
                                     anchors.fill: parent
-                                    
+
                                     // 序号列
                                     Rectangle {
                                         width: tableColumn.colIndexWidth
@@ -399,7 +405,7 @@ Rectangle {
                                             font.bold: true
                                         }
                                     }
-                                    
+
                                     // 中文名称
                                     Rectangle {
                                         width: tableColumn.colChineseWidth
@@ -415,7 +421,7 @@ Rectangle {
                                             font.bold: true
                                         }
                                     }
-                                    
+
                                     // Mricro命名
                                     Rectangle {
                                         width: tableColumn.colEnglishWidth
@@ -431,7 +437,7 @@ Rectangle {
                                             font.bold: true
                                         }
                                     }
-                                    
+
                                     // 度
                                     Rectangle {
                                         width: tableColumn.colDegreeWidth
@@ -447,7 +453,7 @@ Rectangle {
                                             font.bold: true
                                         }
                                     }
-                                    
+
                                     // 聚类
                                     Rectangle {
                                         width: tableColumn.colClusteringWidth
@@ -463,7 +469,7 @@ Rectangle {
                                             font.bold: true
                                         }
                                     }
-                                    
+
                                     // 局部效率
                                     Rectangle {
                                         width: tableColumn.width - tableColumn.colIndexWidth - tableColumn.colChineseWidth - tableColumn.colEnglishWidth - tableColumn.colDegreeWidth - tableColumn.colClusteringWidth - 10
@@ -481,7 +487,7 @@ Rectangle {
                                     }
                                 }
                             }
-                            
+
                             // 表格内容
                             ListView {
                                 id: regionTableView
@@ -490,7 +496,7 @@ Rectangle {
                                 clip: true
                                 model: $BrainRegionTableModel
                                 currentIndex: 0
-                                
+
                                 ScrollBar.vertical: ScrollBar {
                                     policy: ScrollBar.AlwaysOn
                                     background: Rectangle {
@@ -502,15 +508,15 @@ Rectangle {
                                         color: "#404040"
                                     }
                                 }
-                                
+
                                 delegate: Rectangle {
                                     width: regionTableView.width - 10
                                     height: 30
                                     color: regionTableView.currentIndex === index ? "#0078d4" : (index % 2 === 0 ? "#1a1a1a" : "#252525")
-                                    
+
                                     Row {
                                         anchors.fill: parent
-                                        
+
                                         // 序号
                                         Rectangle {
                                             width: tableColumn.colIndexWidth
@@ -523,7 +529,7 @@ Rectangle {
                                                 font.pixelSize: 11
                                             }
                                         }
-                                        
+
                                         // 中文名称
                                         Rectangle {
                                             width: tableColumn.colChineseWidth
@@ -539,7 +545,7 @@ Rectangle {
                                                 horizontalAlignment: Text.AlignHCenter
                                             }
                                         }
-                                        
+
                                         // Mricro命名
                                         Rectangle {
                                             width: tableColumn.colEnglishWidth
@@ -555,7 +561,7 @@ Rectangle {
                                                 horizontalAlignment: Text.AlignHCenter
                                             }
                                         }
-                                        
+
                                         // 度
                                         Rectangle {
                                             width: tableColumn.colDegreeWidth
@@ -568,7 +574,7 @@ Rectangle {
                                                 font.pixelSize: 11
                                             }
                                         }
-                                        
+
                                         // 聚类
                                         Rectangle {
                                             width: tableColumn.colClusteringWidth
@@ -581,7 +587,7 @@ Rectangle {
                                                 font.pixelSize: 11
                                             }
                                         }
-                                        
+
                                         // 局部效率
                                         Rectangle {
                                             width: tableColumn.width - tableColumn.colIndexWidth - tableColumn.colChineseWidth - tableColumn.colEnglishWidth - tableColumn.colDegreeWidth - tableColumn.colClusteringWidth - 10
@@ -595,7 +601,7 @@ Rectangle {
                                             }
                                         }
                                     }
-                                    
+
                                     MouseArea {
                                         anchors.fill: parent
                                         onClicked: {
@@ -609,16 +615,6 @@ Rectangle {
                     }
                 }
             }
-        }
-        Rectangle {
-            height: rootPanel.height - 10 - 60
-            width: parent.width
-            visible: currentIndex === 4
-        }
-        Rectangle {
-            height: rootPanel.height - 10 - 60
-            width: parent.width
-            visible: currentIndex === 5
         }
     }
 }

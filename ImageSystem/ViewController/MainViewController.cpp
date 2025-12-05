@@ -249,7 +249,7 @@ void MainViewController::selectBrainRegion(int row)
     // 获取该行的图片路径
     QModelIndex index = m_brainRegionTableModel->index(row, 0);
     QString imagePath = m_brainRegionTableModel->data(index, BrainRegionTableModel::ImagePathRole).toString();
-    
+    emit networkTableIndexChanged(row);
     qDebug() << QStringLiteral("选中脑区:") << row << imagePath;
     setcurrentRegionplotsUrl(imagePath);
 }

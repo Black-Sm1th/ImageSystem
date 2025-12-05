@@ -559,6 +559,7 @@ signals:
     void errorMsg(const QString& warning);
     void brainAnalysisStarted();
     void brainAnalysisFinished(bool success);
+    void networkTableIndexChanged(int index);
     
 private:
     bool loadOutputData(const QString& path);
