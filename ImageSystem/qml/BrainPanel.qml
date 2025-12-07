@@ -257,24 +257,211 @@ Rectangle {
                 anchors.right: parent.right
                 color: "transparent"
                 visible: currentIndex === 2
-                Row {
-                    spacing: 5
-                    height: 40
-                    Label{
-                        text: qsTr("导入数据：")
-                        anchors.verticalCenter: parent.verticalCenter
-                        color: "#ffffff"
-                        font.pixelSize: 16
-                    }
-                    // 文件选择按钮
-                    CustomButton {
-                        id: openButton
-                        width: 160
+                Column{
+                    width: parent.width
+                    spacing: 10
+                    Row {
+                        spacing: 5
                         height: 40
-                        text: "选择预处理后数据"
-                        backgroundColor: "#004578"
-                        onClicked: {
-                            segFileDialog.open()
+                        Label{
+                            text: qsTr("导入数据：")
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: "#ffffff"
+                            font.pixelSize: 16
+                        }
+                        // 文件选择按钮
+                        CustomButton {
+                            id: openButton
+                            width: 160
+                            height: 40
+                            text: "选择预处理后数据"
+                            backgroundColor: "#004578"
+                            onClicked: {
+                                segFileDialog.open()
+                            }
+                        }
+                    }
+                    ///脑区表格
+                    Rectangle {
+                        width: parent.width
+                        height: rootPanel.height - 150
+                        color: "#1a1a1a"
+                        border.color: "#404040"
+                        border.width: 1
+
+                        Column {
+                            id: segTableColumn
+                            anchors.fill: parent
+                            anchors.margins: 5
+                            spacing: 0
+
+                            // 定义列宽常量
+                            readonly property int colChineseWidth: 100
+                            readonly property int colHemisphereWidth: 60
+                            readonly property int colVolumeWidth: 80
+                            readonly property int colPercentWidth: 80
+
+                            // 表格标题
+                            Rectangle {
+                                id: segTableHeader
+                                width: parent.width
+                                height: 35
+                                color: "#2a2a2a"
+
+                                Row {
+                                    anchors.fill: parent
+
+                                    // 中文名称
+                                    Rectangle {
+                                        width: segTableColumn.colChineseWidth
+                                        height: parent.height
+                                        color: "transparent"
+                                        border.color: "#404040"
+                                        border.width: 1
+                                        Label {
+                                            anchors.centerIn: parent
+                                            text: "中文名称"
+                                            color: "#ffffff"
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                        }
+                                    }
+
+                                    // 位置
+                                    Rectangle {
+                                        width: segTableColumn.colHemisphereWidth
+                                        height: parent.height
+                                        color: "transparent"
+                                        border.color: "#404040"
+                                        border.width: 1
+                                        Label {
+                                            anchors.centerIn: parent
+                                            text: "位置"
+                                            color: "#ffffff"
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                        }
+                                    }
+
+                                    // 容积
+                                    Rectangle {
+                                        width: segTableColumn.colVolumeWidth
+                                        height: parent.height
+                                        color: "transparent"
+                                        border.color: "#404040"
+                                        border.width: 1
+                                        Label {
+                                            anchors.centerIn: parent
+                                            text: "容积(mm³)"
+                                            color: "#ffffff"
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                        }
+                                    }
+
+                                    // 全脑占比
+                                    Rectangle {
+                                        width: segTableColumn.width - segTableColumn.colChineseWidth - segTableColumn.colHemisphereWidth - segTableColumn.colVolumeWidth - 10
+                                        height: parent.height
+                                        color: "transparent"
+                                        border.color: "#404040"
+                                        border.width: 1
+                                        Label {
+                                            anchors.centerIn: parent
+                                            text: "全脑占比"
+                                            color: "#ffffff"
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 表格内容
+                            ListView {
+                                id: segmentationTableView
+                                width: parent.width
+                                height: parent.height - 35
+                                clip: true
+                                model: $BrainSegmentationTableModel
+
+                                ScrollBar.vertical: ScrollBar {
+                                    policy: ScrollBar.AlwaysOn
+                                    background: Rectangle {
+                                        color: "#1a1a1a"
+                                    }
+                                    contentItem: Rectangle {
+                                        implicitWidth: 8
+                                        radius: 4
+                                        color: "#404040"
+                                    }
+                                }
+
+                                delegate: Rectangle {
+                                    width: segmentationTableView.width - 10
+                                    height: 30
+                                    color: index % 2 === 0 ? "#1a1a1a" : "#252525"
+
+                                    Row {
+                                        anchors.fill: parent
+
+                                        // 中文名称
+                                        Rectangle {
+                                            width: segTableColumn.colChineseWidth
+                                            height: parent.height
+                                            color: "transparent"
+                                            Label {
+                                                anchors.centerIn: parent
+                                                text: model.chineseName
+                                                color: "#cccccc"
+                                                font.pixelSize: 11
+                                                elide: Text.ElideRight
+                                                width: parent.width - 4
+                                                horizontalAlignment: Text.AlignHCenter
+                                            }
+                                        }
+
+                                        // 位置
+                                        Rectangle {
+                                            width: segTableColumn.colHemisphereWidth
+                                            height: parent.height
+                                            color: "transparent"
+                                            Label {
+                                                anchors.centerIn: parent
+                                                text: model.hemisphere
+                                                color: "#cccccc"
+                                                font.pixelSize: 11
+                                            }
+                                        }
+
+                                        // 容积
+                                        Rectangle {
+                                            width: segTableColumn.colVolumeWidth
+                                            height: parent.height
+                                            color: "transparent"
+                                            Label {
+                                                anchors.centerIn: parent
+                                                text: model.volume
+                                                color: "#cccccc"
+                                                font.pixelSize: 11
+                                            }
+                                        }
+
+                                        // 全脑占比
+                                        Rectangle {
+                                            width: segTableColumn.width - segTableColumn.colChineseWidth - segTableColumn.colHemisphereWidth - segTableColumn.colVolumeWidth - 10
+                                            height: parent.height
+                                            color: "transparent"
+                                            Label {
+                                                anchors.centerIn: parent
+                                                text: model.volumePercent
+                                                color: "#cccccc"
+                                                font.pixelSize: 11
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

@@ -2,6 +2,7 @@
 
 DicomDataModel::DicomDataModel(QObject* parent)
     : QObject(parent) {
+    m_segmentationTableModel = new BrainSegmentationTableModel(this);
 }
 
 bool DicomDataModel::loadDicomDirectory(const QString& path) {
@@ -61,6 +62,21 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     qDebug() << dirPath;
     m_region = new BrainRegionVisualizer(dirPath.toStdString(), "Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
     m_region->Initialize();
+    
+    // 加载表格数据
+    QVector<SegmentationRegion> regions;
+    auto& regionEntries = m_region->Regions();
+    for (const auto& entry : regionEntries) {
+        SegmentationRegion region;
+        region.chineseName = QString::fromStdString(entry.chineseName);
+        region.hemisphere = QString(QChar(entry.hemisphere));
+        region.volume = entry.volume;
+        region.volumePercent = entry.volumePercent;
+        region.label = entry.label;
+        regions.append(region);
+    }
+    m_segmentationTableModel->loadRegions(regions);
+    
     m_windowWidth = 2000;
     m_windowLevel = 0;
     emit segDataLoaded();

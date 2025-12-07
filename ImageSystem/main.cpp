@@ -42,6 +42,8 @@ int main(int argc, char* argv[])
     engine.rootContext()->setContextProperty("$MainViewController", GET_SINGLETON(MainViewController));
     // 将BrainRegionTableModel暴露给QML
     engine.rootContext()->setContextProperty("$BrainRegionTableModel", GET_SINGLETON(MainViewController)->getBrainRegionTableModel());
+    // 将BrainSegmentationTableModel暴露给QML
+    engine.rootContext()->setContextProperty("$BrainSegmentationTableModel", GET_SINGLETON(DicomDataModel)->getSegmentationTableModel());
     int fontId1 = QFontDatabase::addApplicationFont(":/fonts/AlibabaPuHuiTi-3-55-Regular.ttf");
     int fontId2 = QFontDatabase::addApplicationFont(":/fonts/AlibabaPuHuiTi-3-65-Medium.ttf");
     int fontId3 = QFontDatabase::addApplicationFont(":/fonts/AlibabaPuHuiTi-3-85-Bold.ttf");

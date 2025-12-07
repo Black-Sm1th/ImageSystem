@@ -58,6 +58,9 @@
     <ClCompile Include="Model\BrainRegionTableModel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Model\BrainSegmentationTableModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="ViewController\MainViewController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -84,6 +87,9 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="Model\BrainRegionTableModel.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="Model\BrainSegmentationTableModel.h">
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="ViewController\MainViewController.h">

@@ -6,6 +6,7 @@
 #include <vtkImageData.h>
 #include <vtkDICOMImageReader.h>
 #include "Modules/BrainRegionVisualizer.h"
+#include "Model/BrainSegmentationTableModel.h"
 
 class DicomDataModel : public QObject
 {
@@ -44,6 +45,8 @@ public:
         }
     }
     vtkSmartPointer<vtkRenderer> getSeg3DRenderer() {return m_region->Get3DRenderer();}
+    
+    BrainSegmentationTableModel* getSegmentationTableModel() { return m_segmentationTableModel; }
 
     void setAxialSlice(int slice) {
         if (slice != m_axialSlice && slice >= 0 && slice < m_dims[2]) {
@@ -95,6 +98,7 @@ signals:
 private:
     vtkSmartPointer<vtkImageData> m_imageData;
     BrainRegionVisualizer* m_region;
+    BrainSegmentationTableModel* m_segmentationTableModel;
     int m_dims[3] = {1, 1, 1};
     int m_axialSlice = 0;
     int m_sagittalSlice = 0;
