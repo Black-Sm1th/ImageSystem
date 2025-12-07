@@ -175,6 +175,8 @@ public:
         // 连接信号（在GUI线程）
         connect(m_dataModel, &DicomDataModel::dataLoaded,
             this, &SliceVtkItemBase::onDataLoaded);
+        connect(m_dataModel, &DicomDataModel::segDataLoaded,
+            this, &SliceVtkItemBase::onSegDataLoaded);
         connect(m_dataModel, &DicomDataModel::axialSliceChanged,
             this, &SliceVtkItemBase::onSliceChanged);
         connect(m_dataModel, &DicomDataModel::sagittalSliceChanged,
@@ -205,6 +207,71 @@ private slots:
                 setupView(rw, data, imageData);
             }
             });
+        scheduleRender();
+    }
+
+    void onSegDataLoaded() {
+        // 使用 dispatch_async 在渲染线程更新VTK对象
+        dispatch_async([this](vtkRenderWindow* rw, vtkUserData userData) {
+            if (userData) {
+                SliceViewData* data = static_cast<SliceViewData*>(userData.GetPointer());
+                // 清除旧的渲染器
+                rw->GetRenderers()->RemoveAllItems();
+
+                switch (m_orientation) {
+                case SliceOrientation::Axial:
+                    data->imageSlice = m_dataModel->getSegImageData(0);
+                    break;
+                case SliceOrientation::Sagittal:
+                    data->imageSlice = m_dataModel->getSegImageData(2);
+                    break;
+                case SliceOrientation::Coronal:
+                    data->imageSlice = m_dataModel->getSegImageData(1);
+                    break;
+                }
+                data->imageSlice->GetProperty()->SetColorWindow(m_dataModel->windowWidth());
+                data->imageSlice->GetProperty()->SetColorLevel(m_dataModel->windowLevel());
+
+                // 创建渲染器
+                data->renderer = vtkSmartPointer<vtkRenderer>::New();
+                data->renderer->AddViewProp(data->imageSlice);
+                data->renderer->SetBackground(0, 0, 0);
+
+                // 添加标题文本标签
+                vtkSmartPointer<vtkTextMapper> textMapper = vtkSmartPointer<vtkTextMapper>::New();
+                textMapper->SetInput(m_viewName);
+                textMapper->GetTextProperty()->SetFontSize(20);
+                textMapper->GetTextProperty()->SetColor(1.0, 1.0, 0.0);
+
+                vtkSmartPointer<vtkActor2D> textActor = vtkSmartPointer<vtkActor2D>::New();
+                textActor->SetMapper(textMapper);
+                textActor->SetPosition(10, 10);
+                data->renderer->AddActor2D(textActor);
+
+                // 添加窗宽窗位显示文本（右下角）
+                data->wwwlTextMapper = vtkSmartPointer<vtkTextMapper>::New();
+                updateWWWLText(data);
+                data->wwwlTextMapper->GetTextProperty()->SetFontSize(16);
+                data->wwwlTextMapper->GetTextProperty()->SetColor(0.0, 1.0, 0.0);
+                data->wwwlTextMapper->GetTextProperty()->SetJustificationToRight();
+
+                data->wwwlTextActor = vtkSmartPointer<vtkActor2D>::New();
+                data->wwwlTextActor->SetMapper(data->wwwlTextMapper);
+                data->wwwlTextActor->GetPositionCoordinate()->SetCoordinateSystemToNormalizedViewport();
+                data->wwwlTextActor->SetPosition(0.98, 0.02);
+                data->renderer->AddActor2D(data->wwwlTextActor);
+
+                rw->AddRenderer(data->renderer);
+
+                // 设置交互样式
+                vtkSmartPointer<SliceInteractorStyle> style = vtkSmartPointer<SliceInteractorStyle>::New();
+                style->SetOrientation(m_orientation);
+                rw->GetInteractor()->SetInteractorStyle(style);
+
+                // 设置相机方向
+                setupCamera(data->renderer);
+            }
+        });
         scheduleRender();
     }
 
@@ -418,7 +485,8 @@ public:
         // 连接信号
         connect(GET_SINGLETON(DicomDataModel), &DicomDataModel::dataLoaded,
             this, &VolumeVtkItem::onDataLoaded);
-
+        connect(GET_SINGLETON(DicomDataModel), &DicomDataModel::segDataLoaded,
+            this, &VolumeVtkItem::onSegDataLoaded);
         // 在渲染线程初始化VTK对象
         vtkSmartPointer<vtkImageData> imageData = GET_SINGLETON(DicomDataModel)->getImageData();
         if (imageData) {
@@ -437,6 +505,26 @@ private slots:
                 VolumeViewData* data = static_cast<VolumeViewData*>(userData.GetPointer());
                 setupView(rw, data, imageData);
             }
+            });
+        scheduleRender();
+    }
+
+    void onSegDataLoaded() {
+        // 使用 dispatch_async 在渲染线程更新VTK对象
+        dispatch_async([](vtkRenderWindow* rw, vtkUserData userData) {
+            VolumeViewData* data = static_cast<VolumeViewData*>(userData.GetPointer());
+            data->renderer = GET_SINGLETON(DicomDataModel)->getSeg3DRenderer();
+            data->renderer->SetBackground(0, 0, 0);
+            rw->AddRenderer(data->renderer);
+
+            // 设置3D交互样式
+            vtkSmartPointer<vtkInteractorStyleTrackballCamera> style =
+                vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
+            rw->GetInteractor()->SetInteractorStyle(style);
+            data->renderer->GetActiveCamera()->SetViewUp(0, 0, -1);
+            data->renderer->GetActiveCamera()->SetPosition(0, 1, 0);
+            data->renderer->GetActiveCamera()->SetFocalPoint(0, 0, 0);
+            data->renderer->ResetCamera();
             });
         scheduleRender();
     }

@@ -64,12 +64,18 @@
     <ClCompile Include="Modules\BrainNetworkData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Modules\BrainRegionVisualizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Module\CommonFunc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Modules\CommonFunc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\BrainRegionVisualizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

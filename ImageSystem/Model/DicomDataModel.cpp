@@ -2,7 +2,6 @@
 
 DicomDataModel::DicomDataModel(QObject* parent)
     : QObject(parent) {
-   
 }
 
 bool DicomDataModel::loadDicomDirectory(const QString& path) {
@@ -46,5 +45,26 @@ bool DicomDataModel::loadDicomDirectory(const QString& path) {
     setSagittalSlice(m_dims[0] / 2);
     setCoronalSlice(m_dims[1] / 2);
     return true;
+    return true;
     
+}
+
+void DicomDataModel::loadSegBrainDirectory(const QString& path)
+{
+    if (path.isEmpty()) return;
+
+    QString dirPath = path;
+    if (dirPath.startsWith("file:///")) {
+        dirPath = dirPath.mid(8);
+    }
+    dirPath += "/sourcedata/freesurfer/sub-01/mri/aparc+aseg.nii.gz";
+    qDebug() << dirPath;
+    m_region = new BrainRegionVisualizer(dirPath.toStdString(), "Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
+    m_region->Initialize();
+    m_windowWidth = 2000;
+    m_windowLevel = 0;
+    emit segDataLoaded();
+    setAxialSlice(m_dims[2] / 2);
+    setSagittalSlice(m_dims[0] / 2);
+    setCoronalSlice(m_dims[1] / 2);
 }

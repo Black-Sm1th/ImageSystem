@@ -5,6 +5,8 @@
 #include <vtkSmartPointer.h>
 #include <vtkImageData.h>
 #include <vtkDICOMImageReader.h>
+#include "Modules/BrainRegionVisualizer.h"
+
 class DicomDataModel : public QObject
 {
     SINGLETON_CLASS(DicomDataModel)
@@ -32,6 +34,17 @@ public:
     QString dicomInfo() const { return m_dicomInfo; }
     bool hasData() const { return m_imageData != nullptr; }
     vtkSmartPointer<vtkImageData> getImageData() { return m_imageData; }
+    vtkSmartPointer<vtkImageSlice> getSegImageData(int index) {
+        if (index == 0) {
+            return m_region->GetAxialSlice();
+        }if (index == 1) {
+            return m_region->GetCoronalSlice();
+        }if (index == 2) {
+            return m_region->GetSagittalSlice();
+        }
+    }
+    vtkSmartPointer<vtkRenderer> getSeg3DRenderer() {return m_region->Get3DRenderer();}
+
     void setAxialSlice(int slice) {
         if (slice != m_axialSlice && slice >= 0 && slice < m_dims[2]) {
             m_axialSlice = slice;
@@ -68,6 +81,8 @@ public:
     }
     Q_INVOKABLE bool loadDicomDirectory(const QString& path);
 
+    Q_INVOKABLE void loadSegBrainDirectory(const QString& path);
+
 signals:
     void axialSliceChanged(int slice);
     void sagittalSliceChanged(int slice);
@@ -75,9 +90,11 @@ signals:
     void windowWidthChanged(double width);
     void windowLevelChanged(double level);
     void dataLoaded();
+    void segDataLoaded();
 
 private:
     vtkSmartPointer<vtkImageData> m_imageData;
+    BrainRegionVisualizer* m_region;
     int m_dims[3] = {1, 1, 1};
     int m_axialSlice = 0;
     int m_sagittalSlice = 0;

@@ -30,7 +30,7 @@ Rectangle {
         title: qsTr("选择要上传的文件")
         selectFolder: true
         onAccepted: {
-            $MainViewController.importBrainSegData(fileDialog.fileUrls[0])
+            $DicomDataModel.loadSegBrainDirectory(segFileDialog.fileUrls[0])
         }
     }
     

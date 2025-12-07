@@ -1,0 +1,1375 @@
+index	name	color	chinese_name	side
+0	"Unknown"	#000000	未知	
+1	"Left-Cerebral-Exterior"	#4682b4	大脑外部	L
+2	"Left-Cerebral-White-Matter"	#f5f5f5	大脑白质	L
+3	"Left-Cerebral-Cortex"	#cd3e4e	大脑皮层	L
+4	"Left-Lateral-Ventricle"	#781286	侧脑室	L
+5	"Left-Inf-Lat-Vent"	#c43afa	下外侧脑室	L
+6	"Left-Cerebellum-Exterior"	#009400	小脑外部	L
+7	"Left-Cerebellum-White-Matter"	#dcf8a4	小脑白质	L
+8	"Left-Cerebellum-Cortex"	#e69422	小脑皮层	L
+9	"Left-Thalamus-unused"	#00760e	丘脑	L
+10	"Left-Thalamus"	#00760e	丘脑	L
+11	"Left-Caudate"	#7abadc	尾状核	L
+12	"Left-Putamen"	#ec0db0	壳核	L
+13	"Left-Pallidum"	#0c30ff	苍白球	L
+14	"3rd-Ventricle"	#ccb68e	3rd Ventricle	
+15	"4th-Ventricle"	#2acca4	4th Ventricle	
+16	"Brain-Stem"	#779fb0	脑干	
+17	"Left-Hippocampus"	#dcd814	海马	L
+18	"Left-Amygdala"	#67ffff	杏仁核	L
+19	"Left-Insula"	#50c462	岛叶	L
+20	"Left-Operculum"	#3c3ad2	岛盖	L
+21	"Line-1"	#3c3ad2	Line 1	
+22	"Line-2"	#3c3ad2	Line 2	
+23	"Line-3"	#3c3ad2	Line 3	
+24	"CSF"	#3c3c3c	脑脊液	
+25	"Left-Lesion"	#ffa500	Lesion	L
+26	"Left-Accumbens-area"	#ffa500	伏隔核	L
+27	"Left-Substancia-Nigra"	#00ff7f	黑质	L
+28	"Left-VentralDC"	#a52a2a	腹侧丘脑	L
+29	"Left-undetermined"	#87ceeb	undetermined	L
+30	"Left-vessel"	#a020f0	vessel	L
+31	"Left-choroid-plexus"	#00c8c8	choroid plexus	L
+32	"Left-F3orb"	#643264	F3orb	L
+33	"Left-lOg"	#87324a	lOg	L
+34	"Left-aOg"	#7a8732	aOg	L
+35	"Left-mOg"	#333287	mOg	L
+36	"Left-pOg"	#4a9b3c	pOg	L
+37	"Left-Stellate"	#783e2b	Stellate	L
+38	"Left-Porg"	#4a9b3c	Porg	L
+39	"Left-Aorg"	#7a8732	Aorg	L
+40	"Right-Cerebral-Exterior"	#4682b4	大脑外部	R
+41	"Right-Cerebral-White-Matter"	#f5f5f5	大脑白质	R
+42	"Right-Cerebral-Cortex"	#cd3e4e	大脑皮层	R
+43	"Right-Lateral-Ventricle"	#781286	侧脑室	R
+44	"Right-Inf-Lat-Vent"	#c43afa	下外侧脑室	R
+45	"Right-Cerebellum-Exterior"	#009400	小脑外部	R
+46	"Right-Cerebellum-White-Matter"	#dcf8a4	小脑白质	R
+47	"Right-Cerebellum-Cortex"	#e69422	小脑皮层	R
+48	"Right-Thalamus-unused"	#00760e	丘脑	R
+49	"Right-Thalamus"	#00760e	丘脑	R
+50	"Right-Caudate"	#7abadc	尾状核	R
+51	"Right-Putamen"	#ec0db0	壳核	R
+52	"Right-Pallidum"	#0d30ff	苍白球	R
+53	"Right-Hippocampus"	#dcd814	海马	R
+54	"Right-Amygdala"	#67ffff	杏仁核	R
+55	"Right-Insula"	#50c462	岛叶	R
+56	"Right-Operculum"	#3c3ad2	岛盖	R
+57	"Right-Lesion"	#ffa500	Lesion	R
+58	"Right-Accumbens-area"	#ffa500	伏隔核	R
+59	"Right-Substancia-Nigra"	#00ff7f	黑质	R
+60	"Right-VentralDC"	#a52a2a	腹侧丘脑	R
+61	"Right-undetermined"	#87ceeb	undetermined	R
+62	"Right-vessel"	#a020f0	vessel	R
+63	"Right-choroid-plexus"	#00c8dd	choroid plexus	R
+64	"Right-F3orb"	#643264	F3orb	R
+65	"Right-lOg"	#87324a	lOg	R
+66	"Right-aOg"	#7a8732	aOg	R
+67	"Right-mOg"	#333287	mOg	R
+68	"Right-pOg"	#4a9b3c	pOg	R
+69	"Right-Stellate"	#783e2b	Stellate	R
+70	"Right-Porg"	#4a9b3c	Porg	R
+71	"Right-Aorg"	#7a8732	Aorg	R
+72	"5th-Ventricle"	#78be96	5th Ventricle	
+73	"Left-Interior"	#7a8732	Interior	L
+74	"Right-Interior"	#7a8732	Interior	R
+77	"WM-hypointensities"	#c846ff	白质低密度区	
+78	"Left-WM-hypointensities"	#ff940a	白质低密度区	L
+79	"Right-WM-hypointensities"	#ff940a	白质低密度区	R
+80	"non-WM-hypointensities"	#a46ce2	白质低密度区	
+81	"Left-non-WM-hypointensities"	#a46ce2	白质低密度区	L
+82	"Right-non-WM-hypointensities"	#a46ce2	白质低密度区	R
+83	"Left-F1"	#ffdab9	F1	L
+84	"Right-F1"	#ffdab9	F1	R
+85	"Optic-Chiasm"	#eaa91e	视交叉	
+192	"Corpus_Callosum"	#faff32	Corpus_Callosum	
+86	"Left_future_WMSA"	#c878ff	Left_future_WMSA	
+87	"Right_future_WMSA"	#c879ff	Right_future_WMSA	
+88	"future_WMSA"	#c87aff	future_WMSA	
+96	"Left-Amygdala-Anterior"	#cd0a7d	杏仁核	L
+97	"Right-Amygdala-Anterior"	#cd0a7d	杏仁核	R
+98	"Dura"	#a020f0	Dura	
+100	"Left-wm-intensity-abnormality"	#7c8cb2	wm intensity abnormality	L
+101	"Left-caudate-intensity-abnormality"	#7d8cb2	caudate intensity abnormality	L
+102	"Left-putamen-intensity-abnormality"	#7e8cb2	putamen intensity abnormality	L
+103	"Left-accumbens-intensity-abnormality"	#7f8cb2	accumbens intensity abnormality	L
+104	"Left-pallidum-intensity-abnormality"	#7c8db2	pallidum intensity abnormality	L
+105	"Left-amygdala-intensity-abnormality"	#7c8eb2	amygdala intensity abnormality	L
+106	"Left-hippocampus-intensity-abnormality"	#7c8fb2	hippocampus intensity abnormality	L
+107	"Left-thalamus-intensity-abnormality"	#7c90b2	thalamus intensity abnormality	L
+108	"Left-VDC-intensity-abnormality"	#7c8cb3	丘脑	L
+109	"Right-wm-intensity-abnormality"	#7c8cb2	wm intensity abnormality	R
+110	"Right-caudate-intensity-abnormality"	#7d8cb2	caudate intensity abnormality	R
+111	"Right-putamen-intensity-abnormality"	#7e8cb2	putamen intensity abnormality	R
+112	"Right-accumbens-intensity-abnormality"	#7f8cb2	accumbens intensity abnormality	R
+113	"Right-pallidum-intensity-abnormality"	#7c8db2	pallidum intensity abnormality	R
+114	"Right-amygdala-intensity-abnormality"	#7c8eb2	amygdala intensity abnormality	R
+115	"Right-hippocampus-intensity-abnormality"	#7c8fb2	hippocampus intensity abnormality	R
+116	"Right-thalamus-intensity-abnormality"	#7c90b2	thalamus intensity abnormality	R
+117	"Right-VDC-intensity-abnormality"	#7c8cb3	丘脑	R
+118	"Epidermis"	#ff1493	Epidermis	
+119	"Conn-Tissue"	#cdb38b	Conn Tissue	
+120	"SC-Fat-Muscle"	#eeeed1	SC Fat Muscle	
+121	"Cranium"	#c8c8c8	Cranium	
+122	"CSF-SA"	#4aff4a	脑脊液	
+123	"Muscle"	#ee0000	Muscle	
+124	"Ear"	#00008b	Ear	
+125	"Adipose"	#adff2f	Adipose	
+126	"Spinal-Cord"	#85cbe5	Spinal Cord	
+127	"Soft-Tissue"	#1aed39	Soft Tissue	
+128	"Nerve"	#228b22	Nerve	
+129	"Bone"	#1e90ff	Bone	
+130	"AirCavity"	#c4a080	AirCavity	
+131	"Orbital-Fat"	#ee3b3b	Orbital Fat	
+132	"Tongue"	#dd27c8	Tongue	
+133	"Nasal-Structures"	#eeaeee	Nasal Structures	
+134	"Globe"	#ff0000	Globe	
+135	"Teeth"	#483d8b	Teeth	
+136	"Left-Caudate-Putamen"	#152784	尾状核	L
+137	"Right-Caudate-Putamen"	#152784	尾状核	R
+138	"Left-Claustrum"	#418714	Claustrum	L
+139	"Right-Claustrum"	#418714	Claustrum	R
+140	"Cornea"	#8604a0	Cornea	
+142	"Diploe"	#dde244	Diploe	
+143	"Vitreous-Humor"	#fffffe	Vitreous Humor	
+144	"Lens"	#34d1e2	Lens	
+145	"Aqueous-Humor"	#efa0df	Aqueous Humor	
+146	"Outer-Table"	#4682b4	Outer Table	
+147	"Inner-Table"	#4682b5	Inner Table	
+148	"Periosteum"	#8b795e	Periosteum	
+149	"Endosteum"	#e0e0e0	Endosteum	
+150	"R-C-S"	#ff0000	R C S	
+151	"Iris"	#cdcd00	Iris	
+152	"SC-Adipose-Muscle"	#eeeed1	SC Adipose Muscle	
+153	"SC-Tissue"	#8b795e	SC Tissue	
+154	"Orbital-Adipose"	#ee3b3b	Orbital Adipose	
+155	"Left-IntCapsule-Ant"	#ee3b3b	IntCapsule Ant	L
+156	"Right-IntCapsule-Ant"	#ee3b3b	IntCapsule Ant	R
+157	"Left-IntCapsule-Pos"	#3e0acd	IntCapsule Pos	L
+158	"Right-IntCapsule-Pos"	#3e0acd	IntCapsule Pos	R
+159	"Left-Cerebral-WM-unmyelinated"	#00760e	Cerebral WM unmyelinated	L
+160	"Right-Cerebral-WM-unmyelinated"	#00760e	Cerebral WM unmyelinated	R
+161	"Left-Cerebral-WM-myelinated"	#dcd815	Cerebral WM myelinated	L
+162	"Right-Cerebral-WM-myelinated"	#dcd815	Cerebral WM myelinated	R
+163	"Left-Subcortical-Gray-Matter"	#7abadc	Subcortical Gray Matter	L
+164	"Right-Subcortical-Gray-Matter"	#7abadc	Subcortical Gray Matter	R
+165	"Skull"	#787878	Skull	
+166	"Posterior-fossa"	#0e30ff	Posterior fossa	
+167	"Scalp"	#a62a2a	Scalp	
+168	"Hematoma"	#791286	Hematoma	
+169	"Left-Basal-Ganglia"	#ec0d7f	Basal Ganglia	L
+176	"Right-Basal-Ganglia"	#ec0d7e	Basal Ganglia	R
+170	"brainstem"	#779fb0	brainstem	
+171	"DCG"	#7700b0	丘脑	
+172	"Vermis"	#7764b0	Vermis	
+173	"Midbrain"	#f2684c	Midbrain	
+174	"Pons"	#cec33a	Pons	
+175	"Medulla"	#779fb0	Medulla	
+177	"Vermis-White-Matter"	#7732b0	Vermis White Matter	
+178	"SCP"	#8eb600	SCP	
+179	"Floculus"	#1364b0	Floculus	
+180	"Left-Cortical-Dysplasia"	#493d8b	Cortical Dysplasia	L
+181	"Right-Cortical-Dysplasia"	#493e8b	Cortical Dysplasia	R
+182	"CblumNodulus"	#0a64b0	CblumNodulus	
+193	"Left-hippocampal_fissure"	#00c4ff	hippocampal_fissure	L
+194	"Left-CADG-head"	#ffa4a4	CADG head	L
+195	"Left-subiculum"	#c4c400	subiculum	L
+196	"Left-fimbria"	#0064ff	fimbria	L
+197	"Right-hippocampal_fissure"	#80c4a4	hippocampal_fissure	R
+198	"Right-CADG-head"	#007e4b	CADG head	R
+199	"Right-subiculum"	#806040	subiculum	R
+200	"Right-fimbria"	#003280	fimbria	R
+201	"alveus"	#ffcc99	alveus	
+202	"perforant_pathway"	#ff8080	perforant_pathway	
+203	"parasubiculum"	#afaf4b	parasubiculum	
+204	"presubiculum"	#400040	presubiculum	
+205	"subiculum"	#0000ff	subiculum	
+206	"CA1"	#ff0000	CA1	
+207	"CA2"	#8080ff	CA2	
+208	"CA3"	#008000	CA3	
+209	"CA4"	#c4a080	CA4	
+210	"GC-DG"	#20c8ff	GC DG	
+211	"HATA"	#80ff80	HATA	
+212	"fimbria"	#cc99cc	fimbria	
+213	"lateral_ventricle"	#791188	lateral_ventricle	
+214	"molecular_layer_HP"	#800000	molecular_layer_HP	
+215	"hippocampal_fissure"	#8020ff	hippocampal_fissure	
+216	"entorhinal_cortex"	#ffcc66	内嗅区	
+217	"molecular_layer_subiculum"	#808080	molecular_layer_subiculum	
+218	"Amygdala"	#68ffff	杏仁核	
+219	"Cerebral_White_Matter"	#00e200	Cerebral_White_Matter	
+220	"Cerebral_Cortex"	#cd3f4e	Cerebral_Cortex	
+221	"Inf_Lat_Vent"	#c53afa	Inf_Lat_Vent	
+222	"Perirhinal"	#2196fa	Perirhinal	
+223	"Cerebral_White_Matter_Edge"	#e20000	Cerebral_White_Matter_Edge	
+224	"Background"	#646464	Background	
+225	"Ectorhinal"	#c596fa	Ectorhinal	
+226	"HP_tail"	#aaaaff	HP_tail	
+231	"HP_body"	#00ff00	HP_body	
+232	"HP_head"	#ff0000	HP_head	
+233	"presubiculum-head"	#200020	presubiculum head	
+234	"presubiculum-body"	#400040	presubiculum body	
+235	"subiculum-head"	#0000af	subiculum head	
+236	"subiculum-body"	#0000ff	subiculum body	
+237	"CA1-head"	#af4b4b	CA1 head	
+238	"CA1-body"	#ff0000	CA1 body	
+239	"CA3-head"	#005000	CA3 head	
+240	"CA3-body"	#008000	CA3 body	
+241	"CA4-head"	#785a32	CA4 head	
+242	"CA4-body"	#c4a080	CA4 body	
+243	"GC-ML-DG-head"	#4b7daf	GC ML DG head	
+244	"GC-ML-DG-body"	#20c8ff	GC ML DG body	
+245	"molecular_layer_HP-head"	#641919	molecular_layer_HP head	
+246	"molecular_layer_HP-body"	#800000	molecular_layer_HP body	
+250	"Fornix"	#ff0000	穹窿	
+251	"CC_Posterior"	#000040	CC_Posterior	
+252	"CC_Mid_Posterior"	#000070	CC_Mid_Posterior	
+253	"CC_Central"	#0000a0	CC_Central	
+254	"CC_Mid_Anterior"	#0000d0	CC_Mid_Anterior	
+255	"CC_Anterior"	#0000ff	CC_Anterior	
+256	"Voxel-Unchanged"	#000000	Voxel Unchanged	
+257	"CSF-ExtraCerebral"	#3c3c3c	脑脊液	
+258	"Head-ExtraCerebral"	#9696c8	Head ExtraCerebral	
+259	"SkullApprox"	#787878	SkullApprox	
+260	"BoneOrAir"	#779fb0	BoneOrAir	
+261	"PossibleFluid"	#781286	PossibleFluid	
+262	"Sinus"	#c4a080	Sinus	
+263	"Left-Eustachian"	#779fb0	Eustachian	L
+264	"Right-Eustachian"	#779fb0	Eustachian	R
+265	"Left-Eyeball"	#3c3c3c	Eyeball	L
+266	"Right-Eyeball"	#3c3c3c	Eyeball	R
+331	"Aorta"	#ff0000	Aorta	
+332	"Left-Common-IliacA"	#ff5000	Common IliacA	L
+333	"Right-Common-IliacA"	#ffa000	Common IliacA	R
+334	"Left-External-IliacA"	#ffff00	External IliacA	L
+335	"Right-External-IliacA"	#00ff00	External IliacA	R
+336	"Left-Internal-IliacA"	#ff00a0	Internal IliacA	L
+337	"Right-Internal-IliacA"	#ff00ff	Internal IliacA	R
+338	"Left-Lateral-SacralA"	#ff3250	Lateral SacralA	L
+339	"Right-Lateral-SacralA"	#50ff32	Lateral SacralA	R
+340	"Left-ObturatorA"	#a0ff32	ObturatorA	L
+341	"Right-ObturatorA"	#a0c8ff	ObturatorA	R
+342	"Left-Internal-PudendalA"	#00ffa0	Internal PudendalA	L
+343	"Right-Internal-PudendalA"	#0000ff	Internal PudendalA	R
+344	"Left-UmbilicalA"	#5032ff	UmbilicalA	L
+345	"Right-UmbilicalA"	#a000ff	UmbilicalA	R
+346	"Left-Inf-RectalA"	#ffd200	Inf RectalA	L
+347	"Right-Inf-RectalA"	#00a0ff	Inf RectalA	R
+348	"Left-Common-IliacV"	#ffc850	Common IliacV	L
+349	"Right-Common-IliacV"	#ffc8a0	Common IliacV	R
+350	"Left-External-IliacV"	#ff50c8	External IliacV	L
+351	"Right-External-IliacV"	#ffa0c8	External IliacV	R
+352	"Left-Internal-IliacV"	#1eff50	Internal IliacV	L
+353	"Right-Internal-IliacV"	#50c8ff	Internal IliacV	R
+354	"Left-ObturatorV"	#50ffc8	ObturatorV	L
+355	"Right-ObturatorV"	#c3ffc8	ObturatorV	R
+356	"Left-Internal-PudendalV"	#78c814	Internal PudendalV	L
+357	"Right-Internal-PudendalV"	#aa0ac8	Internal PudendalV	R
+358	"Pos-Lymph"	#1482b4	Pos Lymph	
+359	"Neg-Lymph"	#14b482	Neg Lymph	
+400	"V1"	#ce3e4e	V1	
+401	"V2"	#791286	V2	
+402	"BA44"	#c73afa	BA44	
+403	"BA45"	#019400	BA45	
+404	"BA4a"	#ddf8a4	BA4a	
+405	"BA4p"	#e79422	BA4p	
+406	"BA6"	#01760e	BA6	
+407	"BA2"	#78760e	BA2	
+408	"BA1_old"	#7bbadd	BA1_old	
+409	"BAun2"	#ee0db1	BAun2	
+410	"BA1"	#7bbadc	BA1	
+411	"BA2b"	#8a0dce	BA2b	
+412	"BA3a"	#ee82b0	BA3a	
+413	"BA3b"	#dae64c	BA3b	
+414	"MT"	#26d5b0	MT	
+415	"AIPS_AIP_l"	#01e1b0	AIPS_AIP_l	
+416	"AIPS_AIP_r"	#01e1b0	AIPS_AIP_r	
+417	"AIPS_VIP_l"	#c80264	AIPS_VIP_l	
+418	"AIPS_VIP_r"	#c80264	AIPS_VIP_r	
+419	"IPL_PFcm_l"	#05c85a	IPL_PFcm_l	
+420	"IPL_PFcm_r"	#05c85a	IPL_PFcm_r	
+421	"IPL_PF_l"	#6405c8	IPL_PF_l	
+422	"IPL_PFm_l"	#19ff64	IPL_PFm_l	
+423	"IPL_PFm_r"	#19ff64	IPL_PFm_r	
+424	"IPL_PFop_l"	#e60764	IPL_PFop_l	
+425	"IPL_PFop_r"	#e60764	IPL_PFop_r	
+426	"IPL_PF_r"	#6405c8	IPL_PF_r	
+427	"IPL_PFt_l"	#960ac8	IPL_PFt_l	
+428	"IPL_PFt_r"	#960ac8	IPL_PFt_r	
+429	"IPL_PGa_l"	#af0ab0	IPL_PGa_l	
+430	"IPL_PGa_r"	#af0ab0	IPL_PGa_r	
+431	"IPL_PGp_l"	#0a64ff	IPL_PGp_l	
+432	"IPL_PGp_r"	#0a64ff	IPL_PGp_r	
+433	"Visual_V3d_l"	#962d46	Visual_V3d_l	
+434	"Visual_V3d_r"	#962d46	Visual_V3d_r	
+435	"Visual_V4_l"	#2dc80f	Visual_V4_l	
+436	"Visual_V4_r"	#2dc80f	Visual_V4_r	
+437	"Visual_V5_b"	#e32d64	Visual_V5_b	
+438	"Visual_VP_l"	#e32d64	Visual_VP_l	
+439	"Visual_VP_r"	#e32d64	Visual_VP_r	
+498	"wmsa"	#8fbc8f	wmsa	
+499	"other_wmsa"	#fff8dc	other_wmsa	
+500	"right_CA2_3"	#115588	right_CA2_3	
+501	"right_alveus"	#77bb66	right_alveus	
+502	"right_CA1"	#cc4422	right_CA1	
+503	"right_fimbria"	#cc00ff	right_fimbria	
+504	"right_presubiculum"	#ddbb11	right_presubiculum	
+505	"right_hippocampal_fissure"	#99ddee	right_hippocampal_fissure	
+506	"right_CA4_DG"	#331111	right_CA4_DG	
+507	"right_subiculum"	#007755	right_subiculum	
+508	"right_fornix"	#1464c8	right_fornix	
+550	"left_CA2_3"	#115589	left_CA2_3	
+551	"left_alveus"	#77bb67	left_alveus	
+552	"left_CA1"	#cc4423	left_CA1	
+553	"left_fimbria"	#cc00fe	left_fimbria	
+554	"left_presubiculum"	#ddbb10	left_presubiculum	
+555	"left_hippocampal_fissure"	#99ddef	left_hippocampal_fissure	
+556	"left_CA4_DG"	#331112	left_CA4_DG	
+557	"left_subiculum"	#007756	left_subiculum	
+558	"left_fornix"	#1464c9	left_fornix	
+600	"Tumor"	#fefefe	Tumor	
+601	"Cbm_Left_I_IV"	#4682b4	Cbm_Left_I_IV	
+602	"Cbm_Right_I_IV"	#f5f5f5	Cbm_Right_I_IV	
+603	"Cbm_Left_V"	#cd3e4e	Cbm_Left_V	
+604	"Cbm_Right_V"	#781286	Cbm_Right_V	
+605	"Cbm_Left_VI"	#c43afa	Cbm_Left_VI	
+606	"Cbm_Vermis_VI"	#009400	Cbm_Vermis_VI	
+607	"Cbm_Right_VI"	#dcf8a4	Cbm_Right_VI	
+608	"Cbm_Left_CrusI"	#e69422	Cbm_Left_CrusI	
+609	"Cbm_Vermis_CrusI"	#00760e	Cbm_Vermis_CrusI	
+610	"Cbm_Right_CrusI"	#00760e	Cbm_Right_CrusI	
+611	"Cbm_Left_CrusII"	#7abadc	Cbm_Left_CrusII	
+612	"Cbm_Vermis_CrusII"	#ec0db0	Cbm_Vermis_CrusII	
+613	"Cbm_Right_CrusII"	#0c30ff	Cbm_Right_CrusII	
+614	"Cbm_Left_VIIb"	#ccb68e	Cbm_Left_VIIb	
+615	"Cbm_Vermis_VIIb"	#2acca4	Cbm_Vermis_VIIb	
+616	"Cbm_Right_VIIb"	#779fb0	Cbm_Right_VIIb	
+617	"Cbm_Left_VIIIa"	#dcd814	Cbm_Left_VIIIa	
+618	"Cbm_Vermis_VIIIa"	#67ffff	Cbm_Vermis_VIIIa	
+619	"Cbm_Right_VIIIa"	#50c462	Cbm_Right_VIIIa	
+620	"Cbm_Left_VIIIb"	#3c3ad2	Cbm_Left_VIIIb	
+621	"Cbm_Vermis_VIIIb"	#3c3ad2	Cbm_Vermis_VIIIb	
+622	"Cbm_Right_VIIIb"	#3c3ad2	Cbm_Right_VIIIb	
+623	"Cbm_Left_IX"	#3c3ad2	Cbm_Left_IX	
+624	"Cbm_Vermis_IX"	#3c3c3c	Cbm_Vermis_IX	
+625	"Cbm_Right_IX"	#ffa500	Cbm_Right_IX	
+626	"Cbm_Left_X"	#ffa500	Cbm_Left_X	
+627	"Cbm_Vermis_X"	#00ff7f	Cbm_Vermis_X	
+628	"Cbm_Right_X"	#a52a2a	Cbm_Right_X	
+640	"Cbm_Right_I_V_med"	#cc0000	Cbm_Right_I_V_med	
+641	"Cbm_Right_I_V_mid"	#ff0000	Cbm_Right_I_V_mid	
+642	"Cbm_Right_VI_med"	#0000ff	Cbm_Right_VI_med	
+643	"Cbm_Right_VI_mid"	#1e90ff	Cbm_Right_VI_mid	
+644	"Cbm_Right_VI_lat"	#64d4ed	Cbm_Right_VI_lat	
+645	"Cbm_Right_CrusI_med"	#daa520	Cbm_Right_CrusI_med	
+646	"Cbm_Right_CrusI_mid"	#ffd700	Cbm_Right_CrusI_mid	
+647	"Cbm_Right_CrusI_lat"	#ffffa6	Cbm_Right_CrusI_lat	
+648	"Cbm_Right_CrusII_med"	#9900cc	Cbm_Right_CrusII_med	
+649	"Cbm_Right_CrusII_mid"	#998dd1	Cbm_Right_CrusII_mid	
+650	"Cbm_Right_CrusII_lat"	#ccccff	Cbm_Right_CrusII_lat	
+651	"Cbm_Right_7med"	#1fd4c2	Cbm_Right_7med	
+652	"Cbm_Right_7mid"	#03ffed	Cbm_Right_7mid	
+653	"Cbm_Right_7lat"	#ccffff	Cbm_Right_7lat	
+654	"Cbm_Right_8med"	#564a93	Cbm_Right_8med	
+655	"Cbm_Right_8mid"	#7272be	Cbm_Right_8mid	
+656	"Cbm_Right_8lat"	#b8b2ff	Cbm_Right_8lat	
+657	"Cbm_Right_PUNs"	#7e8a25	Cbm_Right_PUNs	
+658	"Cbm_Right_TONs"	#bdc575	Cbm_Right_TONs	
+659	"Cbm_Right_FLOs"	#f0e68c	Cbm_Right_FLOs	
+660	"Cbm_Left_I_V_med"	#cc0000	Cbm_Left_I_V_med	
+661	"Cbm_Left_I_V_mid"	#ff0000	Cbm_Left_I_V_mid	
+662	"Cbm_Left_VI_med"	#0000ff	Cbm_Left_VI_med	
+663	"Cbm_Left_VI_mid"	#1e90ff	Cbm_Left_VI_mid	
+664	"Cbm_Left_VI_lat"	#64d4ed	Cbm_Left_VI_lat	
+665	"Cbm_Left_CrusI_med"	#daa520	Cbm_Left_CrusI_med	
+666	"Cbm_Left_CrusI_mid"	#ffd700	Cbm_Left_CrusI_mid	
+667	"Cbm_Left_CrusI_lat"	#ffffa6	Cbm_Left_CrusI_lat	
+668	"Cbm_Left_CrusII_med"	#9900cc	Cbm_Left_CrusII_med	
+669	"Cbm_Left_CrusII_mid"	#998dd1	Cbm_Left_CrusII_mid	
+670	"Cbm_Left_CrusII_lat"	#ccccff	Cbm_Left_CrusII_lat	
+671	"Cbm_Left_7med"	#1fd4c2	Cbm_Left_7med	
+672	"Cbm_Left_7mid"	#03ffed	Cbm_Left_7mid	
+673	"Cbm_Left_7lat"	#ccffff	Cbm_Left_7lat	
+674	"Cbm_Left_8med"	#564a93	Cbm_Left_8med	
+675	"Cbm_Left_8mid"	#7272be	Cbm_Left_8mid	
+676	"Cbm_Left_8lat"	#b8b2ff	Cbm_Left_8lat	
+677	"Cbm_Left_PUNs"	#7e8a25	Cbm_Left_PUNs	
+678	"Cbm_Left_TONs"	#bdc575	Cbm_Left_TONs	
+679	"Cbm_Left_FLOs"	#f0e68c	Cbm_Left_FLOs	
+690	"CbmWM_Gyri_Left"	#7a8732	CbmWM_Gyri_Left	
+691	"CbmWM_Gyri_Right"	#7a8732	CbmWM_Gyri_Right	
+701	"CSF-FSL-FAST"	#781286	脑脊液	
+702	"GrayMatter-FSL-FAST"	#cd3e4e	GrayMatter FSL FAST	
+703	"WhiteMatter-FSL-FAST"	#00e100	WhiteMatter FSL FAST	
+999	"SUSPICIOUS"	#ff6464	SUSPICIOUS	
+1000	"ctx-lh-unknown"	#190519	ctx unknown	L
+1001	"ctx-lh-bankssts"	#196428	bank of superior temporal sulcus	L
+1002	"ctx-lh-caudalanteriorcingulate"	#7d64a0	尾部前扣带	L
+1003	"ctx-lh-caudalmiddlefrontal"	#641900	尾部中额回	L
+1004	"ctx-lh-corpuscallosum"	#784632	ctx corpuscallosum	L
+1005	"ctx-lh-cuneus"	#dc1464	楔叶	L
+1006	"ctx-lh-entorhinal"	#dc140a	内嗅区	L
+1007	"ctx-lh-fusiform"	#b4dc8c	梭状回	L
+1008	"ctx-lh-inferiorparietal"	#dc3cdc	下顶叶	L
+1009	"ctx-lh-inferiortemporal"	#b42878	下颞叶	L
+1010	"ctx-lh-isthmuscingulate"	#8c148c	扣带峡部	L
+1011	"ctx-lh-lateraloccipital"	#141e8c	外侧枕叶	L
+1012	"ctx-lh-lateralorbitofrontal"	#234b32	外侧眶额叶	L
+1013	"ctx-lh-lingual"	#e18c8c	舌回	L
+1014	"ctx-lh-medialorbitofrontal"	#c8234b	内侧眶额叶	L
+1015	"ctx-lh-middletemporal"	#a06432	中颞叶	L
+1016	"ctx-lh-parahippocampal"	#14dc3c	海马旁回	L
+1017	"ctx-lh-paracentral"	#3cdc3c	旁中央小叶	L
+1018	"ctx-lh-parsopercularis"	#dcb48c	缘上回	L
+1019	"ctx-lh-parsorbitalis"	#146432	眶部	L
+1020	"ctx-lh-parstriangularis"	#dc3c14	三角部	L
+1021	"ctx-lh-pericalcarine"	#78643c	距状沟周围	L
+1022	"ctx-lh-postcentral"	#dc1414	中央后回	L
+1023	"ctx-lh-posteriorcingulate"	#dcb4dc	后扣带	L
+1024	"ctx-lh-precentral"	#3c14dc	中央前回	L
+1025	"ctx-lh-precuneus"	#a08cb4	楔叶	L
+1026	"ctx-lh-rostralanteriorcingulate"	#50148c	嘴部前扣带	L
+1027	"ctx-lh-rostralmiddlefrontal"	#4b327d	嘴部中额回	L
+1028	"ctx-lh-superiorfrontal"	#14dca0	上额回	L
+1029	"ctx-lh-superiorparietal"	#14b48c	上顶叶	L
+1030	"ctx-lh-superiortemporal"	#8cdcdc	上颞叶	L
+1031	"ctx-lh-supramarginal"	#50a014	缘上回	L
+1032	"ctx-lh-frontalpole"	#640064	额极	L
+1033	"ctx-lh-temporalpole"	#464646	颞极	L
+1034	"ctx-lh-transversetemporal"	#9696c8	横颞回	L
+1035	"ctx-lh-insula"	#ffc020	岛叶	L
+2000	"ctx-rh-unknown"	#190519	ctx unknown	R
+2001	"ctx-rh-bankssts"	#196428	bank of superior temporal sulcus	R
+2002	"ctx-rh-caudalanteriorcingulate"	#7d64a0	尾部前扣带	R
+2003	"ctx-rh-caudalmiddlefrontal"	#641900	尾部中额回	R
+2004	"ctx-rh-corpuscallosum"	#784632	ctx corpuscallosum	R
+2005	"ctx-rh-cuneus"	#dc1464	楔叶	R
+2006	"ctx-rh-entorhinal"	#dc140a	内嗅区	R
+2007	"ctx-rh-fusiform"	#b4dc8c	梭状回	R
+2008	"ctx-rh-inferiorparietal"	#dc3cdc	下顶叶	R
+2009	"ctx-rh-inferiortemporal"	#b42878	下颞叶	R
+2010	"ctx-rh-isthmuscingulate"	#8c148c	扣带峡部	R
+2011	"ctx-rh-lateraloccipital"	#141e8c	外侧枕叶	R
+2012	"ctx-rh-lateralorbitofrontal"	#234b32	外侧眶额叶	R
+2013	"ctx-rh-lingual"	#e18c8c	舌回	R
+2014	"ctx-rh-medialorbitofrontal"	#c8234b	内侧眶额叶	R
+2015	"ctx-rh-middletemporal"	#a06432	中颞叶	R
+2016	"ctx-rh-parahippocampal"	#14dc3c	海马旁回	R
+2017	"ctx-rh-paracentral"	#3cdc3c	旁中央小叶	R
+2018	"ctx-rh-parsopercularis"	#dcb48c	缘上回	R
+2019	"ctx-rh-parsorbitalis"	#146432	眶部	R
+2020	"ctx-rh-parstriangularis"	#dc3c14	三角部	R
+2021	"ctx-rh-pericalcarine"	#78643c	距状沟周围	R
+2022	"ctx-rh-postcentral"	#dc1414	中央后回	R
+2023	"ctx-rh-posteriorcingulate"	#dcb4dc	后扣带	R
+2024	"ctx-rh-precentral"	#3c14dc	中央前回	R
+2025	"ctx-rh-precuneus"	#a08cb4	楔叶	R
+2026	"ctx-rh-rostralanteriorcingulate"	#50148c	嘴部前扣带	R
+2027	"ctx-rh-rostralmiddlefrontal"	#4b327d	嘴部中额回	R
+2028	"ctx-rh-superiorfrontal"	#14dca0	上额回	R
+2029	"ctx-rh-superiorparietal"	#14b48c	上顶叶	R
+2030	"ctx-rh-superiortemporal"	#8cdcdc	上颞叶	R
+2031	"ctx-rh-supramarginal"	#50a014	缘上回	R
+2032	"ctx-rh-frontalpole"	#640064	额极	R
+2033	"ctx-rh-temporalpole"	#464646	颞极	R
+2034	"ctx-rh-transversetemporal"	#9696c8	横颞回	R
+2035	"ctx-rh-insula"	#ffc020	岛叶	R
+3000	"wm-lh-unknown"	#e6fae6	wm unknown	L
+3001	"wm-lh-bankssts"	#e69bd7	bank of superior temporal sulcus	L
+3002	"wm-lh-caudalanteriorcingulate"	#829b5f	尾部前扣带	L
+3003	"wm-lh-caudalmiddlefrontal"	#9be6ff	尾部中额回	L
+3004	"wm-lh-corpuscallosum"	#87b9cd	wm corpuscallosum	L
+3005	"wm-lh-cuneus"	#23eb9b	楔叶	L
+3006	"wm-lh-entorhinal"	#23ebf5	内嗅区	L
+3007	"wm-lh-fusiform"	#4b2373	梭状回	L
+3008	"wm-lh-inferiorparietal"	#23c323	下顶叶	L
+3009	"wm-lh-inferiortemporal"	#4bd787	下颞叶	L
+3010	"wm-lh-isthmuscingulate"	#73eb73	扣带峡部	L
+3011	"wm-lh-lateraloccipital"	#ebe173	外侧枕叶	L
+3012	"wm-lh-lateralorbitofrontal"	#dcb4cd	外侧眶额叶	L
+3013	"wm-lh-lingual"	#1e7373	舌回	L
+3014	"wm-lh-medialorbitofrontal"	#37dcb4	内侧眶额叶	L
+3015	"wm-lh-middletemporal"	#5f9bcd	中颞叶	L
+3016	"wm-lh-parahippocampal"	#eb23c3	海马旁回	L
+3017	"wm-lh-paracentral"	#c323c3	旁中央小叶	L
+3018	"wm-lh-parsopercularis"	#234b73	缘上回	L
+3019	"wm-lh-parsorbitalis"	#eb9bcd	眶部	L
+3020	"wm-lh-parstriangularis"	#23c3eb	三角部	L
+3021	"wm-lh-pericalcarine"	#879bc3	距状沟周围	L
+3022	"wm-lh-postcentral"	#23ebeb	中央后回	L
+3023	"wm-lh-posteriorcingulate"	#234b23	后扣带	L
+3024	"wm-lh-precentral"	#c3eb23	中央前回	L
+3025	"wm-lh-precuneus"	#5f734b	楔叶	L
+3026	"wm-lh-rostralanteriorcingulate"	#afeb73	嘴部前扣带	L
+3027	"wm-lh-rostralmiddlefrontal"	#b4cd82	嘴部中额回	L
+3028	"wm-lh-superiorfrontal"	#eb235f	上额回	L
+3029	"wm-lh-superiorparietal"	#eb4b73	上顶叶	L
+3030	"wm-lh-superiortemporal"	#732323	上颞叶	L
+3031	"wm-lh-supramarginal"	#af5feb	缘上回	L
+3032	"wm-lh-frontalpole"	#9bff9b	额极	L
+3033	"wm-lh-temporalpole"	#b9b9b9	颞极	L
+3034	"wm-lh-transversetemporal"	#696937	横颞回	L
+3035	"wm-lh-insula"	#14dca0	岛叶	L
+4000	"wm-rh-unknown"	#e6fae6	wm unknown	R
+4001	"wm-rh-bankssts"	#e69bd7	bank of superior temporal sulcus	R
+4002	"wm-rh-caudalanteriorcingulate"	#829b5f	尾部前扣带	R
+4003	"wm-rh-caudalmiddlefrontal"	#9be6ff	尾部中额回	R
+4004	"wm-rh-corpuscallosum"	#87b9cd	wm corpuscallosum	R
+4005	"wm-rh-cuneus"	#23eb9b	楔叶	R
+4006	"wm-rh-entorhinal"	#23ebf5	内嗅区	R
+4007	"wm-rh-fusiform"	#4b2373	梭状回	R
+4008	"wm-rh-inferiorparietal"	#23c323	下顶叶	R
+4009	"wm-rh-inferiortemporal"	#4bd787	下颞叶	R
+4010	"wm-rh-isthmuscingulate"	#73eb73	扣带峡部	R
+4011	"wm-rh-lateraloccipital"	#ebe173	外侧枕叶	R
+4012	"wm-rh-lateralorbitofrontal"	#dcb4cd	外侧眶额叶	R
+4013	"wm-rh-lingual"	#1e7373	舌回	R
+4014	"wm-rh-medialorbitofrontal"	#37dcb4	内侧眶额叶	R
+4015	"wm-rh-middletemporal"	#5f9bcd	中颞叶	R
+4016	"wm-rh-parahippocampal"	#eb23c3	海马旁回	R
+4017	"wm-rh-paracentral"	#c323c3	旁中央小叶	R
+4018	"wm-rh-parsopercularis"	#234b73	缘上回	R
+4019	"wm-rh-parsorbitalis"	#eb9bcd	眶部	R
+4020	"wm-rh-parstriangularis"	#23c3eb	三角部	R
+4021	"wm-rh-pericalcarine"	#879bc3	距状沟周围	R
+4022	"wm-rh-postcentral"	#23ebeb	中央后回	R
+4023	"wm-rh-posteriorcingulate"	#234b23	后扣带	R
+4024	"wm-rh-precentral"	#c3eb23	中央前回	R
+4025	"wm-rh-precuneus"	#5f734b	楔叶	R
+4026	"wm-rh-rostralanteriorcingulate"	#afeb73	嘴部前扣带	R
+4027	"wm-rh-rostralmiddlefrontal"	#b4cd82	嘴部中额回	R
+4028	"wm-rh-superiorfrontal"	#eb235f	上额回	R
+4029	"wm-rh-superiorparietal"	#eb4b73	上顶叶	R
+4030	"wm-rh-superiortemporal"	#732323	上颞叶	R
+4031	"wm-rh-supramarginal"	#af5feb	缘上回	R
+4032	"wm-rh-frontalpole"	#9bff9b	额极	R
+4033	"wm-rh-temporalpole"	#b9b9b9	颞极	R
+4034	"wm-rh-transversetemporal"	#696937	横颞回	R
+4035	"wm-rh-insula"	#14dca0	岛叶	R
+1301	"ctx-lh-frontal-lobe"	#196428	ctx frontal lobe	L
+1303	"ctx-lh-cingulate-lobe"	#641900	ctx cingulate lobe	L
+1304	"ctx-lh-occiptal-lobe"	#784632	ctx occiptal lobe	L
+1305	"ctx-lh-temporal-lobe"	#dc1464	ctx temporal lobe	L
+1306	"ctx-lh-parietal-lobe"	#dc140a	ctx parietal lobe	L
+1307	"ctx-lh-insula-lobe"	#ffc020	岛叶	L
+2301	"ctx-rh-frontal-lobe"	#196428	ctx frontal lobe	R
+2303	"ctx-rh-cingulate-lobe"	#641900	ctx cingulate lobe	R
+2304	"ctx-rh-occiptal-lobe"	#784632	ctx occiptal lobe	R
+2305	"ctx-rh-temporal-lobe"	#dc1464	ctx temporal lobe	R
+2306	"ctx-rh-parietal-lobe"	#dc140a	ctx parietal lobe	R
+2307	"ctx-rh-insula-lobe"	#ffc020	岛叶	R
+3201	"wm-lh-frontal-lobe"	#eb235f	wm frontal lobe	L
+3203	"wm-lh-cingulate-lobe"	#234b23	wm cingulate lobe	L
+3204	"wm-lh-occiptal-lobe"	#879bc3	wm occiptal lobe	L
+3205	"wm-lh-temporal-lobe"	#732323	wm temporal lobe	L
+3206	"wm-lh-parietal-lobe"	#23c323	wm parietal lobe	L
+3207	"wm-lh-insula-lobe"	#14dca0	岛叶	L
+4201	"wm-rh-frontal-lobe"	#eb235f	wm frontal lobe	R
+4203	"wm-rh-cingulate-lobe"	#234b23	wm cingulate lobe	R
+4204	"wm-rh-occiptal-lobe"	#879bc3	wm occiptal lobe	R
+4205	"wm-rh-temporal-lobe"	#732323	wm temporal lobe	R
+4206	"wm-rh-parietal-lobe"	#23c323	wm parietal lobe	R
+4207	"wm-rh-insula-lobe"	#14dca0	岛叶	R
+1100	"ctx-lh-Unknown"	#000000	未知	L
+1101	"ctx-lh-Corpus_callosum"	#323232	ctx Corpus_callosum	L
+1102	"ctx-lh-G_and_S_Insula_ONLY_AVERAGE"	#b4141e	岛叶	L
+1103	"ctx-lh-G_cingulate-Isthmus"	#3c1919	ctx G_cingulate Isthmus	L
+1104	"ctx-lh-G_cingulate-Main_part"	#193c3c	ctx G_cingulate Main_part	L
+1200	"ctx-lh-G_cingulate-caudal_ACC"	#193c3d	ctx G_cingulate caudal_ACC	L
+1201	"ctx-lh-G_cingulate-rostral_ACC"	#195a3c	ctx G_cingulate rostral_ACC	L
+1202	"ctx-lh-G_cingulate-posterior"	#19783c	ctx G_cingulate posterior	L
+1205	"ctx-lh-S_cingulate-caudal_ACC"	#19963c	ctx S_cingulate caudal_ACC	L
+1206	"ctx-lh-S_cingulate-rostral_ACC"	#19b43c	ctx S_cingulate rostral_ACC	L
+1207	"ctx-lh-S_cingulate-posterior"	#19d23c	ctx S_cingulate posterior	L
+1210	"ctx-lh-S_pericallosal-caudal"	#19965a	ctx S_pericallosal caudal	L
+1211	"ctx-lh-S_pericallosal-rostral"	#19b45a	ctx S_pericallosal rostral	L
+1212	"ctx-lh-S_pericallosal-posterior"	#19d25a	ctx S_pericallosal posterior	L
+1105	"ctx-lh-G_cuneus"	#b41414	楔叶	L
+1106	"ctx-lh-G_frontal_inf-Opercular_part"	#dc1464	ctx G_frontal_inf Opercular_part	L
+1107	"ctx-lh-G_frontal_inf-Orbital_part"	#8c3c3c	ctx G_frontal_inf Orbital_part	L
+1108	"ctx-lh-G_frontal_inf-Triangular_part"	#b4dc8c	ctx G_frontal_inf Triangular_part	L
+1109	"ctx-lh-G_frontal_middle"	#8c64b4	ctx G_frontal_middle	L
+1110	"ctx-lh-G_frontal_superior"	#b4148c	ctx G_frontal_superior	L
+1111	"ctx-lh-G_frontomarginal"	#8c148c	ctx G_frontomarginal	L
+1112	"ctx-lh-G_insular_long"	#150a0a	岛叶	L
+1113	"ctx-lh-G_insular_short"	#e18c8c	岛叶	L
+1114	"ctx-lh-G_and_S_occipital_inferior"	#173cb4	ctx G_and_S_occipital_inferior	L
+1115	"ctx-lh-G_occipital_middle"	#b43cb4	ctx G_occipital_middle	L
+1116	"ctx-lh-G_occipital_superior"	#14dc3c	ctx G_occipital_superior	L
+1117	"ctx-lh-G_occipit-temp_lat-Or_fusiform"	#3c148c	梭状回	L
+1118	"ctx-lh-G_occipit-temp_med-Lingual_part"	#dcb48c	ctx G_occipit temp_med Lingual_part	L
+1119	"ctx-lh-G_occipit-temp_med-Parahippocampal_part"	#416414	ctx G_occipit temp_med Parahippocampal_part	L
+1120	"ctx-lh-G_orbital"	#dc3c14	ctx G_orbital	L
+1121	"ctx-lh-G_paracentral"	#3c643c	旁中央小叶	L
+1122	"ctx-lh-G_parietal_inferior-Angular_part"	#143cdc	ctx G_parietal_inferior Angular_part	L
+1123	"ctx-lh-G_parietal_inferior-Supramarginal_part"	#64643c	ctx G_parietal_inferior Supramarginal_part	L
+1124	"ctx-lh-G_parietal_superior"	#dcb4dc	ctx G_parietal_superior	L
+1125	"ctx-lh-G_postcentral"	#14b48c	中央后回	L
+1126	"ctx-lh-G_precentral"	#3c8cb4	中央前回	L
+1127	"ctx-lh-G_precuneus"	#19148c	楔叶	L
+1128	"ctx-lh-G_rectus"	#143c64	ctx G_rectus	L
+1129	"ctx-lh-G_subcallosal"	#3cdc14	ctx G_subcallosal	L
+1130	"ctx-lh-G_subcentral"	#3c14dc	ctx G_subcentral	L
+1131	"ctx-lh-G_temporal_inferior"	#dcdc64	ctx G_temporal_inferior	L
+1132	"ctx-lh-G_temporal_middle"	#b43c3c	ctx G_temporal_middle	L
+1133	"ctx-lh-G_temp_sup-G_temp_transv_and_interm_S"	#3c3cdc	ctx G_temp_sup G_temp_transv_and_interm_S	L
+1134	"ctx-lh-G_temp_sup-Lateral_aspect"	#dc3cdc	ctx G_temp_sup Lateral_aspect	L
+1135	"ctx-lh-G_temp_sup-Planum_polare"	#41dc3c	ctx G_temp_sup Planum_polare	L
+1136	"ctx-lh-G_temp_sup-Planum_tempolare"	#198c14	ctx G_temp_sup Planum_tempolare	L
+1137	"ctx-lh-G_and_S_transverse_frontopolar"	#0d00fa	ctx G_and_S_transverse_frontopolar	L
+1138	"ctx-lh-Lat_Fissure-ant_sgt-ramus_horizontal"	#3d14dc	ctx Lat_Fissure ant_sgt ramus_horizontal	L
+1139	"ctx-lh-Lat_Fissure-ant_sgt-ramus_vertical"	#3d143c	ctx Lat_Fissure ant_sgt ramus_vertical	L
+1140	"ctx-lh-Lat_Fissure-post_sgt"	#3d3c64	ctx Lat_Fissure post_sgt	L
+1141	"ctx-lh-Medial_wall"	#191919	ctx Medial_wall	L
+1142	"ctx-lh-Pole_occipital"	#8c143c	ctx Pole_occipital	L
+1143	"ctx-lh-Pole_temporal"	#dcb414	ctx Pole_temporal	L
+1144	"ctx-lh-S_calcarine"	#3fb4b4	ctx S_calcarine	L
+1145	"ctx-lh-S_central"	#dd140a	ctx S_central	L
+1146	"ctx-lh-S_central_insula"	#15dc14	岛叶	L
+1147	"ctx-lh-S_cingulate-Main_part_and_Intracingulate"	#b76414	ctx S_cingulate Main_part_and_Intracingulate	L
+1148	"ctx-lh-S_cingulate-Marginalis_part"	#dd1464	ctx S_cingulate Marginalis_part	L
+1149	"ctx-lh-S_circular_insula_anterior"	#dd3c8c	岛叶	L
+1150	"ctx-lh-S_circular_insula_inferior"	#dd14dc	岛叶	L
+1151	"ctx-lh-S_circular_insula_superior"	#3ddcdc	岛叶	L
+1152	"ctx-lh-S_collateral_transverse_ant"	#64c8c8	ctx S_collateral_transverse_ant	L
+1153	"ctx-lh-S_collateral_transverse_post"	#0ac8c8	ctx S_collateral_transverse_post	L
+1154	"ctx-lh-S_frontal_inferior"	#dddc14	ctx S_frontal_inferior	L
+1155	"ctx-lh-S_frontal_middle"	#8d1464	ctx S_frontal_middle	L
+1156	"ctx-lh-S_frontal_superior"	#3ddc64	ctx S_frontal_superior	L
+1157	"ctx-lh-S_frontomarginal"	#15dc3c	ctx S_frontomarginal	L
+1158	"ctx-lh-S_intermedius_primus-Jensen"	#8d3c14	ctx S_intermedius_primus Jensen	L
+1159	"ctx-lh-S_intraparietal-and_Parietal_transverse"	#8f14dc	顶叶	L
+1160	"ctx-lh-S_occipital_anterior"	#3d14b4	ctx S_occipital_anterior	L
+1161	"ctx-lh-S_occipital_middle_and_Lunatus"	#653cdc	ctx S_occipital_middle_and_Lunatus	L
+1162	"ctx-lh-S_occipital_superior_and_transversalis"	#15148c	ctx S_occipital_superior_and_transversalis	L
+1163	"ctx-lh-S_occipito-temporal_lateral"	#dd8c14	ctx S_occipito temporal_lateral	L
+1164	"ctx-lh-S_occipito-temporal_medial_and_S_Lingual"	#8d64dc	ctx S_occipito temporal_medial_and_S_Lingual	L
+1165	"ctx-lh-S_orbital-H_shapped"	#651414	ctx S_orbital H_shapped	L
+1166	"ctx-lh-S_orbital_lateral"	#dd6414	ctx S_orbital_lateral	L
+1167	"ctx-lh-S_orbital_medial-Or_olfactory"	#b5c814	ctx S_orbital_medial Or_olfactory	L
+1168	"ctx-lh-S_paracentral"	#15b48c	旁中央小叶	L
+1169	"ctx-lh-S_parieto_occipital"	#6564b4	ctx S_parieto_occipital	L
+1170	"ctx-lh-S_pericallosal"	#b5dc14	ctx S_pericallosal	L
+1171	"ctx-lh-S_postcentral"	#158cc8	中央后回	L
+1172	"ctx-lh-S_precentral-Inferior-part"	#1514f0	中央前回	L
+1173	"ctx-lh-S_precentral-Superior-part"	#1514c8	中央前回	L
+1174	"ctx-lh-S_subcentral_ant"	#3db43c	ctx S_subcentral_ant	L
+1175	"ctx-lh-S_subcentral_post"	#3db4fa	ctx S_subcentral_post	L
+1176	"ctx-lh-S_suborbital"	#15143c	ctx S_suborbital	L
+1177	"ctx-lh-S_subparietal"	#653c3c	ctx S_subparietal	L
+1178	"ctx-lh-S_supracingulate"	#15dcdc	ctx S_supracingulate	L
+1179	"ctx-lh-S_temporal_inferior"	#15b4b4	ctx S_temporal_inferior	L
+1180	"ctx-lh-S_temporal_superior"	#dfdc3c	ctx S_temporal_superior	L
+1181	"ctx-lh-S_temporal_transverse"	#dd3c3c	ctx S_temporal_transverse	L
+2100	"ctx-rh-Unknown"	#000000	未知	R
+2101	"ctx-rh-Corpus_callosum"	#323232	ctx Corpus_callosum	R
+2102	"ctx-rh-G_and_S_Insula_ONLY_AVERAGE"	#b4141e	岛叶	R
+2103	"ctx-rh-G_cingulate-Isthmus"	#3c1919	ctx G_cingulate Isthmus	R
+2104	"ctx-rh-G_cingulate-Main_part"	#193c3c	ctx G_cingulate Main_part	R
+2105	"ctx-rh-G_cuneus"	#b41414	楔叶	R
+2106	"ctx-rh-G_frontal_inf-Opercular_part"	#dc1464	ctx G_frontal_inf Opercular_part	R
+2107	"ctx-rh-G_frontal_inf-Orbital_part"	#8c3c3c	ctx G_frontal_inf Orbital_part	R
+2108	"ctx-rh-G_frontal_inf-Triangular_part"	#b4dc8c	ctx G_frontal_inf Triangular_part	R
+2109	"ctx-rh-G_frontal_middle"	#8c64b4	ctx G_frontal_middle	R
+2110	"ctx-rh-G_frontal_superior"	#b4148c	ctx G_frontal_superior	R
+2111	"ctx-rh-G_frontomarginal"	#8c148c	ctx G_frontomarginal	R
+2112	"ctx-rh-G_insular_long"	#150a0a	岛叶	R
+2113	"ctx-rh-G_insular_short"	#e18c8c	岛叶	R
+2114	"ctx-rh-G_and_S_occipital_inferior"	#173cb4	ctx G_and_S_occipital_inferior	R
+2115	"ctx-rh-G_occipital_middle"	#b43cb4	ctx G_occipital_middle	R
+2116	"ctx-rh-G_occipital_superior"	#14dc3c	ctx G_occipital_superior	R
+2117	"ctx-rh-G_occipit-temp_lat-Or_fusiform"	#3c148c	梭状回	R
+2118	"ctx-rh-G_occipit-temp_med-Lingual_part"	#dcb48c	ctx G_occipit temp_med Lingual_part	R
+2119	"ctx-rh-G_occipit-temp_med-Parahippocampal_part"	#416414	ctx G_occipit temp_med Parahippocampal_part	R
+2120	"ctx-rh-G_orbital"	#dc3c14	ctx G_orbital	R
+2121	"ctx-rh-G_paracentral"	#3c643c	旁中央小叶	R
+2122	"ctx-rh-G_parietal_inferior-Angular_part"	#143cdc	ctx G_parietal_inferior Angular_part	R
+2123	"ctx-rh-G_parietal_inferior-Supramarginal_part"	#64643c	ctx G_parietal_inferior Supramarginal_part	R
+2124	"ctx-rh-G_parietal_superior"	#dcb4dc	ctx G_parietal_superior	R
+2125	"ctx-rh-G_postcentral"	#14b48c	中央后回	R
+2126	"ctx-rh-G_precentral"	#3c8cb4	中央前回	R
+2127	"ctx-rh-G_precuneus"	#19148c	楔叶	R
+2128	"ctx-rh-G_rectus"	#143c64	ctx G_rectus	R
+2129	"ctx-rh-G_subcallosal"	#3cdc14	ctx G_subcallosal	R
+2130	"ctx-rh-G_subcentral"	#3c14dc	ctx G_subcentral	R
+2131	"ctx-rh-G_temporal_inferior"	#dcdc64	ctx G_temporal_inferior	R
+2132	"ctx-rh-G_temporal_middle"	#b43c3c	ctx G_temporal_middle	R
+2133	"ctx-rh-G_temp_sup-G_temp_transv_and_interm_S"	#3c3cdc	ctx G_temp_sup G_temp_transv_and_interm_S	R
+2134	"ctx-rh-G_temp_sup-Lateral_aspect"	#dc3cdc	ctx G_temp_sup Lateral_aspect	R
+2135	"ctx-rh-G_temp_sup-Planum_polare"	#41dc3c	ctx G_temp_sup Planum_polare	R
+2136	"ctx-rh-G_temp_sup-Planum_tempolare"	#198c14	ctx G_temp_sup Planum_tempolare	R
+2137	"ctx-rh-G_and_S_transverse_frontopolar"	#0d00fa	ctx G_and_S_transverse_frontopolar	R
+2138	"ctx-rh-Lat_Fissure-ant_sgt-ramus_horizontal"	#3d14dc	ctx Lat_Fissure ant_sgt ramus_horizontal	R
+2139	"ctx-rh-Lat_Fissure-ant_sgt-ramus_vertical"	#3d143c	ctx Lat_Fissure ant_sgt ramus_vertical	R
+2140	"ctx-rh-Lat_Fissure-post_sgt"	#3d3c64	ctx Lat_Fissure post_sgt	R
+2141	"ctx-rh-Medial_wall"	#191919	ctx Medial_wall	R
+2142	"ctx-rh-Pole_occipital"	#8c143c	ctx Pole_occipital	R
+2143	"ctx-rh-Pole_temporal"	#dcb414	ctx Pole_temporal	R
+2144	"ctx-rh-S_calcarine"	#3fb4b4	ctx S_calcarine	R
+2145	"ctx-rh-S_central"	#dd140a	ctx S_central	R
+2146	"ctx-rh-S_central_insula"	#15dc14	岛叶	R
+2147	"ctx-rh-S_cingulate-Main_part_and_Intracingulate"	#b76414	ctx S_cingulate Main_part_and_Intracingulate	R
+2148	"ctx-rh-S_cingulate-Marginalis_part"	#dd1464	ctx S_cingulate Marginalis_part	R
+2149	"ctx-rh-S_circular_insula_anterior"	#dd3c8c	岛叶	R
+2150	"ctx-rh-S_circular_insula_inferior"	#dd14dc	岛叶	R
+2151	"ctx-rh-S_circular_insula_superior"	#3ddcdc	岛叶	R
+2152	"ctx-rh-S_collateral_transverse_ant"	#64c8c8	ctx S_collateral_transverse_ant	R
+2153	"ctx-rh-S_collateral_transverse_post"	#0ac8c8	ctx S_collateral_transverse_post	R
+2154	"ctx-rh-S_frontal_inferior"	#dddc14	ctx S_frontal_inferior	R
+2155	"ctx-rh-S_frontal_middle"	#8d1464	ctx S_frontal_middle	R
+2156	"ctx-rh-S_frontal_superior"	#3ddc64	ctx S_frontal_superior	R
+2157	"ctx-rh-S_frontomarginal"	#15dc3c	ctx S_frontomarginal	R
+2158	"ctx-rh-S_intermedius_primus-Jensen"	#8d3c14	ctx S_intermedius_primus Jensen	R
+2159	"ctx-rh-S_intraparietal-and_Parietal_transverse"	#8f14dc	顶叶	R
+2160	"ctx-rh-S_occipital_anterior"	#3d14b4	ctx S_occipital_anterior	R
+2161	"ctx-rh-S_occipital_middle_and_Lunatus"	#653cdc	ctx S_occipital_middle_and_Lunatus	R
+2162	"ctx-rh-S_occipital_superior_and_transversalis"	#15148c	ctx S_occipital_superior_and_transversalis	R
+2163	"ctx-rh-S_occipito-temporal_lateral"	#dd8c14	ctx S_occipito temporal_lateral	R
+2164	"ctx-rh-S_occipito-temporal_medial_and_S_Lingual"	#8d64dc	ctx S_occipito temporal_medial_and_S_Lingual	R
+2165	"ctx-rh-S_orbital-H_shapped"	#651414	ctx S_orbital H_shapped	R
+2166	"ctx-rh-S_orbital_lateral"	#dd6414	ctx S_orbital_lateral	R
+2167	"ctx-rh-S_orbital_medial-Or_olfactory"	#b5c814	ctx S_orbital_medial Or_olfactory	R
+2168	"ctx-rh-S_paracentral"	#15b48c	旁中央小叶	R
+2169	"ctx-rh-S_parieto_occipital"	#6564b4	ctx S_parieto_occipital	R
+2170	"ctx-rh-S_pericallosal"	#b5dc14	ctx S_pericallosal	R
+2171	"ctx-rh-S_postcentral"	#158cc8	中央后回	R
+2172	"ctx-rh-S_precentral-Inferior-part"	#1514f0	中央前回	R
+2173	"ctx-rh-S_precentral-Superior-part"	#1514c8	中央前回	R
+2174	"ctx-rh-S_subcentral_ant"	#3db43c	ctx S_subcentral_ant	R
+2175	"ctx-rh-S_subcentral_post"	#3db4fa	ctx S_subcentral_post	R
+2176	"ctx-rh-S_suborbital"	#15143c	ctx S_suborbital	R
+2177	"ctx-rh-S_subparietal"	#653c3c	ctx S_subparietal	R
+2178	"ctx-rh-S_supracingulate"	#15dcdc	ctx S_supracingulate	R
+2179	"ctx-rh-S_temporal_inferior"	#15b4b4	ctx S_temporal_inferior	R
+2180	"ctx-rh-S_temporal_superior"	#dfdc3c	ctx S_temporal_superior	R
+2181	"ctx-rh-S_temporal_transverse"	#dd3c3c	ctx S_temporal_transverse	R
+2200	"ctx-rh-G_cingulate-caudal_ACC"	#193c3d	ctx G_cingulate caudal_ACC	R
+2201	"ctx-rh-G_cingulate-rostral_ACC"	#195a3c	ctx G_cingulate rostral_ACC	R
+2202	"ctx-rh-G_cingulate-posterior"	#19783c	ctx G_cingulate posterior	R
+2205	"ctx-rh-S_cingulate-caudal_ACC"	#19963c	ctx S_cingulate caudal_ACC	R
+2206	"ctx-rh-S_cingulate-rostral_ACC"	#19b43c	ctx S_cingulate rostral_ACC	R
+2207	"ctx-rh-S_cingulate-posterior"	#19d23c	ctx S_cingulate posterior	R
+2210	"ctx-rh-S_pericallosal-caudal"	#19965a	ctx S_pericallosal caudal	R
+2211	"ctx-rh-S_pericallosal-rostral"	#19b45a	ctx S_pericallosal rostral	R
+2212	"ctx-rh-S_pericallosal-posterior"	#19d25a	ctx S_pericallosal posterior	R
+3100	"wm-lh-Unknown"	#000000	未知	L
+3101	"wm-lh-Corpus_callosum"	#323232	wm Corpus_callosum	L
+3102	"wm-lh-G_and_S_Insula_ONLY_AVERAGE"	#b4141e	岛叶	L
+3103	"wm-lh-G_cingulate-Isthmus"	#3c1919	wm G_cingulate Isthmus	L
+3104	"wm-lh-G_cingulate-Main_part"	#193c3c	wm G_cingulate Main_part	L
+3105	"wm-lh-G_cuneus"	#b41414	楔叶	L
+3106	"wm-lh-G_frontal_inf-Opercular_part"	#dc1464	wm G_frontal_inf Opercular_part	L
+3107	"wm-lh-G_frontal_inf-Orbital_part"	#8c3c3c	wm G_frontal_inf Orbital_part	L
+3108	"wm-lh-G_frontal_inf-Triangular_part"	#b4dc8c	wm G_frontal_inf Triangular_part	L
+3109	"wm-lh-G_frontal_middle"	#8c64b4	wm G_frontal_middle	L
+3110	"wm-lh-G_frontal_superior"	#b4148c	wm G_frontal_superior	L
+3111	"wm-lh-G_frontomarginal"	#8c148c	wm G_frontomarginal	L
+3112	"wm-lh-G_insular_long"	#150a0a	岛叶	L
+3113	"wm-lh-G_insular_short"	#e18c8c	岛叶	L
+3114	"wm-lh-G_and_S_occipital_inferior"	#173cb4	wm G_and_S_occipital_inferior	L
+3115	"wm-lh-G_occipital_middle"	#b43cb4	wm G_occipital_middle	L
+3116	"wm-lh-G_occipital_superior"	#14dc3c	wm G_occipital_superior	L
+3117	"wm-lh-G_occipit-temp_lat-Or_fusiform"	#3c148c	梭状回	L
+3118	"wm-lh-G_occipit-temp_med-Lingual_part"	#dcb48c	wm G_occipit temp_med Lingual_part	L
+3119	"wm-lh-G_occipit-temp_med-Parahippocampal_part"	#416414	wm G_occipit temp_med Parahippocampal_part	L
+3120	"wm-lh-G_orbital"	#dc3c14	wm G_orbital	L
+3121	"wm-lh-G_paracentral"	#3c643c	旁中央小叶	L
+3122	"wm-lh-G_parietal_inferior-Angular_part"	#143cdc	wm G_parietal_inferior Angular_part	L
+3123	"wm-lh-G_parietal_inferior-Supramarginal_part"	#64643c	wm G_parietal_inferior Supramarginal_part	L
+3124	"wm-lh-G_parietal_superior"	#dcb4dc	wm G_parietal_superior	L
+3125	"wm-lh-G_postcentral"	#14b48c	中央后回	L
+3126	"wm-lh-G_precentral"	#3c8cb4	中央前回	L
+3127	"wm-lh-G_precuneus"	#19148c	楔叶	L
+3128	"wm-lh-G_rectus"	#143c64	wm G_rectus	L
+3129	"wm-lh-G_subcallosal"	#3cdc14	wm G_subcallosal	L
+3130	"wm-lh-G_subcentral"	#3c14dc	wm G_subcentral	L
+3131	"wm-lh-G_temporal_inferior"	#dcdc64	wm G_temporal_inferior	L
+3132	"wm-lh-G_temporal_middle"	#b43c3c	wm G_temporal_middle	L
+3133	"wm-lh-G_temp_sup-G_temp_transv_and_interm_S"	#3c3cdc	wm G_temp_sup G_temp_transv_and_interm_S	L
+3134	"wm-lh-G_temp_sup-Lateral_aspect"	#dc3cdc	wm G_temp_sup Lateral_aspect	L
+3135	"wm-lh-G_temp_sup-Planum_polare"	#41dc3c	wm G_temp_sup Planum_polare	L
+3136	"wm-lh-G_temp_sup-Planum_tempolare"	#198c14	wm G_temp_sup Planum_tempolare	L
+3137	"wm-lh-G_and_S_transverse_frontopolar"	#0d00fa	wm G_and_S_transverse_frontopolar	L
+3138	"wm-lh-Lat_Fissure-ant_sgt-ramus_horizontal"	#3d14dc	wm Lat_Fissure ant_sgt ramus_horizontal	L
+3139	"wm-lh-Lat_Fissure-ant_sgt-ramus_vertical"	#3d143c	wm Lat_Fissure ant_sgt ramus_vertical	L
+3140	"wm-lh-Lat_Fissure-post_sgt"	#3d3c64	wm Lat_Fissure post_sgt	L
+3141	"wm-lh-Medial_wall"	#191919	wm Medial_wall	L
+3142	"wm-lh-Pole_occipital"	#8c143c	wm Pole_occipital	L
+3143	"wm-lh-Pole_temporal"	#dcb414	wm Pole_temporal	L
+3144	"wm-lh-S_calcarine"	#3fb4b4	wm S_calcarine	L
+3145	"wm-lh-S_central"	#dd140a	wm S_central	L
+3146	"wm-lh-S_central_insula"	#15dc14	岛叶	L
+3147	"wm-lh-S_cingulate-Main_part_and_Intracingulate"	#b76414	wm S_cingulate Main_part_and_Intracingulate	L
+3148	"wm-lh-S_cingulate-Marginalis_part"	#dd1464	wm S_cingulate Marginalis_part	L
+3149	"wm-lh-S_circular_insula_anterior"	#dd3c8c	岛叶	L
+3150	"wm-lh-S_circular_insula_inferior"	#dd14dc	岛叶	L
+3151	"wm-lh-S_circular_insula_superior"	#3ddcdc	岛叶	L
+3152	"wm-lh-S_collateral_transverse_ant"	#64c8c8	wm S_collateral_transverse_ant	L
+3153	"wm-lh-S_collateral_transverse_post"	#0ac8c8	wm S_collateral_transverse_post	L
+3154	"wm-lh-S_frontal_inferior"	#dddc14	wm S_frontal_inferior	L
+3155	"wm-lh-S_frontal_middle"	#8d1464	wm S_frontal_middle	L
+3156	"wm-lh-S_frontal_superior"	#3ddc64	wm S_frontal_superior	L
+3157	"wm-lh-S_frontomarginal"	#15dc3c	wm S_frontomarginal	L
+3158	"wm-lh-S_intermedius_primus-Jensen"	#8d3c14	wm S_intermedius_primus Jensen	L
+3159	"wm-lh-S_intraparietal-and_Parietal_transverse"	#8f14dc	顶叶	L
+3160	"wm-lh-S_occipital_anterior"	#3d14b4	wm S_occipital_anterior	L
+3161	"wm-lh-S_occipital_middle_and_Lunatus"	#653cdc	wm S_occipital_middle_and_Lunatus	L
+3162	"wm-lh-S_occipital_superior_and_transversalis"	#15148c	wm S_occipital_superior_and_transversalis	L
+3163	"wm-lh-S_occipito-temporal_lateral"	#dd8c14	wm S_occipito temporal_lateral	L
+3164	"wm-lh-S_occipito-temporal_medial_and_S_Lingual"	#8d64dc	wm S_occipito temporal_medial_and_S_Lingual	L
+3165	"wm-lh-S_orbital-H_shapped"	#651414	wm S_orbital H_shapped	L
+3166	"wm-lh-S_orbital_lateral"	#dd6414	wm S_orbital_lateral	L
+3167	"wm-lh-S_orbital_medial-Or_olfactory"	#b5c814	wm S_orbital_medial Or_olfactory	L
+3168	"wm-lh-S_paracentral"	#15b48c	旁中央小叶	L
+3169	"wm-lh-S_parieto_occipital"	#6564b4	wm S_parieto_occipital	L
+3170	"wm-lh-S_pericallosal"	#b5dc14	wm S_pericallosal	L
+3171	"wm-lh-S_postcentral"	#158cc8	中央后回	L
+3172	"wm-lh-S_precentral-Inferior-part"	#1514f0	中央前回	L
+3173	"wm-lh-S_precentral-Superior-part"	#1514c8	中央前回	L
+3174	"wm-lh-S_subcentral_ant"	#3db43c	wm S_subcentral_ant	L
+3175	"wm-lh-S_subcentral_post"	#3db4fa	wm S_subcentral_post	L
+3176	"wm-lh-S_suborbital"	#15143c	wm S_suborbital	L
+3177	"wm-lh-S_subparietal"	#653c3c	wm S_subparietal	L
+3178	"wm-lh-S_supracingulate"	#15dcdc	wm S_supracingulate	L
+3179	"wm-lh-S_temporal_inferior"	#15b4b4	wm S_temporal_inferior	L
+3180	"wm-lh-S_temporal_superior"	#dfdc3c	wm S_temporal_superior	L
+3181	"wm-lh-S_temporal_transverse"	#dd3c3c	wm S_temporal_transverse	L
+4100	"wm-rh-Unknown"	#000000	未知	R
+4101	"wm-rh-Corpus_callosum"	#323232	wm Corpus_callosum	R
+4102	"wm-rh-G_and_S_Insula_ONLY_AVERAGE"	#b4141e	岛叶	R
+4103	"wm-rh-G_cingulate-Isthmus"	#3c1919	wm G_cingulate Isthmus	R
+4104	"wm-rh-G_cingulate-Main_part"	#193c3c	wm G_cingulate Main_part	R
+4105	"wm-rh-G_cuneus"	#b41414	楔叶	R
+4106	"wm-rh-G_frontal_inf-Opercular_part"	#dc1464	wm G_frontal_inf Opercular_part	R
+4107	"wm-rh-G_frontal_inf-Orbital_part"	#8c3c3c	wm G_frontal_inf Orbital_part	R
+4108	"wm-rh-G_frontal_inf-Triangular_part"	#b4dc8c	wm G_frontal_inf Triangular_part	R
+4109	"wm-rh-G_frontal_middle"	#8c64b4	wm G_frontal_middle	R
+4110	"wm-rh-G_frontal_superior"	#b4148c	wm G_frontal_superior	R
+4111	"wm-rh-G_frontomarginal"	#8c148c	wm G_frontomarginal	R
+4112	"wm-rh-G_insular_long"	#150a0a	岛叶	R
+4113	"wm-rh-G_insular_short"	#e18c8c	岛叶	R
+4114	"wm-rh-G_and_S_occipital_inferior"	#173cb4	wm G_and_S_occipital_inferior	R
+4115	"wm-rh-G_occipital_middle"	#b43cb4	wm G_occipital_middle	R
+4116	"wm-rh-G_occipital_superior"	#14dc3c	wm G_occipital_superior	R
+4117	"wm-rh-G_occipit-temp_lat-Or_fusiform"	#3c148c	梭状回	R
+4118	"wm-rh-G_occipit-temp_med-Lingual_part"	#dcb48c	wm G_occipit temp_med Lingual_part	R
+4119	"wm-rh-G_occipit-temp_med-Parahippocampal_part"	#416414	wm G_occipit temp_med Parahippocampal_part	R
+4120	"wm-rh-G_orbital"	#dc3c14	wm G_orbital	R
+4121	"wm-rh-G_paracentral"	#3c643c	旁中央小叶	R
+4122	"wm-rh-G_parietal_inferior-Angular_part"	#143cdc	wm G_parietal_inferior Angular_part	R
+4123	"wm-rh-G_parietal_inferior-Supramarginal_part"	#64643c	wm G_parietal_inferior Supramarginal_part	R
+4124	"wm-rh-G_parietal_superior"	#dcb4dc	wm G_parietal_superior	R
+4125	"wm-rh-G_postcentral"	#14b48c	中央后回	R
+4126	"wm-rh-G_precentral"	#3c8cb4	中央前回	R
+4127	"wm-rh-G_precuneus"	#19148c	楔叶	R
+4128	"wm-rh-G_rectus"	#143c64	wm G_rectus	R
+4129	"wm-rh-G_subcallosal"	#3cdc14	wm G_subcallosal	R
+4130	"wm-rh-G_subcentral"	#3c14dc	wm G_subcentral	R
+4131	"wm-rh-G_temporal_inferior"	#dcdc64	wm G_temporal_inferior	R
+4132	"wm-rh-G_temporal_middle"	#b43c3c	wm G_temporal_middle	R
+4133	"wm-rh-G_temp_sup-G_temp_transv_and_interm_S"	#3c3cdc	wm G_temp_sup G_temp_transv_and_interm_S	R
+4134	"wm-rh-G_temp_sup-Lateral_aspect"	#dc3cdc	wm G_temp_sup Lateral_aspect	R
+4135	"wm-rh-G_temp_sup-Planum_polare"	#41dc3c	wm G_temp_sup Planum_polare	R
+4136	"wm-rh-G_temp_sup-Planum_tempolare"	#198c14	wm G_temp_sup Planum_tempolare	R
+4137	"wm-rh-G_and_S_transverse_frontopolar"	#0d00fa	wm G_and_S_transverse_frontopolar	R
+4138	"wm-rh-Lat_Fissure-ant_sgt-ramus_horizontal"	#3d14dc	wm Lat_Fissure ant_sgt ramus_horizontal	R
+4139	"wm-rh-Lat_Fissure-ant_sgt-ramus_vertical"	#3d143c	wm Lat_Fissure ant_sgt ramus_vertical	R
+4140	"wm-rh-Lat_Fissure-post_sgt"	#3d3c64	wm Lat_Fissure post_sgt	R
+4141	"wm-rh-Medial_wall"	#191919	wm Medial_wall	R
+4142	"wm-rh-Pole_occipital"	#8c143c	wm Pole_occipital	R
+4143	"wm-rh-Pole_temporal"	#dcb414	wm Pole_temporal	R
+4144	"wm-rh-S_calcarine"	#3fb4b4	wm S_calcarine	R
+4145	"wm-rh-S_central"	#dd140a	wm S_central	R
+4146	"wm-rh-S_central_insula"	#15dc14	岛叶	R
+4147	"wm-rh-S_cingulate-Main_part_and_Intracingulate"	#b76414	wm S_cingulate Main_part_and_Intracingulate	R
+4148	"wm-rh-S_cingulate-Marginalis_part"	#dd1464	wm S_cingulate Marginalis_part	R
+4149	"wm-rh-S_circular_insula_anterior"	#dd3c8c	岛叶	R
+4150	"wm-rh-S_circular_insula_inferior"	#dd14dc	岛叶	R
+4151	"wm-rh-S_circular_insula_superior"	#3ddcdc	岛叶	R
+4152	"wm-rh-S_collateral_transverse_ant"	#64c8c8	wm S_collateral_transverse_ant	R
+4153	"wm-rh-S_collateral_transverse_post"	#0ac8c8	wm S_collateral_transverse_post	R
+4154	"wm-rh-S_frontal_inferior"	#dddc14	wm S_frontal_inferior	R
+4155	"wm-rh-S_frontal_middle"	#8d1464	wm S_frontal_middle	R
+4156	"wm-rh-S_frontal_superior"	#3ddc64	wm S_frontal_superior	R
+4157	"wm-rh-S_frontomarginal"	#15dc3c	wm S_frontomarginal	R
+4158	"wm-rh-S_intermedius_primus-Jensen"	#8d3c14	wm S_intermedius_primus Jensen	R
+4159	"wm-rh-S_intraparietal-and_Parietal_transverse"	#8f14dc	顶叶	R
+4160	"wm-rh-S_occipital_anterior"	#3d14b4	wm S_occipital_anterior	R
+4161	"wm-rh-S_occipital_middle_and_Lunatus"	#653cdc	wm S_occipital_middle_and_Lunatus	R
+4162	"wm-rh-S_occipital_superior_and_transversalis"	#15148c	wm S_occipital_superior_and_transversalis	R
+4163	"wm-rh-S_occipito-temporal_lateral"	#dd8c14	wm S_occipito temporal_lateral	R
+4164	"wm-rh-S_occipito-temporal_medial_and_S_Lingual"	#8d64dc	wm S_occipito temporal_medial_and_S_Lingual	R
+4165	"wm-rh-S_orbital-H_shapped"	#651414	wm S_orbital H_shapped	R
+4166	"wm-rh-S_orbital_lateral"	#dd6414	wm S_orbital_lateral	R
+4167	"wm-rh-S_orbital_medial-Or_olfactory"	#b5c814	wm S_orbital_medial Or_olfactory	R
+4168	"wm-rh-S_paracentral"	#15b48c	旁中央小叶	R
+4169	"wm-rh-S_parieto_occipital"	#6564b4	wm S_parieto_occipital	R
+4170	"wm-rh-S_pericallosal"	#b5dc14	wm S_pericallosal	R
+4171	"wm-rh-S_postcentral"	#158cc8	中央后回	R
+4172	"wm-rh-S_precentral-Inferior-part"	#1514f0	中央前回	R
+4173	"wm-rh-S_precentral-Superior-part"	#1514c8	中央前回	R
+4174	"wm-rh-S_subcentral_ant"	#3db43c	wm S_subcentral_ant	R
+4175	"wm-rh-S_subcentral_post"	#3db4fa	wm S_subcentral_post	R
+4176	"wm-rh-S_suborbital"	#15143c	wm S_suborbital	R
+4177	"wm-rh-S_subparietal"	#653c3c	wm S_subparietal	R
+4178	"wm-rh-S_supracingulate"	#15dcdc	wm S_supracingulate	R
+4179	"wm-rh-S_temporal_inferior"	#15b4b4	wm S_temporal_inferior	R
+4180	"wm-rh-S_temporal_superior"	#dfdc3c	wm S_temporal_superior	R
+4181	"wm-rh-S_temporal_transverse"	#dd3c3c	wm S_temporal_transverse	R
+5001	"Left-UnsegmentedWhiteMatter"	#141e28	UnsegmentedWhiteMatter	L
+5002	"Right-UnsegmentedWhiteMatter"	#141e28	UnsegmentedWhiteMatter	R
+5100	"fmajor"	#cc6666	fmajor	
+5101	"fminor"	#cc6666	fminor	
+5102	"lh.atr"	#ffff66	lh.atr	
+5103	"lh.cab"	#99cc00	lh.cab	
+5104	"lh.ccg"	#009999	lh.ccg	
+5105	"lh.cst"	#cc99ff	lh.cst	
+5106	"lh.ilf"	#ff9933	lh.ilf	
+5107	"lh.slfp"	#cccccc	lh.slfp	
+5108	"lh.slft"	#99ffff	lh.slft	
+5109	"lh.unc"	#6699ff	lh.unc	
+5110	"rh.atr"	#ffff66	rh.atr	
+5111	"rh.cab"	#99cc00	rh.cab	
+5112	"rh.ccg"	#009999	rh.ccg	
+5113	"rh.cst"	#cc99ff	rh.cst	
+5114	"rh.ilf"	#ff9933	rh.ilf	
+5115	"rh.slfp"	#cccccc	rh.slfp	
+5116	"rh.slft"	#99ffff	rh.slft	
+5117	"rh.unc"	#6699ff	rh.unc	
+5200	"CC-ForcepsMajor"	#cc6666	CC ForcepsMajor	
+5201	"CC-ForcepsMinor"	#cc6666	CC ForcepsMinor	
+5202	"LAntThalRadiation"	#ffff66	LAntThalRadiation	
+5203	"LCingulumAngBundle"	#99cc00	LCingulumAngBundle	
+5204	"LCingulumCingGyrus"	#009999	LCingulumCingGyrus	
+5205	"LCorticospinalTract"	#cc99ff	LCorticospinalTract	
+5206	"LInfLongFas"	#ff9933	LInfLongFas	
+5207	"LSupLongFasParietal"	#cccccc	顶叶	
+5208	"LSupLongFasTemporal"	#99ffff	颞叶	
+5209	"LUncinateFas"	#6699ff	LUncinateFas	
+5210	"RAntThalRadiation"	#ffff66	RAntThalRadiation	
+5211	"RCingulumAngBundle"	#99cc00	RCingulumAngBundle	
+5212	"RCingulumCingGyrus"	#009999	RCingulumCingGyrus	
+5213	"RCorticospinalTract"	#cc99ff	RCorticospinalTract	
+5214	"RInfLongFas"	#ff9933	RInfLongFas	
+5215	"RSupLongFasParietal"	#cccccc	顶叶	
+5216	"RSupLongFasTemporal"	#99ffff	颞叶	
+5217	"RUncinateFas"	#6699ff	RUncinateFas	
+6000	"CST-orig"	#00ff00	CST orig	
+6001	"CST-hammer"	#ffff00	CST hammer	
+6002	"CST-CVS"	#00ffff	CST CVS	
+6003	"CST-flirt"	#0000ff	CST flirt	
+6010	"Left-SLF1"	#ec10e7	SLF1	L
+6020	"Right-SLF1"	#ed12e8	SLF1	R
+6030	"Left-SLF3"	#ec0de3	SLF3	L
+6040	"Right-SLF3"	#ec11e4	SLF3	R
+6050	"Left-CST"	#01ff01	CST	L
+6060	"Right-CST"	#02ff01	CST	R
+6070	"Left-SLF2"	#ec0ee6	SLF2	L
+6080	"Right-SLF2"	#ed0ee6	SLF2	R
+7001	"Lateral-nucleus"	#4884b5	Lateral nucleus	
+7002	"Basolateral-nucleus"	#f3f3f3	Basolateral nucleus	
+7003	"Basal-nucleus"	#cf3f4f	Basal nucleus	
+7004	"Centromedial-nucleus"	#791487	Centromedial nucleus	
+7005	"Central-nucleus"	#c53cf8	Central nucleus	
+7006	"Medial-nucleus"	#029502	Medial nucleus	
+7007	"Cortical-nucleus"	#ddf9a6	Cortical nucleus	
+7008	"Accessory-Basal-nucleus"	#e89223	Accessory Basal nucleus	
+7009	"Corticoamygdaloid-transitio"	#143c78	Corticoamygdaloid transitio	
+7010	"Anterior-amygdaloid-area-AAA"	#fafa00	Anterior amygdaloid area AAA	
+7011	"Fusion-amygdala-HP-FAH"	#7abbde	Fusion amygdala HP FAH	
+7012	"Hippocampal-amygdala-transition-HATA"	#ed0cb1	Hippocampal amygdala transition HATA	
+7013	"Endopiriform-nucleus"	#0a31ff	Endopiriform nucleus	
+7014	"Lateral-nucleus-olfactory-tract"	#cdb890	Lateral nucleus olfactory tract	
+7015	"Paralaminar-nucleus"	#2dcda5	Paralaminar nucleus	
+7016	"Intercalated-nucleus"	#75a0af	Intercalated nucleus	
+7017	"Prepiriform-cortex"	#ddd915	Prepiriform cortex	
+7018	"Periamygdaloid-cortex"	#143c78	Periamygdaloid cortex	
+7019	"Envelope-Amygdala"	#8d1564	杏仁核	
+7020	"Extranuclear-Amydala"	#e18c8d	Extranuclear Amydala	
+7100	"Brainstem-inferior-colliculus"	#2ac9a8	Brainstem inferior colliculus	
+7101	"Brainstem-cochlear-nucleus"	#a868a2	Brainstem cochlear nucleus	
+8001	"Thalamus-Anterior"	#4a82b5	丘脑	
+8002	"Thalamus-Ventral-anterior"	#f2f1f0	丘脑	
+8003	"Thalamus-Lateral-dorsal"	#ce414e	丘脑	
+8004	"Thalamus-Lateral-posterior"	#781585	丘脑	
+8005	"Thalamus-Ventral-lateral"	#c33df6	丘脑	
+8006	"Thalamus-Ventral-posterior-medial"	#039306	丘脑	
+8007	"Thalamus-Ventral-posterior-lateral"	#dcfba3	丘脑	
+8008	"Thalamus-intralaminar"	#e89221	丘脑	
+8009	"Thalamus-centromedian"	#04720e	丘脑	
+8010	"Thalamus-mediodorsal"	#79b8dc	丘脑	
+8011	"Thalamus-medial"	#eb0baf	丘脑	
+8012	"Thalamus-pulvinar"	#0c2efa	丘脑	
+8013	"Thalamus-lateral-geniculate"	#cbb68f	丘脑	
+8014	"Thalamus-medial-geniculate"	#2acca7	丘脑	
+8103	"Left-AV"	#005500	AV	L
+8104	"Left-CeM"	#aa5500	CeM	L
+8105	"Left-CL"	#00aa00	CL	L
+8106	"Left-CM"	#aaaa00	CM	L
+8108	"Left-LD"	#aaff00	LD	L
+8109	"Left-LGN"	#00007f	LGN	L
+8110	"Left-LP"	#00557f	LP	L
+8111	"Left-L-Sg"	#aa557f	L Sg	L
+8112	"Left-MDl"	#00aa7f	MDl	L
+8113	"Left-MDm"	#aaaa7f	MDm	L
+8115	"Left-MGN"	#aaff7f	MGN	L
+8116	"Left-MV(Re)"	#0000ff	MV(Re)	L
+8117	"Left-Pc"	#aa00ff	Pc	L
+8118	"Left-Pf"	#0055ff	Pf	L
+8119	"Left-Pt"	#aa55ff	Pt	L
+8120	"Left-PuA"	#00aaff	PuA	L
+8121	"Left-PuI"	#aaaaff	PuI	L
+8122	"Left-PuL"	#00ffff	PuL	L
+8123	"Left-PuM"	#aaffff	PuM	L
+8125	"Left-R"	#ff0000	R	L
+8126	"Left-VA"	#555500	VA	L
+8127	"Left-VAmc"	#ff5500	VAmc	L
+8128	"Left-VLa"	#55aa00	VLa	L
+8129	"Left-VLp"	#ffaa00	VLp	L
+8130	"Left-VM"	#55ff00	VM	L
+8133	"Left-VPL"	#ff00ff	VPL	L
+8203	"Right-AV"	#005500	AV	R
+8204	"Right-CeM"	#aa5500	CeM	R
+8205	"Right-CL"	#00aa00	CL	R
+8206	"Right-CM"	#aaaa00	CM	R
+8208	"Right-LD"	#aaff00	LD	R
+8209	"Right-LGN"	#00007f	LGN	R
+8210	"Right-LP"	#00557f	LP	R
+8211	"Right-L-Sg"	#aa557f	L Sg	R
+8212	"Right-MDl"	#00aa7f	MDl	R
+8213	"Right-MDm"	#aaaa7f	MDm	R
+8215	"Right-MGN"	#aaff7f	MGN	R
+8216	"Right-MV(Re)"	#0000ff	MV(Re)	R
+8217	"Right-Pc"	#aa00ff	Pc	R
+8218	"Right-Pf"	#0055ff	Pf	R
+8219	"Right-Pt"	#aa55ff	Pt	R
+8220	"Right-PuA"	#00aaff	PuA	R
+8221	"Right-PuI"	#aaaaff	PuI	R
+8222	"Right-PuL"	#00ffff	PuL	R
+8223	"Right-PuM"	#aaffff	PuM	R
+8225	"Right-R"	#ff0000	R	R
+8226	"Right-VA"	#555500	VA	R
+8227	"Right-VAmc"	#ff5500	VAmc	R
+8228	"Right-VLa"	#55aa00	VLa	R
+8229	"Right-VLp"	#ffaa00	VLp	R
+8230	"Right-VM"	#55ff00	VM	R
+8233	"Right-VPL"	#ff00ff	VPL	R
+9000	"ctx-lh-prefrontal"	#32641e	ctx prefrontal	L
+9001	"ctx-lh-primary-motor"	#1e642d	ctx primary motor	L
+9002	"ctx-lh-premotor"	#8264a5	ctx premotor	L
+9003	"ctx-lh-temporal"	#691905	ctx temporal	L
+9004	"ctx-lh-posterior-parietal"	#7d4637	ctx posterior parietal	L
+9005	"ctx-lh-prim-sec-somatosensory"	#e11469	ctx prim sec somatosensory	L
+9006	"ctx-lh-occipital"	#e1140f	ctx occipital	L
+9500	"ctx-rh-prefrontal"	#32c81e	ctx prefrontal	R
+9501	"ctx-rh-primary-motor"	#1e962d	ctx primary motor	R
+9502	"ctx-rh-premotor"	#8296a5	ctx premotor	R
+9503	"ctx-rh-temporal"	#694b05	ctx temporal	R
+9504	"ctx-rh-posterior-parietal"	#7d7837	ctx posterior parietal	R
+9505	"ctx-rh-prim-sec-somatosensory"	#e14669	ctx prim sec somatosensory	R
+9506	"ctx-rh-occipital"	#e1460f	ctx occipital	R
+11100	"ctx_lh_Unknown"	#000000	未知	
+11101	"ctx_lh_G_and_S_frontomargin"	#17dc3c	ctx_lh_G_and_S_frontomargin	
+11102	"ctx_lh_G_and_S_occipital_inf"	#173cb4	ctx_lh_G_and_S_occipital_inf	
+11103	"ctx_lh_G_and_S_paracentral"	#3f643c	旁中央小叶	
+11104	"ctx_lh_G_and_S_subcentral"	#3f14dc	ctx_lh_G_and_S_subcentral	
+11105	"ctx_lh_G_and_S_transv_frontopol"	#0d00fa	ctx_lh_G_and_S_transv_frontopol	
+11106	"ctx_lh_G_and_S_cingul-Ant"	#1a3c00	ctx_lh_G_and_S_cingul Ant	
+11107	"ctx_lh_G_and_S_cingul-Mid-Ant"	#1a3c4b	ctx_lh_G_and_S_cingul Mid Ant	
+11108	"ctx_lh_G_and_S_cingul-Mid-Post"	#1a3c96	ctx_lh_G_and_S_cingul Mid Post	
+11109	"ctx_lh_G_cingul-Post-dorsal"	#193cfa	ctx_lh_G_cingul Post dorsal	
+11110	"ctx_lh_G_cingul-Post-ventral"	#3c1919	ctx_lh_G_cingul Post ventral	
+11111	"ctx_lh_G_cuneus"	#b41414	楔叶	
+11112	"ctx_lh_G_front_inf-Opercular"	#dc1464	ctx_lh_G_front_inf Opercular	
+11113	"ctx_lh_G_front_inf-Orbital"	#8c3c3c	ctx_lh_G_front_inf Orbital	
+11114	"ctx_lh_G_front_inf-Triangul"	#b4dc8c	ctx_lh_G_front_inf Triangul	
+11115	"ctx_lh_G_front_middle"	#8c64b4	ctx_lh_G_front_middle	
+11116	"ctx_lh_G_front_sup"	#b4148c	ctx_lh_G_front_sup	
+11117	"ctx_lh_G_Ins_lg_and_S_cent_ins"	#170a0a	ctx_lh_G_Ins_lg_and_S_cent_ins	
+11118	"ctx_lh_G_insular_short"	#e18c8c	岛叶	
+11119	"ctx_lh_G_occipital_middle"	#b43cb4	ctx_lh_G_occipital_middle	
+11120	"ctx_lh_G_occipital_sup"	#14dc3c	ctx_lh_G_occipital_sup	
+11121	"ctx_lh_G_oc-temp_lat-fusifor"	#3c148c	ctx_lh_G_oc temp_lat fusifor	
+11122	"ctx_lh_G_oc-temp_med-Lingual"	#dcb48c	ctx_lh_G_oc temp_med Lingual	
+11123	"ctx_lh_G_oc-temp_med-Parahip"	#416414	ctx_lh_G_oc temp_med Parahip	
+11124	"ctx_lh_G_orbital"	#dc3c14	ctx_lh_G_orbital	
+11125	"ctx_lh_G_pariet_inf-Angular"	#143cdc	ctx_lh_G_pariet_inf Angular	
+11126	"ctx_lh_G_pariet_inf-Supramar"	#64643c	ctx_lh_G_pariet_inf Supramar	
+11127	"ctx_lh_G_parietal_sup"	#dcb4dc	ctx_lh_G_parietal_sup	
+11128	"ctx_lh_G_postcentral"	#14b48c	中央后回	
+11129	"ctx_lh_G_precentral"	#3c8cb4	中央前回	
+11130	"ctx_lh_G_precuneus"	#19148c	楔叶	
+11131	"ctx_lh_G_rectus"	#143c64	ctx_lh_G_rectus	
+11132	"ctx_lh_G_subcallosal"	#3cdc14	ctx_lh_G_subcallosal	
+11133	"ctx_lh_G_temp_sup-G_T_transv"	#3c3cdc	ctx_lh_G_temp_sup G_T_transv	
+11134	"ctx_lh_G_temp_sup-Lateral"	#dc3cdc	ctx_lh_G_temp_sup Lateral	
+11135	"ctx_lh_G_temp_sup-Plan_polar"	#41dc3c	ctx_lh_G_temp_sup Plan_polar	
+11136	"ctx_lh_G_temp_sup-Plan_tempo"	#198c14	ctx_lh_G_temp_sup Plan_tempo	
+11137	"ctx_lh_G_temporal_inf"	#dcdc64	ctx_lh_G_temporal_inf	
+11138	"ctx_lh_G_temporal_middle"	#b43c3c	ctx_lh_G_temporal_middle	
+11139	"ctx_lh_Lat_Fis-ant-Horizont"	#3d14dc	ctx_lh_Lat_Fis ant Horizont	
+11140	"ctx_lh_Lat_Fis-ant-Vertical"	#3d143c	ctx_lh_Lat_Fis ant Vertical	
+11141	"ctx_lh_Lat_Fis-post"	#3d3c64	ctx_lh_Lat_Fis post	
+11142	"ctx_lh_Medial_wall"	#191919	ctx_lh_Medial_wall	
+11143	"ctx_lh_Pole_occipital"	#8c143c	ctx_lh_Pole_occipital	
+11144	"ctx_lh_Pole_temporal"	#dcb414	ctx_lh_Pole_temporal	
+11145	"ctx_lh_S_calcarine"	#3fb4b4	ctx_lh_S_calcarine	
+11146	"ctx_lh_S_central"	#dd140a	ctx_lh_S_central	
+11147	"ctx_lh_S_cingul-Marginalis"	#dd1464	ctx_lh_S_cingul Marginalis	
+11148	"ctx_lh_S_circular_insula_ant"	#dd3c8c	岛叶	
+11149	"ctx_lh_S_circular_insula_inf"	#dd14dc	岛叶	
+11150	"ctx_lh_S_circular_insula_sup"	#3ddcdc	岛叶	
+11151	"ctx_lh_S_collat_transv_ant"	#64c8c8	ctx_lh_S_collat_transv_ant	
+11152	"ctx_lh_S_collat_transv_post"	#0ac8c8	ctx_lh_S_collat_transv_post	
+11153	"ctx_lh_S_front_inf"	#dddc14	ctx_lh_S_front_inf	
+11154	"ctx_lh_S_front_middle"	#8d1464	ctx_lh_S_front_middle	
+11155	"ctx_lh_S_front_sup"	#3ddc64	ctx_lh_S_front_sup	
+11156	"ctx_lh_S_interm_prim-Jensen"	#8d3c14	ctx_lh_S_interm_prim Jensen	
+11157	"ctx_lh_S_intrapariet_and_P_trans"	#8f14dc	ctx_lh_S_intrapariet_and_P_trans	
+11158	"ctx_lh_S_oc_middle_and_Lunatus"	#653cdc	ctx_lh_S_oc_middle_and_Lunatus	
+11159	"ctx_lh_S_oc_sup_and_transversal"	#15148c	ctx_lh_S_oc_sup_and_transversal	
+11160	"ctx_lh_S_occipital_ant"	#3d14b4	ctx_lh_S_occipital_ant	
+11161	"ctx_lh_S_oc-temp_lat"	#dd8c14	ctx_lh_S_oc temp_lat	
+11162	"ctx_lh_S_oc-temp_med_and_Lingual"	#8d64dc	ctx_lh_S_oc temp_med_and_Lingual	
+11163	"ctx_lh_S_orbital_lateral"	#dd6414	ctx_lh_S_orbital_lateral	
+11164	"ctx_lh_S_orbital_med-olfact"	#b5c814	ctx_lh_S_orbital_med olfact	
+11165	"ctx_lh_S_orbital-H_Shaped"	#651414	ctx_lh_S_orbital H_Shaped	
+11166	"ctx_lh_S_parieto_occipital"	#6564b4	ctx_lh_S_parieto_occipital	
+11167	"ctx_lh_S_pericallosal"	#b5dc14	ctx_lh_S_pericallosal	
+11168	"ctx_lh_S_postcentral"	#158cc8	中央后回	
+11169	"ctx_lh_S_precentral-inf-part"	#1514f0	中央前回	
+11170	"ctx_lh_S_precentral-sup-part"	#1514c8	中央前回	
+11171	"ctx_lh_S_suborbital"	#15143c	ctx_lh_S_suborbital	
+11172	"ctx_lh_S_subparietal"	#653c3c	ctx_lh_S_subparietal	
+11173	"ctx_lh_S_temporal_inf"	#15b4b4	ctx_lh_S_temporal_inf	
+11174	"ctx_lh_S_temporal_sup"	#dfdc3c	ctx_lh_S_temporal_sup	
+11175	"ctx_lh_S_temporal_transverse"	#dd3c3c	ctx_lh_S_temporal_transverse	
+12100	"ctx_rh_Unknown"	#000000	未知	
+12101	"ctx_rh_G_and_S_frontomargin"	#17dc3c	ctx_rh_G_and_S_frontomargin	
+12102	"ctx_rh_G_and_S_occipital_inf"	#173cb4	ctx_rh_G_and_S_occipital_inf	
+12103	"ctx_rh_G_and_S_paracentral"	#3f643c	旁中央小叶	
+12104	"ctx_rh_G_and_S_subcentral"	#3f14dc	ctx_rh_G_and_S_subcentral	
+12105	"ctx_rh_G_and_S_transv_frontopol"	#0d00fa	ctx_rh_G_and_S_transv_frontopol	
+12106	"ctx_rh_G_and_S_cingul-Ant"	#1a3c00	ctx_rh_G_and_S_cingul Ant	
+12107	"ctx_rh_G_and_S_cingul-Mid-Ant"	#1a3c4b	ctx_rh_G_and_S_cingul Mid Ant	
+12108	"ctx_rh_G_and_S_cingul-Mid-Post"	#1a3c96	ctx_rh_G_and_S_cingul Mid Post	
+12109	"ctx_rh_G_cingul-Post-dorsal"	#193cfa	ctx_rh_G_cingul Post dorsal	
+12110	"ctx_rh_G_cingul-Post-ventral"	#3c1919	ctx_rh_G_cingul Post ventral	
+12111	"ctx_rh_G_cuneus"	#b41414	楔叶	
+12112	"ctx_rh_G_front_inf-Opercular"	#dc1464	ctx_rh_G_front_inf Opercular	
+12113	"ctx_rh_G_front_inf-Orbital"	#8c3c3c	ctx_rh_G_front_inf Orbital	
+12114	"ctx_rh_G_front_inf-Triangul"	#b4dc8c	ctx_rh_G_front_inf Triangul	
+12115	"ctx_rh_G_front_middle"	#8c64b4	ctx_rh_G_front_middle	
+12116	"ctx_rh_G_front_sup"	#b4148c	ctx_rh_G_front_sup	
+12117	"ctx_rh_G_Ins_lg_and_S_cent_ins"	#170a0a	ctx_rh_G_Ins_lg_and_S_cent_ins	
+12118	"ctx_rh_G_insular_short"	#e18c8c	岛叶	
+12119	"ctx_rh_G_occipital_middle"	#b43cb4	ctx_rh_G_occipital_middle	
+12120	"ctx_rh_G_occipital_sup"	#14dc3c	ctx_rh_G_occipital_sup	
+12121	"ctx_rh_G_oc-temp_lat-fusifor"	#3c148c	ctx_rh_G_oc temp_lat fusifor	
+12122	"ctx_rh_G_oc-temp_med-Lingual"	#dcb48c	ctx_rh_G_oc temp_med Lingual	
+12123	"ctx_rh_G_oc-temp_med-Parahip"	#416414	ctx_rh_G_oc temp_med Parahip	
+12124	"ctx_rh_G_orbital"	#dc3c14	ctx_rh_G_orbital	
+12125	"ctx_rh_G_pariet_inf-Angular"	#143cdc	ctx_rh_G_pariet_inf Angular	
+12126	"ctx_rh_G_pariet_inf-Supramar"	#64643c	ctx_rh_G_pariet_inf Supramar	
+12127	"ctx_rh_G_parietal_sup"	#dcb4dc	ctx_rh_G_parietal_sup	
+12128	"ctx_rh_G_postcentral"	#14b48c	中央后回	
+12129	"ctx_rh_G_precentral"	#3c8cb4	中央前回	
+12130	"ctx_rh_G_precuneus"	#19148c	楔叶	
+12131	"ctx_rh_G_rectus"	#143c64	ctx_rh_G_rectus	
+12132	"ctx_rh_G_subcallosal"	#3cdc14	ctx_rh_G_subcallosal	
+12133	"ctx_rh_G_temp_sup-G_T_transv"	#3c3cdc	ctx_rh_G_temp_sup G_T_transv	
+12134	"ctx_rh_G_temp_sup-Lateral"	#dc3cdc	ctx_rh_G_temp_sup Lateral	
+12135	"ctx_rh_G_temp_sup-Plan_polar"	#41dc3c	ctx_rh_G_temp_sup Plan_polar	
+12136	"ctx_rh_G_temp_sup-Plan_tempo"	#198c14	ctx_rh_G_temp_sup Plan_tempo	
+12137	"ctx_rh_G_temporal_inf"	#dcdc64	ctx_rh_G_temporal_inf	
+12138	"ctx_rh_G_temporal_middle"	#b43c3c	ctx_rh_G_temporal_middle	
+12139	"ctx_rh_Lat_Fis-ant-Horizont"	#3d14dc	ctx_rh_Lat_Fis ant Horizont	
+12140	"ctx_rh_Lat_Fis-ant-Vertical"	#3d143c	ctx_rh_Lat_Fis ant Vertical	
+12141	"ctx_rh_Lat_Fis-post"	#3d3c64	ctx_rh_Lat_Fis post	
+12142	"ctx_rh_Medial_wall"	#191919	ctx_rh_Medial_wall	
+12143	"ctx_rh_Pole_occipital"	#8c143c	ctx_rh_Pole_occipital	
+12144	"ctx_rh_Pole_temporal"	#dcb414	ctx_rh_Pole_temporal	
+12145	"ctx_rh_S_calcarine"	#3fb4b4	ctx_rh_S_calcarine	
+12146	"ctx_rh_S_central"	#dd140a	ctx_rh_S_central	
+12147	"ctx_rh_S_cingul-Marginalis"	#dd1464	ctx_rh_S_cingul Marginalis	
+12148	"ctx_rh_S_circular_insula_ant"	#dd3c8c	岛叶	
+12149	"ctx_rh_S_circular_insula_inf"	#dd14dc	岛叶	
+12150	"ctx_rh_S_circular_insula_sup"	#3ddcdc	岛叶	
+12151	"ctx_rh_S_collat_transv_ant"	#64c8c8	ctx_rh_S_collat_transv_ant	
+12152	"ctx_rh_S_collat_transv_post"	#0ac8c8	ctx_rh_S_collat_transv_post	
+12153	"ctx_rh_S_front_inf"	#dddc14	ctx_rh_S_front_inf	
+12154	"ctx_rh_S_front_middle"	#8d1464	ctx_rh_S_front_middle	
+12155	"ctx_rh_S_front_sup"	#3ddc64	ctx_rh_S_front_sup	
+12156	"ctx_rh_S_interm_prim-Jensen"	#8d3c14	ctx_rh_S_interm_prim Jensen	
+12157	"ctx_rh_S_intrapariet_and_P_trans"	#8f14dc	ctx_rh_S_intrapariet_and_P_trans	
+12158	"ctx_rh_S_oc_middle_and_Lunatus"	#653cdc	ctx_rh_S_oc_middle_and_Lunatus	
+12159	"ctx_rh_S_oc_sup_and_transversal"	#15148c	ctx_rh_S_oc_sup_and_transversal	
+12160	"ctx_rh_S_occipital_ant"	#3d14b4	ctx_rh_S_occipital_ant	
+12161	"ctx_rh_S_oc-temp_lat"	#dd8c14	ctx_rh_S_oc temp_lat	
+12162	"ctx_rh_S_oc-temp_med_and_Lingual"	#8d64dc	ctx_rh_S_oc temp_med_and_Lingual	
+12163	"ctx_rh_S_orbital_lateral"	#dd6414	ctx_rh_S_orbital_lateral	
+12164	"ctx_rh_S_orbital_med-olfact"	#b5c814	ctx_rh_S_orbital_med olfact	
+12165	"ctx_rh_S_orbital-H_Shaped"	#651414	ctx_rh_S_orbital H_Shaped	
+12166	"ctx_rh_S_parieto_occipital"	#6564b4	ctx_rh_S_parieto_occipital	
+12167	"ctx_rh_S_pericallosal"	#b5dc14	ctx_rh_S_pericallosal	
+12168	"ctx_rh_S_postcentral"	#158cc8	中央后回	
+12169	"ctx_rh_S_precentral-inf-part"	#1514f0	中央前回	
+12170	"ctx_rh_S_precentral-sup-part"	#1514c8	中央前回	
+12171	"ctx_rh_S_suborbital"	#15143c	ctx_rh_S_suborbital	
+12172	"ctx_rh_S_subparietal"	#653c3c	ctx_rh_S_subparietal	
+12173	"ctx_rh_S_temporal_inf"	#15b4b4	ctx_rh_S_temporal_inf	
+12174	"ctx_rh_S_temporal_sup"	#dfdc3c	ctx_rh_S_temporal_sup	
+12175	"ctx_rh_S_temporal_transverse"	#dd3c3c	ctx_rh_S_temporal_transverse	
+13100	"wm_lh_Unknown"	#000000	未知	
+13101	"wm_lh_G_and_S_frontomargin"	#17dc3c	wm_lh_G_and_S_frontomargin	
+13102	"wm_lh_G_and_S_occipital_inf"	#173cb4	wm_lh_G_and_S_occipital_inf	
+13103	"wm_lh_G_and_S_paracentral"	#3f643c	旁中央小叶	
+13104	"wm_lh_G_and_S_subcentral"	#3f14dc	wm_lh_G_and_S_subcentral	
+13105	"wm_lh_G_and_S_transv_frontopol"	#0d00fa	wm_lh_G_and_S_transv_frontopol	
+13106	"wm_lh_G_and_S_cingul-Ant"	#1a3c00	wm_lh_G_and_S_cingul Ant	
+13107	"wm_lh_G_and_S_cingul-Mid-Ant"	#1a3c4b	wm_lh_G_and_S_cingul Mid Ant	
+13108	"wm_lh_G_and_S_cingul-Mid-Post"	#1a3c96	wm_lh_G_and_S_cingul Mid Post	
+13109	"wm_lh_G_cingul-Post-dorsal"	#193cfa	wm_lh_G_cingul Post dorsal	
+13110	"wm_lh_G_cingul-Post-ventral"	#3c1919	wm_lh_G_cingul Post ventral	
+13111	"wm_lh_G_cuneus"	#b41414	楔叶	
+13112	"wm_lh_G_front_inf-Opercular"	#dc1464	wm_lh_G_front_inf Opercular	
+13113	"wm_lh_G_front_inf-Orbital"	#8c3c3c	wm_lh_G_front_inf Orbital	
+13114	"wm_lh_G_front_inf-Triangul"	#b4dc8c	wm_lh_G_front_inf Triangul	
+13115	"wm_lh_G_front_middle"	#8c64b4	wm_lh_G_front_middle	
+13116	"wm_lh_G_front_sup"	#b4148c	wm_lh_G_front_sup	
+13117	"wm_lh_G_Ins_lg_and_S_cent_ins"	#170a0a	wm_lh_G_Ins_lg_and_S_cent_ins	
+13118	"wm_lh_G_insular_short"	#e18c8c	岛叶	
+13119	"wm_lh_G_occipital_middle"	#b43cb4	wm_lh_G_occipital_middle	
+13120	"wm_lh_G_occipital_sup"	#14dc3c	wm_lh_G_occipital_sup	
+13121	"wm_lh_G_oc-temp_lat-fusifor"	#3c148c	wm_lh_G_oc temp_lat fusifor	
+13122	"wm_lh_G_oc-temp_med-Lingual"	#dcb48c	wm_lh_G_oc temp_med Lingual	
+13123	"wm_lh_G_oc-temp_med-Parahip"	#416414	wm_lh_G_oc temp_med Parahip	
+13124	"wm_lh_G_orbital"	#dc3c14	wm_lh_G_orbital	
+13125	"wm_lh_G_pariet_inf-Angular"	#143cdc	wm_lh_G_pariet_inf Angular	
+13126	"wm_lh_G_pariet_inf-Supramar"	#64643c	wm_lh_G_pariet_inf Supramar	
+13127	"wm_lh_G_parietal_sup"	#dcb4dc	wm_lh_G_parietal_sup	
+13128	"wm_lh_G_postcentral"	#14b48c	中央后回	
+13129	"wm_lh_G_precentral"	#3c8cb4	中央前回	
+13130	"wm_lh_G_precuneus"	#19148c	楔叶	
+13131	"wm_lh_G_rectus"	#143c64	wm_lh_G_rectus	
+13132	"wm_lh_G_subcallosal"	#3cdc14	wm_lh_G_subcallosal	
+13133	"wm_lh_G_temp_sup-G_T_transv"	#3c3cdc	wm_lh_G_temp_sup G_T_transv	
+13134	"wm_lh_G_temp_sup-Lateral"	#dc3cdc	wm_lh_G_temp_sup Lateral	
+13135	"wm_lh_G_temp_sup-Plan_polar"	#41dc3c	wm_lh_G_temp_sup Plan_polar	
+13136	"wm_lh_G_temp_sup-Plan_tempo"	#198c14	wm_lh_G_temp_sup Plan_tempo	
+13137	"wm_lh_G_temporal_inf"	#dcdc64	wm_lh_G_temporal_inf	
+13138	"wm_lh_G_temporal_middle"	#b43c3c	wm_lh_G_temporal_middle	
+13139	"wm_lh_Lat_Fis-ant-Horizont"	#3d14dc	wm_lh_Lat_Fis ant Horizont	
+13140	"wm_lh_Lat_Fis-ant-Vertical"	#3d143c	wm_lh_Lat_Fis ant Vertical	
+13141	"wm_lh_Lat_Fis-post"	#3d3c64	wm_lh_Lat_Fis post	
+13142	"wm_lh_Medial_wall"	#191919	wm_lh_Medial_wall	
+13143	"wm_lh_Pole_occipital"	#8c143c	wm_lh_Pole_occipital	
+13144	"wm_lh_Pole_temporal"	#dcb414	wm_lh_Pole_temporal	
+13145	"wm_lh_S_calcarine"	#3fb4b4	wm_lh_S_calcarine	
+13146	"wm_lh_S_central"	#dd140a	wm_lh_S_central	
+13147	"wm_lh_S_cingul-Marginalis"	#dd1464	wm_lh_S_cingul Marginalis	
+13148	"wm_lh_S_circular_insula_ant"	#dd3c8c	岛叶	
+13149	"wm_lh_S_circular_insula_inf"	#dd14dc	岛叶	
+13150	"wm_lh_S_circular_insula_sup"	#3ddcdc	岛叶	
+13151	"wm_lh_S_collat_transv_ant"	#64c8c8	wm_lh_S_collat_transv_ant	
+13152	"wm_lh_S_collat_transv_post"	#0ac8c8	wm_lh_S_collat_transv_post	
+13153	"wm_lh_S_front_inf"	#dddc14	wm_lh_S_front_inf	
+13154	"wm_lh_S_front_middle"	#8d1464	wm_lh_S_front_middle	
+13155	"wm_lh_S_front_sup"	#3ddc64	wm_lh_S_front_sup	
+13156	"wm_lh_S_interm_prim-Jensen"	#8d3c14	wm_lh_S_interm_prim Jensen	
+13157	"wm_lh_S_intrapariet_and_P_trans"	#8f14dc	wm_lh_S_intrapariet_and_P_trans	
+13158	"wm_lh_S_oc_middle_and_Lunatus"	#653cdc	wm_lh_S_oc_middle_and_Lunatus	
+13159	"wm_lh_S_oc_sup_and_transversal"	#15148c	wm_lh_S_oc_sup_and_transversal	
+13160	"wm_lh_S_occipital_ant"	#3d14b4	wm_lh_S_occipital_ant	
+13161	"wm_lh_S_oc-temp_lat"	#dd8c14	wm_lh_S_oc temp_lat	
+13162	"wm_lh_S_oc-temp_med_and_Lingual"	#8d64dc	wm_lh_S_oc temp_med_and_Lingual	
+13163	"wm_lh_S_orbital_lateral"	#dd6414	wm_lh_S_orbital_lateral	
+13164	"wm_lh_S_orbital_med-olfact"	#b5c814	wm_lh_S_orbital_med olfact	
+13165	"wm_lh_S_orbital-H_Shaped"	#651414	wm_lh_S_orbital H_Shaped	
+13166	"wm_lh_S_parieto_occipital"	#6564b4	wm_lh_S_parieto_occipital	
+13167	"wm_lh_S_pericallosal"	#b5dc14	wm_lh_S_pericallosal	
+13168	"wm_lh_S_postcentral"	#158cc8	中央后回	
+13169	"wm_lh_S_precentral-inf-part"	#1514f0	中央前回	
+13170	"wm_lh_S_precentral-sup-part"	#1514c8	中央前回	
+13171	"wm_lh_S_suborbital"	#15143c	wm_lh_S_suborbital	
+13172	"wm_lh_S_subparietal"	#653c3c	wm_lh_S_subparietal	
+13173	"wm_lh_S_temporal_inf"	#15b4b4	wm_lh_S_temporal_inf	
+13174	"wm_lh_S_temporal_sup"	#dfdc3c	wm_lh_S_temporal_sup	
+13175	"wm_lh_S_temporal_transverse"	#dd3c3c	wm_lh_S_temporal_transverse	
+14100	"wm_rh_Unknown"	#000000	未知	
+14101	"wm_rh_G_and_S_frontomargin"	#17dc3c	wm_rh_G_and_S_frontomargin	
+14102	"wm_rh_G_and_S_occipital_inf"	#173cb4	wm_rh_G_and_S_occipital_inf	
+14103	"wm_rh_G_and_S_paracentral"	#3f643c	旁中央小叶	
+14104	"wm_rh_G_and_S_subcentral"	#3f14dc	wm_rh_G_and_S_subcentral	
+14105	"wm_rh_G_and_S_transv_frontopol"	#0d00fa	wm_rh_G_and_S_transv_frontopol	
+14106	"wm_rh_G_and_S_cingul-Ant"	#1a3c00	wm_rh_G_and_S_cingul Ant	
+14107	"wm_rh_G_and_S_cingul-Mid-Ant"	#1a3c4b	wm_rh_G_and_S_cingul Mid Ant	
+14108	"wm_rh_G_and_S_cingul-Mid-Post"	#1a3c96	wm_rh_G_and_S_cingul Mid Post	
+14109	"wm_rh_G_cingul-Post-dorsal"	#193cfa	wm_rh_G_cingul Post dorsal	
+14110	"wm_rh_G_cingul-Post-ventral"	#3c1919	wm_rh_G_cingul Post ventral	
+14111	"wm_rh_G_cuneus"	#b41414	楔叶	
+14112	"wm_rh_G_front_inf-Opercular"	#dc1464	wm_rh_G_front_inf Opercular	
+14113	"wm_rh_G_front_inf-Orbital"	#8c3c3c	wm_rh_G_front_inf Orbital	
+14114	"wm_rh_G_front_inf-Triangul"	#b4dc8c	wm_rh_G_front_inf Triangul	
+14115	"wm_rh_G_front_middle"	#8c64b4	wm_rh_G_front_middle	
+14116	"wm_rh_G_front_sup"	#b4148c	wm_rh_G_front_sup	
+14117	"wm_rh_G_Ins_lg_and_S_cent_ins"	#170a0a	wm_rh_G_Ins_lg_and_S_cent_ins	
+14118	"wm_rh_G_insular_short"	#e18c8c	岛叶	
+14119	"wm_rh_G_occipital_middle"	#b43cb4	wm_rh_G_occipital_middle	
+14120	"wm_rh_G_occipital_sup"	#14dc3c	wm_rh_G_occipital_sup	
+14121	"wm_rh_G_oc-temp_lat-fusifor"	#3c148c	wm_rh_G_oc temp_lat fusifor	
+14122	"wm_rh_G_oc-temp_med-Lingual"	#dcb48c	wm_rh_G_oc temp_med Lingual	
+14123	"wm_rh_G_oc-temp_med-Parahip"	#416414	wm_rh_G_oc temp_med Parahip	
+14124	"wm_rh_G_orbital"	#dc3c14	wm_rh_G_orbital	
+14125	"wm_rh_G_pariet_inf-Angular"	#143cdc	wm_rh_G_pariet_inf Angular	
+14126	"wm_rh_G_pariet_inf-Supramar"	#64643c	wm_rh_G_pariet_inf Supramar	
+14127	"wm_rh_G_parietal_sup"	#dcb4dc	wm_rh_G_parietal_sup	
+14128	"wm_rh_G_postcentral"	#14b48c	中央后回	
+14129	"wm_rh_G_precentral"	#3c8cb4	中央前回	
+14130	"wm_rh_G_precuneus"	#19148c	楔叶	
+14131	"wm_rh_G_rectus"	#143c64	wm_rh_G_rectus	
+14132	"wm_rh_G_subcallosal"	#3cdc14	wm_rh_G_subcallosal	
+14133	"wm_rh_G_temp_sup-G_T_transv"	#3c3cdc	wm_rh_G_temp_sup G_T_transv	
+14134	"wm_rh_G_temp_sup-Lateral"	#dc3cdc	wm_rh_G_temp_sup Lateral	
+14135	"wm_rh_G_temp_sup-Plan_polar"	#41dc3c	wm_rh_G_temp_sup Plan_polar	
+14136	"wm_rh_G_temp_sup-Plan_tempo"	#198c14	wm_rh_G_temp_sup Plan_tempo	
+14137	"wm_rh_G_temporal_inf"	#dcdc64	wm_rh_G_temporal_inf	
+14138	"wm_rh_G_temporal_middle"	#b43c3c	wm_rh_G_temporal_middle	
+14139	"wm_rh_Lat_Fis-ant-Horizont"	#3d14dc	wm_rh_Lat_Fis ant Horizont	
+14140	"wm_rh_Lat_Fis-ant-Vertical"	#3d143c	wm_rh_Lat_Fis ant Vertical	
+14141	"wm_rh_Lat_Fis-post"	#3d3c64	wm_rh_Lat_Fis post	
+14142	"wm_rh_Medial_wall"	#191919	wm_rh_Medial_wall	
+14143	"wm_rh_Pole_occipital"	#8c143c	wm_rh_Pole_occipital	
+14144	"wm_rh_Pole_temporal"	#dcb414	wm_rh_Pole_temporal	
+14145	"wm_rh_S_calcarine"	#3fb4b4	wm_rh_S_calcarine	
+14146	"wm_rh_S_central"	#dd140a	wm_rh_S_central	
+14147	"wm_rh_S_cingul-Marginalis"	#dd1464	wm_rh_S_cingul Marginalis	
+14148	"wm_rh_S_circular_insula_ant"	#dd3c8c	岛叶	
+14149	"wm_rh_S_circular_insula_inf"	#dd14dc	岛叶	
+14150	"wm_rh_S_circular_insula_sup"	#3ddcdc	岛叶	
+14151	"wm_rh_S_collat_transv_ant"	#64c8c8	wm_rh_S_collat_transv_ant	
+14152	"wm_rh_S_collat_transv_post"	#0ac8c8	wm_rh_S_collat_transv_post	
+14153	"wm_rh_S_front_inf"	#dddc14	wm_rh_S_front_inf	
+14154	"wm_rh_S_front_middle"	#8d1464	wm_rh_S_front_middle	
+14155	"wm_rh_S_front_sup"	#3ddc64	wm_rh_S_front_sup	
+14156	"wm_rh_S_interm_prim-Jensen"	#8d3c14	wm_rh_S_interm_prim Jensen	
+14157	"wm_rh_S_intrapariet_and_P_trans"	#8f14dc	wm_rh_S_intrapariet_and_P_trans	
+14158	"wm_rh_S_oc_middle_and_Lunatus"	#653cdc	wm_rh_S_oc_middle_and_Lunatus	
+14159	"wm_rh_S_oc_sup_and_transversal"	#15148c	wm_rh_S_oc_sup_and_transversal	
+14160	"wm_rh_S_occipital_ant"	#3d14b4	wm_rh_S_occipital_ant	
+14161	"wm_rh_S_oc-temp_lat"	#dd8c14	wm_rh_S_oc temp_lat	
+14162	"wm_rh_S_oc-temp_med_and_Lingual"	#8d64dc	wm_rh_S_oc temp_med_and_Lingual	
+14163	"wm_rh_S_orbital_lateral"	#dd6414	wm_rh_S_orbital_lateral	
+14164	"wm_rh_S_orbital_med-olfact"	#b5c814	wm_rh_S_orbital_med olfact	
+14165	"wm_rh_S_orbital-H_Shaped"	#651414	wm_rh_S_orbital H_Shaped	
+14166	"wm_rh_S_parieto_occipital"	#6564b4	wm_rh_S_parieto_occipital	
+14167	"wm_rh_S_pericallosal"	#b5dc14	wm_rh_S_pericallosal	
+14168	"wm_rh_S_postcentral"	#158cc8	中央后回	
+14169	"wm_rh_S_precentral-inf-part"	#1514f0	中央前回	
+14170	"wm_rh_S_precentral-sup-part"	#1514c8	中央前回	
+14171	"wm_rh_S_suborbital"	#15143c	wm_rh_S_suborbital	
+14172	"wm_rh_S_subparietal"	#653c3c	wm_rh_S_subparietal	
+14173	"wm_rh_S_temporal_inf"	#15b4b4	wm_rh_S_temporal_inf	
+14174	"wm_rh_S_temporal_sup"	#dfdc3c	wm_rh_S_temporal_sup	
+14175	"wm_rh_S_temporal_transverse"	#dd3c3c	wm_rh_S_temporal_transverse	
