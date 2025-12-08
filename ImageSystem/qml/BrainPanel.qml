@@ -105,6 +105,16 @@ Rectangle {
             regionTableView.currentIndex = index
         }
     }
+    
+    // 监听currentIndex变化，切换数据模式
+    onCurrentIndexChanged: {
+        // 当切换到脑区分割面板（currentIndex === 2）时，启用SegData模式
+        if (currentIndex === 2) {
+            $DicomDataModel.setSegDataMode(true)
+        } else {
+            $DicomDataModel.setSegDataMode(false)
+        }
+    }
     Column{
         spacing: 10
         width: parent.width

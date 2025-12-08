@@ -63,6 +63,16 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     m_region = new BrainRegionVisualizer(dirPath.toStdString(), "Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
     m_region->Initialize();
     
+    // 获取SegData的维度信息
+    vtkSmartPointer<vtkImageSlice> axialSlice = m_region->GetAxialSlice();
+    if (axialSlice && axialSlice->GetMapper()) {
+        vtkImageSliceMapper* mapper = vtkImageSliceMapper::SafeDownCast(axialSlice->GetMapper());
+        if (mapper && mapper->GetInput()) {
+            mapper->GetInput()->GetDimensions(m_segDims);
+            qDebug() << "SegData dimensions:" << m_segDims[0] << "x" << m_segDims[1] << "x" << m_segDims[2];
+        }
+    }
+    
     // 加载表格数据
     QVector<SegmentationRegion> regions;
     auto& regionEntries = m_region->Regions();
@@ -77,10 +87,13 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     }
     m_segmentationTableModel->loadRegions(regions);
     
-    m_windowWidth = 2000;
+    m_windowWidth = 0;
     m_windowLevel = 0;
+    
+    // 设置SegData的默认切片为中间位置
+    setSegAxialSlice(m_segDims[2] / 2);
+    setSegSagittalSlice(m_segDims[0] / 2);
+    setSegCoronalSlice(m_segDims[1] / 2);
+    
     emit segDataLoaded();
-    setAxialSlice(m_dims[2] / 2);
-    setSagittalSlice(m_dims[0] / 2);
-    setCoronalSlice(m_dims[1] / 2);
 }

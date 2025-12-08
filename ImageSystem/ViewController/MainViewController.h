@@ -97,34 +97,67 @@ protected:
 
 private:
     int getCurrentSlice() const {
-        switch (m_orientation) {
-        case SliceOrientation::Axial: return m_dataModel->axialSlice();
-        case SliceOrientation::Sagittal: return m_dataModel->sagittalSlice();
-        case SliceOrientation::Coronal: return m_dataModel->coronalSlice();
+        // 根据当前数据模式选择切片
+        if (m_dataModel->isSegDataMode()) {
+            switch (m_orientation) {
+            case SliceOrientation::Axial: return m_dataModel->segAxialSlice();
+            case SliceOrientation::Sagittal: return m_dataModel->segSagittalSlice();
+            case SliceOrientation::Coronal: return m_dataModel->segCoronalSlice();
+            }
+        } else {
+            switch (m_orientation) {
+            case SliceOrientation::Axial: return m_dataModel->axialSlice();
+            case SliceOrientation::Sagittal: return m_dataModel->sagittalSlice();
+            case SliceOrientation::Coronal: return m_dataModel->coronalSlice();
+            }
         }
         return 0;
     }
 
     int getMaxSlice() const {
-        switch (m_orientation) {
-        case SliceOrientation::Axial: return m_dataModel->maxAxialSlice();
-        case SliceOrientation::Sagittal: return m_dataModel->maxSagittalSlice();
-        case SliceOrientation::Coronal: return m_dataModel->maxCoronalSlice();
+        // 根据当前数据模式选择最大切片
+        if (m_dataModel->isSegDataMode()) {
+            switch (m_orientation) {
+            case SliceOrientation::Axial: return m_dataModel->maxSegAxialSlice();
+            case SliceOrientation::Sagittal: return m_dataModel->maxSegSagittalSlice();
+            case SliceOrientation::Coronal: return m_dataModel->maxSegCoronalSlice();
+            }
+        } else {
+            switch (m_orientation) {
+            case SliceOrientation::Axial: return m_dataModel->maxAxialSlice();
+            case SliceOrientation::Sagittal: return m_dataModel->maxSagittalSlice();
+            case SliceOrientation::Coronal: return m_dataModel->maxCoronalSlice();
+            }
         }
         return 0;
     }
 
     void setSlice(int slice) {
-        switch (m_orientation) {
-        case SliceOrientation::Axial:
-            m_dataModel->setAxialSlice(slice);
-            break;
-        case SliceOrientation::Sagittal:
-            m_dataModel->setSagittalSlice(slice);
-            break;
-        case SliceOrientation::Coronal:
-            m_dataModel->setCoronalSlice(slice);
-            break;
+        // 根据当前数据模式设置切片
+        if (m_dataModel->isSegDataMode()) {
+            switch (m_orientation) {
+            case SliceOrientation::Axial:
+                m_dataModel->setSegAxialSlice(slice);
+                break;
+            case SliceOrientation::Sagittal:
+                m_dataModel->setSegSagittalSlice(slice);
+                break;
+            case SliceOrientation::Coronal:
+                m_dataModel->setSegCoronalSlice(slice);
+                break;
+            }
+        } else {
+            switch (m_orientation) {
+            case SliceOrientation::Axial:
+                m_dataModel->setAxialSlice(slice);
+                break;
+            case SliceOrientation::Sagittal:
+                m_dataModel->setSagittalSlice(slice);
+                break;
+            case SliceOrientation::Coronal:
+                m_dataModel->setCoronalSlice(slice);
+                break;
+            }
         }
     }
     DicomDataModel* m_dataModel;
@@ -183,6 +216,13 @@ public:
             this, &SliceVtkItemBase::onSliceChanged);
         connect(m_dataModel, &DicomDataModel::coronalSliceChanged,
             this, &SliceVtkItemBase::onSliceChanged);
+        // 连接SegData切片变化信号
+        connect(m_dataModel, &DicomDataModel::segAxialSliceChanged,
+            this, &SliceVtkItemBase::onSegSliceChanged);
+        connect(m_dataModel, &DicomDataModel::segSagittalSliceChanged,
+            this, &SliceVtkItemBase::onSegSliceChanged);
+        connect(m_dataModel, &DicomDataModel::segCoronalSliceChanged,
+            this, &SliceVtkItemBase::onSegSliceChanged);
         connect(m_dataModel, &DicomDataModel::windowWidthChanged,
             this, &SliceVtkItemBase::onWindowChanged);
         connect(m_dataModel, &DicomDataModel::windowLevelChanged,
@@ -285,6 +325,25 @@ private slots:
                 if (data->imageMapper) {
                     data->imageMapper->SetSliceNumber(getCurrentSlice());
                     data->imageMapper->Modified();
+                }
+            }
+            });
+        scheduleRender();
+    }
+    
+    void onSegSliceChanged(int slice) {
+        Q_UNUSED(slice);
+        // 使用 dispatch_async 在渲染线程更新SegData切片
+        dispatch_async([this](vtkRenderWindow* rw, vtkUserData userData) {
+            Q_UNUSED(rw);
+            if (userData) {
+                SliceViewData* data = static_cast<SliceViewData*>(userData.GetPointer());
+                if (data->imageSlice && data->imageSlice->GetMapper()) {
+                    vtkImageSliceMapper* mapper = vtkImageSliceMapper::SafeDownCast(data->imageSlice->GetMapper());
+                    if (mapper) {
+                        mapper->SetSliceNumber(getSegCurrentSlice());
+                        mapper->Modified();
+                    }
                 }
             }
             });
@@ -412,6 +471,18 @@ private:
             return m_dataModel->sagittalSlice();
         case SliceOrientation::Coronal:
             return m_dataModel->coronalSlice();
+        }
+        return 0;
+    }
+    
+    int getSegCurrentSlice() const {
+        switch (m_orientation) {
+        case SliceOrientation::Axial:
+            return m_dataModel->segAxialSlice();
+        case SliceOrientation::Sagittal:
+            return m_dataModel->segSagittalSlice();
+        case SliceOrientation::Coronal:
+            return m_dataModel->segCoronalSlice();
         }
         return 0;
     }
