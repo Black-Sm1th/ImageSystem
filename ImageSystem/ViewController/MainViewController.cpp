@@ -9,6 +9,607 @@ vtkStandardNewMacro(SliceInteractorStyle);
 vtkStandardNewMacro(SliceViewData);
 vtkStandardNewMacro(VolumeViewData);
 
+// ===== SliceInteractorStyle implementations =====
+SliceInteractorStyle::SliceInteractorStyle()
+    : m_orientation(SliceOrientation::Axial),
+      m_isDragging(false),
+      m_lastX(0),
+      m_lastY(0)
+{
+    m_dataModel = GET_SINGLETON(DicomDataModel);
+}
+
+void SliceInteractorStyle::SetOrientation(SliceOrientation orientation)
+{
+    m_orientation = orientation;
+}
+
+void SliceInteractorStyle::OnMouseWheelForward()
+{
+    int currentSlice = getCurrentSlice();
+    int maxSlice = getMaxSlice();
+    if (currentSlice < maxSlice) {
+        setSlice(currentSlice + 1);
+    }
+}
+
+void SliceInteractorStyle::OnMouseWheelBackward()
+{
+    int currentSlice = getCurrentSlice();
+    if (currentSlice > 0) {
+        setSlice(currentSlice - 1);
+    }
+}
+
+void SliceInteractorStyle::OnLeftButtonDown()
+{
+    m_isDragging = true;
+    int* pos = this->GetInteractor()->GetEventPosition();
+    m_lastX = pos[0];
+    m_lastY = pos[1];
+}
+
+void SliceInteractorStyle::OnLeftButtonUp()
+{
+    m_isDragging = false;
+}
+
+void SliceInteractorStyle::OnMouseMove()
+{
+    if (m_isDragging) {
+        int* pos = this->GetInteractor()->GetEventPosition();
+        int dx = pos[0] - m_lastX;
+        int dy = pos[1] - m_lastY;
+
+        // 水平拖动调整窗宽，垂直拖动调整窗位
+        double currentWidth = m_dataModel->windowWidth();
+        double currentLevel = m_dataModel->windowLevel();
+
+        double newWidth = currentWidth + dx * 4.0;
+        double newLevel = currentLevel + dy * 4.0;
+
+        if (newWidth < 1) newWidth = 1;
+
+        m_dataModel->setWindowWidth(newWidth);
+        m_dataModel->setWindowLevel(newLevel);
+
+        m_lastX = pos[0];
+        m_lastY = pos[1];
+    }
+}
+
+int SliceInteractorStyle::getCurrentSlice() const
+{
+    // 根据当前数据模式选择切片
+    if (m_dataModel->isSegDataMode()) {
+        switch (m_orientation) {
+        case SliceOrientation::Axial: return m_dataModel->segAxialSlice();
+        case SliceOrientation::Sagittal: return m_dataModel->segSagittalSlice();
+        case SliceOrientation::Coronal: return m_dataModel->segCoronalSlice();
+        }
+    } else {
+        switch (m_orientation) {
+        case SliceOrientation::Axial: return m_dataModel->axialSlice();
+        case SliceOrientation::Sagittal: return m_dataModel->sagittalSlice();
+        case SliceOrientation::Coronal: return m_dataModel->coronalSlice();
+        }
+    }
+    return 0;
+}
+
+int SliceInteractorStyle::getMaxSlice() const
+{
+    // 根据当前数据模式选择最大切片
+    if (m_dataModel->isSegDataMode()) {
+        switch (m_orientation) {
+        case SliceOrientation::Axial: return m_dataModel->maxSegAxialSlice();
+        case SliceOrientation::Sagittal: return m_dataModel->maxSegSagittalSlice();
+        case SliceOrientation::Coronal: return m_dataModel->maxSegCoronalSlice();
+        }
+    } else {
+        switch (m_orientation) {
+        case SliceOrientation::Axial: return m_dataModel->maxAxialSlice();
+        case SliceOrientation::Sagittal: return m_dataModel->maxSagittalSlice();
+        case SliceOrientation::Coronal: return m_dataModel->maxCoronalSlice();
+        }
+    }
+    return 0;
+}
+
+void SliceInteractorStyle::setSlice(int slice)
+{
+    // 根据当前数据模式设置切片
+    if (m_dataModel->isSegDataMode()) {
+        switch (m_orientation) {
+        case SliceOrientation::Axial:
+            m_dataModel->setSegAxialSlice(slice);
+            break;
+        case SliceOrientation::Sagittal:
+            m_dataModel->setSegSagittalSlice(slice);
+            break;
+        case SliceOrientation::Coronal:
+            m_dataModel->setSegCoronalSlice(slice);
+            break;
+        }
+    } else {
+        switch (m_orientation) {
+        case SliceOrientation::Axial:
+            m_dataModel->setAxialSlice(slice);
+            break;
+        case SliceOrientation::Sagittal:
+            m_dataModel->setSagittalSlice(slice);
+            break;
+        case SliceOrientation::Coronal:
+            m_dataModel->setCoronalSlice(slice);
+            break;
+        }
+    }
+}
+
+// ===== SliceVtkItemBase implementations =====
+SliceVtkItemBase::SliceVtkItemBase(SliceOrientation orientation, const char* viewName)
+    : m_orientation(orientation),
+      m_viewName(viewName)
+{
+    m_dataModel = GET_SINGLETON(DicomDataModel);
+}
+
+QQuickVTKItem::vtkUserData SliceVtkItemBase::initializeVTK(vtkRenderWindow* renderWindow)
+{
+    // 创建用户数据对象
+    vtkSmartPointer<SliceViewData> data = vtkSmartPointer<SliceViewData>::New();
+
+    // 连接信号（在GUI线程）
+    connect(m_dataModel, &DicomDataModel::dataLoaded,
+        this, &SliceVtkItemBase::onDataLoaded);
+    connect(m_dataModel, &DicomDataModel::segDataLoaded,
+        this, &SliceVtkItemBase::onSegDataLoaded);
+    connect(m_dataModel, &DicomDataModel::axialSliceChanged,
+        this, &SliceVtkItemBase::onSliceChanged);
+    connect(m_dataModel, &DicomDataModel::sagittalSliceChanged,
+        this, &SliceVtkItemBase::onSliceChanged);
+    connect(m_dataModel, &DicomDataModel::coronalSliceChanged,
+        this, &SliceVtkItemBase::onSliceChanged);
+    // 连接SegData切片变化信号
+    connect(m_dataModel, &DicomDataModel::segAxialSliceChanged,
+        this, &SliceVtkItemBase::onSegSliceChanged);
+    connect(m_dataModel, &DicomDataModel::segSagittalSliceChanged,
+        this, &SliceVtkItemBase::onSegSliceChanged);
+    connect(m_dataModel, &DicomDataModel::segCoronalSliceChanged,
+        this, &SliceVtkItemBase::onSegSliceChanged);
+    connect(m_dataModel, &DicomDataModel::windowWidthChanged,
+        this, &SliceVtkItemBase::onWindowChanged);
+    connect(m_dataModel, &DicomDataModel::windowLevelChanged,
+        this, &SliceVtkItemBase::onWindowChanged);
+
+    // 在渲染线程初始化VTK对象
+    vtkSmartPointer<vtkImageData> imageData = m_dataModel->getImageData();
+    if (imageData) {
+        setupView(renderWindow, data, imageData);
+    }
+
+    return data;
+}
+
+void SliceVtkItemBase::onDataLoaded()
+{
+    // 使用 dispatch_async 在渲染线程更新VTK对象
+    dispatch_async([this](vtkRenderWindow* rw, vtkUserData userData) {
+        vtkSmartPointer<vtkImageData> imageData = m_dataModel->getImageData();
+        if (imageData && userData) {
+            SliceViewData* data = static_cast<SliceViewData*>(userData.GetPointer());
+            setupView(rw, data, imageData);
+        }
+        });
+    scheduleRender();
+}
+
+void SliceVtkItemBase::onSegDataLoaded()
+{
+    // 使用 dispatch_async 在渲染线程更新VTK对象
+    dispatch_async([this](vtkRenderWindow* rw, vtkUserData userData) {
+        if (userData) {
+            SliceViewData* data = static_cast<SliceViewData*>(userData.GetPointer());
+            // 清除旧的渲染器
+            rw->GetRenderers()->RemoveAllItems();
+
+            switch (m_orientation) {
+            case SliceOrientation::Axial:
+                data->imageSlice = m_dataModel->getSegImageData(0);
+                break;
+            case SliceOrientation::Sagittal:
+                data->imageSlice = m_dataModel->getSegImageData(2);
+                break;
+            case SliceOrientation::Coronal:
+                data->imageSlice = m_dataModel->getSegImageData(1);
+                break;
+            }
+            data->imageSlice->GetProperty()->SetColorWindow(m_dataModel->windowWidth());
+            data->imageSlice->GetProperty()->SetColorLevel(m_dataModel->windowLevel());
+
+            // 创建渲染器
+            data->renderer = vtkSmartPointer<vtkRenderer>::New();
+            data->renderer->AddViewProp(data->imageSlice);
+            data->renderer->SetBackground(0, 0, 0);
+
+            // 添加标题文本标签
+            vtkSmartPointer<vtkTextMapper> textMapper = vtkSmartPointer<vtkTextMapper>::New();
+            textMapper->SetInput(m_viewName);
+            textMapper->GetTextProperty()->SetFontSize(20);
+            textMapper->GetTextProperty()->SetColor(1.0, 1.0, 0.0);
+
+            vtkSmartPointer<vtkActor2D> textActor = vtkSmartPointer<vtkActor2D>::New();
+            textActor->SetMapper(textMapper);
+            textActor->SetPosition(10, 10);
+            data->renderer->AddActor2D(textActor);
+
+            // 添加窗宽窗位显示文本（右下角）
+            data->wwwlTextMapper = vtkSmartPointer<vtkTextMapper>::New();
+            updateWWWLText(data);
+            data->wwwlTextMapper->GetTextProperty()->SetFontSize(16);
+            data->wwwlTextMapper->GetTextProperty()->SetColor(0.0, 1.0, 0.0);
+            data->wwwlTextMapper->GetTextProperty()->SetJustificationToRight();
+
+            data->wwwlTextActor = vtkSmartPointer<vtkActor2D>::New();
+            data->wwwlTextActor->SetMapper(data->wwwlTextMapper);
+            data->wwwlTextActor->GetPositionCoordinate()->SetCoordinateSystemToNormalizedViewport();
+            data->wwwlTextActor->SetPosition(0.98, 0.02);
+            data->renderer->AddActor2D(data->wwwlTextActor);
+
+            rw->AddRenderer(data->renderer);
+
+            // 设置交互样式
+            vtkSmartPointer<SliceInteractorStyle> style = vtkSmartPointer<SliceInteractorStyle>::New();
+            style->SetOrientation(m_orientation);
+            rw->GetInteractor()->SetInteractorStyle(style);
+
+            // 设置相机方向
+            setupCamera(data->renderer);
+        }
+    });
+    scheduleRender();
+}
+
+void SliceVtkItemBase::onSliceChanged(int slice)
+{
+    Q_UNUSED(slice);
+    // 使用 dispatch_async 在渲染线程更新切片
+    dispatch_async([this](vtkRenderWindow* rw, vtkUserData userData) {
+        Q_UNUSED(rw);
+        if (userData) {
+            SliceViewData* data = static_cast<SliceViewData*>(userData.GetPointer());
+            if (data->imageMapper) {
+                data->imageMapper->SetSliceNumber(getCurrentSlice());
+                data->imageMapper->Modified();
+            }
+        }
+        });
+    scheduleRender();
+}
+
+void SliceVtkItemBase::onSegSliceChanged(int slice)
+{
+    Q_UNUSED(slice);
+    // 使用 dispatch_async 在渲染线程更新SegData切片
+    dispatch_async([this](vtkRenderWindow* rw, vtkUserData userData) {
+        Q_UNUSED(rw);
+        if (userData) {
+            SliceViewData* data = static_cast<SliceViewData*>(userData.GetPointer());
+            if (data->imageSlice && data->imageSlice->GetMapper()) {
+                vtkImageSliceMapper* mapper = vtkImageSliceMapper::SafeDownCast(data->imageSlice->GetMapper());
+                if (mapper) {
+                    mapper->SetSliceNumber(getSegCurrentSlice());
+                    mapper->Modified();
+                }
+            }
+        }
+        });
+    scheduleRender();
+}
+
+void SliceVtkItemBase::onWindowChanged()
+{
+    // 使用 dispatch_async 在渲染线程更新窗宽窗位
+    dispatch_async([this](vtkRenderWindow* rw, vtkUserData userData) {
+        Q_UNUSED(rw);
+        if (userData) {
+            SliceViewData* data = static_cast<SliceViewData*>(userData.GetPointer());
+            if (data->imageSlice) {
+                data->imageSlice->GetProperty()->SetColorWindow(
+                    m_dataModel->windowWidth());
+                data->imageSlice->GetProperty()->SetColorLevel(
+                    m_dataModel->windowLevel());
+                data->imageSlice->GetProperty()->Modified();
+                updateWWWLText(data);
+            }
+        }
+        });
+    scheduleRender();
+}
+
+void SliceVtkItemBase::setupView(vtkRenderWindow* renderWindow, SliceViewData* data, vtkImageData* imageData)
+{
+    // 清除旧的渲染器
+    renderWindow->GetRenderers()->RemoveAllItems();
+
+    // 创建图像切片
+    data->imageMapper = vtkSmartPointer<vtkImageSliceMapper>::New();
+    data->imageMapper->SetInputData(imageData);
+    setMapperOrientation(data->imageMapper);
+    data->imageMapper->SetSliceNumber(getCurrentSlice());
+
+    data->imageSlice = vtkSmartPointer<vtkImageSlice>::New();
+    data->imageSlice->SetMapper(data->imageMapper);
+    data->imageSlice->GetProperty()->SetColorWindow(m_dataModel->windowWidth());
+    data->imageSlice->GetProperty()->SetColorLevel(m_dataModel->windowLevel());
+
+    // 创建渲染器
+    data->renderer = vtkSmartPointer<vtkRenderer>::New();
+    data->renderer->AddViewProp(data->imageSlice);
+    data->renderer->SetBackground(0, 0, 0);
+
+    // 添加标题文本标签
+    vtkSmartPointer<vtkTextMapper> textMapper = vtkSmartPointer<vtkTextMapper>::New();
+    textMapper->SetInput(m_viewName);
+    textMapper->GetTextProperty()->SetFontSize(20);
+    textMapper->GetTextProperty()->SetColor(1.0, 1.0, 0.0);
+
+    vtkSmartPointer<vtkActor2D> textActor = vtkSmartPointer<vtkActor2D>::New();
+    textActor->SetMapper(textMapper);
+    textActor->SetPosition(10, 10);
+    data->renderer->AddActor2D(textActor);
+
+    // 添加窗宽窗位显示文本（右下角）
+    data->wwwlTextMapper = vtkSmartPointer<vtkTextMapper>::New();
+    updateWWWLText(data);
+    data->wwwlTextMapper->GetTextProperty()->SetFontSize(16);
+    data->wwwlTextMapper->GetTextProperty()->SetColor(0.0, 1.0, 0.0);
+    data->wwwlTextMapper->GetTextProperty()->SetJustificationToRight();
+
+    data->wwwlTextActor = vtkSmartPointer<vtkActor2D>::New();
+    data->wwwlTextActor->SetMapper(data->wwwlTextMapper);
+    data->wwwlTextActor->GetPositionCoordinate()->SetCoordinateSystemToNormalizedViewport();
+    data->wwwlTextActor->SetPosition(0.98, 0.02);
+    data->renderer->AddActor2D(data->wwwlTextActor);
+
+    renderWindow->AddRenderer(data->renderer);
+
+    // 设置交互样式
+    vtkSmartPointer<SliceInteractorStyle> style = vtkSmartPointer<SliceInteractorStyle>::New();
+    style->SetOrientation(m_orientation);
+    renderWindow->GetInteractor()->SetInteractorStyle(style);
+
+    // 设置相机方向
+    setupCamera(data->renderer);
+}
+
+void SliceVtkItemBase::setMapperOrientation(vtkImageSliceMapper* mapper)
+{
+    switch (m_orientation) {
+    case SliceOrientation::Axial:
+        mapper->SetOrientationToZ();
+        break;
+    case SliceOrientation::Sagittal:
+        mapper->SetOrientationToX();
+        break;
+    case SliceOrientation::Coronal:
+        mapper->SetOrientationToY();
+        break;
+    }
+}
+
+void SliceVtkItemBase::setupCamera(vtkRenderer* renderer)
+{
+    renderer->ResetCamera();
+    vtkCamera* camera = renderer->GetActiveCamera();
+
+    switch (m_orientation) {
+    case SliceOrientation::Axial:
+        camera->SetViewUp(0, 1, 0);
+        camera->SetPosition(0, 0, 1);
+        camera->SetFocalPoint(0, 0, 0);
+        break;
+    case SliceOrientation::Sagittal:
+        camera->SetViewUp(0, 0, -1);
+        camera->SetPosition(1, 0, 0);
+        camera->SetFocalPoint(0, 0, 0);
+        break;
+    case SliceOrientation::Coronal:
+        camera->SetViewUp(0, 0, -1);
+        camera->SetPosition(0, -1, 0);
+        camera->SetFocalPoint(0, 0, 0);
+        break;
+    }
+
+    renderer->ResetCamera();
+}
+
+int SliceVtkItemBase::getCurrentSlice() const
+{
+    switch (m_orientation) {
+    case SliceOrientation::Axial:
+        return m_dataModel->axialSlice();
+    case SliceOrientation::Sagittal:
+        return m_dataModel->sagittalSlice();
+    case SliceOrientation::Coronal:
+        return m_dataModel->coronalSlice();
+    }
+    return 0;
+}
+
+int SliceVtkItemBase::getSegCurrentSlice() const
+{
+    switch (m_orientation) {
+    case SliceOrientation::Axial:
+        return m_dataModel->segAxialSlice();
+    case SliceOrientation::Sagittal:
+        return m_dataModel->segSagittalSlice();
+    case SliceOrientation::Coronal:
+        return m_dataModel->segCoronalSlice();
+    }
+    return 0;
+}
+
+void SliceVtkItemBase::updateWWWLText(SliceViewData* data)
+{
+    if (data->wwwlTextMapper) {
+        char buffer[64];
+        snprintf(buffer, sizeof(buffer), "W: %.0f  L: %.0f",
+            m_dataModel->windowWidth(),
+            m_dataModel->windowLevel());
+        data->wwwlTextMapper->SetInput(buffer);
+    }
+}
+
+// ===== Derived Slice Items =====
+AxialVtkItem::AxialVtkItem()
+    : SliceVtkItemBase(SliceOrientation::Axial, "Axial View")
+{
+}
+
+SagittalVtkItem::SagittalVtkItem()
+    : SliceVtkItemBase(SliceOrientation::Sagittal, "Sagittal View")
+{
+}
+
+CoronalVtkItem::CoronalVtkItem()
+    : SliceVtkItemBase(SliceOrientation::Coronal, "Coronal View")
+{
+}
+
+// ===== VolumeVtkItem implementations =====
+QQuickVTKItem::vtkUserData VolumeVtkItem::initializeVTK(vtkRenderWindow* renderWindow)
+{
+    // 创建用户数据对象
+    vtkSmartPointer<VolumeViewData> data = vtkSmartPointer<VolumeViewData>::New();
+
+    // 连接信号
+    connect(GET_SINGLETON(DicomDataModel), &DicomDataModel::dataLoaded,
+        this, &VolumeVtkItem::onDataLoaded);
+    connect(GET_SINGLETON(DicomDataModel), &DicomDataModel::segDataLoaded,
+        this, &VolumeVtkItem::onSegDataLoaded);
+    // 在渲染线程初始化VTK对象
+    vtkSmartPointer<vtkImageData> imageData = GET_SINGLETON(DicomDataModel)->getImageData();
+    if (imageData) {
+        setupView(renderWindow, data, imageData);
+    }
+
+    return data;
+}
+
+void VolumeVtkItem::onDataLoaded()
+{
+    // 使用 dispatch_async 在渲染线程更新VTK对象
+    dispatch_async([](vtkRenderWindow* rw, vtkUserData userData) {
+        vtkSmartPointer<vtkImageData> imageData = GET_SINGLETON(DicomDataModel)->getImageData();
+        if (imageData && userData) {
+            VolumeViewData* data = static_cast<VolumeViewData*>(userData.GetPointer());
+            setupView(rw, data, imageData);
+        }
+        });
+    scheduleRender();
+}
+
+void VolumeVtkItem::onSegDataLoaded()
+{
+    // 使用 dispatch_async 在渲染线程更新VTK对象
+    dispatch_async([](vtkRenderWindow* rw, vtkUserData userData) {
+        VolumeViewData* data = static_cast<VolumeViewData*>(userData.GetPointer());
+        data->renderer = GET_SINGLETON(DicomDataModel)->getSeg3DRenderer();
+        data->renderer->SetBackground(0, 0, 0);
+        rw->AddRenderer(data->renderer);
+
+        // 设置3D交互样式
+        vtkSmartPointer<vtkInteractorStyleTrackballCamera> style =
+            vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
+        rw->GetInteractor()->SetInteractorStyle(style);
+        data->renderer->GetActiveCamera()->SetViewUp(0, 0, -1);
+        data->renderer->GetActiveCamera()->SetPosition(0, 1, 0);
+        data->renderer->GetActiveCamera()->SetFocalPoint(0, 0, 0);
+        data->renderer->ResetCamera();
+        });
+    scheduleRender();
+}
+
+void VolumeVtkItem::setupView(vtkRenderWindow* renderWindow, VolumeViewData* data, vtkImageData* imageData)
+{
+    // 清除旧的渲染器
+    renderWindow->GetRenderers()->RemoveAllItems();
+
+    // 创建体渲染映射器
+    vtkSmartPointer<vtkGPUVolumeRayCastMapper> volumeMapper =
+        vtkSmartPointer<vtkGPUVolumeRayCastMapper>::New();
+    volumeMapper->SetInputData(imageData);
+
+    // 颜色传输函数
+    vtkSmartPointer<vtkColorTransferFunction> colorFunc =
+        vtkSmartPointer<vtkColorTransferFunction>::New();
+    colorFunc->AddRGBPoint(-3024, 0.0, 0.0, 0.0);
+    colorFunc->AddRGBPoint(-77, 0.54902, 0.25098, 0.14902);
+    colorFunc->AddRGBPoint(94, 0.882353, 0.603922, 0.290196);
+    colorFunc->AddRGBPoint(179, 1.0, 0.937033, 0.954531);
+    colorFunc->AddRGBPoint(260, 0.615686, 0.0, 0.0);
+    colorFunc->AddRGBPoint(3071, 0.827451, 0.658824, 1.0);
+
+    // 不透明度传输函数
+    vtkSmartPointer<vtkPiecewiseFunction> opacityFunc =
+        vtkSmartPointer<vtkPiecewiseFunction>::New();
+    opacityFunc->AddPoint(-3024, 0.0);
+    opacityFunc->AddPoint(-77, 0.0);
+    opacityFunc->AddPoint(94, 0.29);
+    opacityFunc->AddPoint(179, 0.55);
+    opacityFunc->AddPoint(260, 0.84);
+    opacityFunc->AddPoint(3071, 0.875);
+
+    // 梯度不透明度函数
+    vtkSmartPointer<vtkPiecewiseFunction> gradientFunc =
+        vtkSmartPointer<vtkPiecewiseFunction>::New();
+    gradientFunc->AddPoint(0, 0.0);
+    gradientFunc->AddPoint(90, 0.5);
+    gradientFunc->AddPoint(100, 1.0);
+
+    // 体属性
+    vtkSmartPointer<vtkVolumeProperty> volumeProperty =
+        vtkSmartPointer<vtkVolumeProperty>::New();
+    volumeProperty->SetColor(colorFunc);
+    volumeProperty->SetScalarOpacity(opacityFunc);
+    volumeProperty->SetGradientOpacity(gradientFunc);
+    volumeProperty->SetInterpolationTypeToLinear();
+    volumeProperty->ShadeOn();
+    volumeProperty->SetAmbient(0.4);
+    volumeProperty->SetDiffuse(0.6);
+    volumeProperty->SetSpecular(0.2);
+
+    vtkSmartPointer<vtkVolume> volume = vtkSmartPointer<vtkVolume>::New();
+    volume->SetMapper(volumeMapper);
+    volume->SetProperty(volumeProperty);
+
+    data->renderer = vtkSmartPointer<vtkRenderer>::New();
+    data->renderer->AddVolume(volume);
+    data->renderer->SetBackground(0, 0, 0);
+
+    // 添加文本标签
+    vtkSmartPointer<vtkTextMapper> textMapper = vtkSmartPointer<vtkTextMapper>::New();
+    textMapper->SetInput("3D Volume Rendering");
+    textMapper->GetTextProperty()->SetFontSize(20);
+    textMapper->GetTextProperty()->SetColor(1.0, 1.0, 0.0);
+
+    vtkSmartPointer<vtkActor2D> textActor = vtkSmartPointer<vtkActor2D>::New();
+    textActor->SetMapper(textMapper);
+    textActor->SetPosition(10, 10);
+    data->renderer->AddActor2D(textActor);
+
+    renderWindow->AddRenderer(data->renderer);
+
+    // 设置3D交互样式
+    vtkSmartPointer<vtkInteractorStyleTrackballCamera> style =
+        vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
+    renderWindow->GetInteractor()->SetInteractorStyle(style);
+    data->renderer->GetActiveCamera()->SetViewUp(0, 0, -1);
+    data->renderer->GetActiveCamera()->SetPosition(0, 1, 0);
+    data->renderer->GetActiveCamera()->SetFocalPoint(0, 0, 0);
+    data->renderer->ResetCamera();
+}
 MainViewController::MainViewController(QObject* parent)
     : QObject(parent)
 {
@@ -252,6 +853,11 @@ void MainViewController::selectBrainRegion(int row)
     emit networkTableIndexChanged(row);
     qDebug() << QStringLiteral("选中脑区:") << row << imagePath;
     setcurrentRegionplotsUrl(imagePath);
+}
+
+BrainRegionTableModel* MainViewController::getBrainRegionTableModel() const
+{
+    return m_brainRegionTableModel;
 }
 
 void MainViewController::processBrainNetworkAnalysis(const QString& boldPath, const QString& confoundsPath, const QString& outputDir)

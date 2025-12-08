@@ -33,106 +33,48 @@ class DicomDataModel : public QObject
 
 public:
     // 普通数据的切片
-    int axialSlice() const { return m_axialSlice; }
-    int sagittalSlice() const { return m_sagittalSlice; }
-    int coronalSlice() const { return m_coronalSlice; }
-    int maxAxialSlice() const { return m_dims[2] - 1; }
-    int maxSagittalSlice() const { return m_dims[0] - 1; }
-    int maxCoronalSlice() const { return m_dims[1] - 1; }
+    int axialSlice() const;
+    int sagittalSlice() const;
+    int coronalSlice() const;
+    int maxAxialSlice() const;
+    int maxSagittalSlice() const;
+    int maxCoronalSlice() const;
     
     // SegData的切片
-    int segAxialSlice() const { return m_segAxialSlice; }
-    int segSagittalSlice() const { return m_segSagittalSlice; }
-    int segCoronalSlice() const { return m_segCoronalSlice; }
-    int maxSegAxialSlice() const { return m_segDims[2] - 1; }
-    int maxSegSagittalSlice() const { return m_segDims[0] - 1; }
-    int maxSegCoronalSlice() const { return m_segDims[1] - 1; }
+    int segAxialSlice() const;
+    int segSagittalSlice() const;
+    int segCoronalSlice() const;
+    int maxSegAxialSlice() const;
+    int maxSegSagittalSlice() const;
+    int maxSegCoronalSlice() const;
     
-    bool isSegDataMode() const { return m_isSegDataMode; }
+    bool isSegDataMode() const;
     
-    double windowWidth() const { return m_windowWidth; }
-    double windowLevel() const { return m_windowLevel; }
-    QString dicomInfo() const { return m_dicomInfo; }
-    bool hasData() const { return m_imageData != nullptr; }
-    vtkSmartPointer<vtkImageData> getImageData() { return m_imageData; }
-    vtkSmartPointer<vtkImageSlice> getSegImageData(int index) {
-        if (index == 0) {
-            return m_region->GetAxialSlice();
-        }if (index == 1) {
-            return m_region->GetCoronalSlice();
-        }if (index == 2) {
-            return m_region->GetSagittalSlice();
-        }
-    }
-    vtkSmartPointer<vtkRenderer> getSeg3DRenderer() {return m_region->Get3DRenderer();}
+    double windowWidth() const;
+    double windowLevel() const;
+    QString dicomInfo() const;
+    bool hasData() const;
+    vtkSmartPointer<vtkImageData> getImageData();
+    vtkSmartPointer<vtkImageSlice> getSegImageData(int index);
+    vtkSmartPointer<vtkRenderer> getSeg3DRenderer();
     
-    BrainSegmentationTableModel* getSegmentationTableModel() { return m_segmentationTableModel; }
+    BrainSegmentationTableModel* getSegmentationTableModel();
 
-    void setAxialSlice(int slice) {
-        if (slice != m_axialSlice && slice >= 0 && slice < m_dims[2]) {
-            m_axialSlice = slice;
-            emit axialSliceChanged(slice);
-        }
-    }
-
-    void setSagittalSlice(int slice) {
-        if (slice != m_sagittalSlice && slice >= 0 && slice < m_dims[0]) {
-            m_sagittalSlice = slice;
-            emit sagittalSliceChanged(slice);
-        }
-    }
-
-    void setCoronalSlice(int slice) {
-        if (slice != m_coronalSlice && slice >= 0 && slice < m_dims[1]) {
-            m_coronalSlice = slice;
-            emit coronalSliceChanged(slice);
-        }
-    }
+    void setAxialSlice(int slice);
+    void setSagittalSlice(int slice);
+    void setCoronalSlice(int slice);
     
-    void setSegAxialSlice(int slice) {
-        if (slice != m_segAxialSlice && slice >= 0 && slice < m_segDims[2]) {
-            m_segAxialSlice = slice;
-            emit segAxialSliceChanged(slice);
-        }
-    }
+    void setSegAxialSlice(int slice);
+    void setSegSagittalSlice(int slice);
+    void setSegCoronalSlice(int slice);
 
-    void setSegSagittalSlice(int slice) {
-        if (slice != m_segSagittalSlice && slice >= 0 && slice < m_segDims[0]) {
-            m_segSagittalSlice = slice;
-            emit segSagittalSliceChanged(slice);
-        }
-    }
-
-    void setSegCoronalSlice(int slice) {
-        if (slice != m_segCoronalSlice && slice >= 0 && slice < m_segDims[1]) {
-            m_segCoronalSlice = slice;
-            emit segCoronalSliceChanged(slice);
-        }
-    }
-
-    void setWindowWidth(double width) {
-        if (width != m_windowWidth && width > 0) {
-            m_windowWidth = width;
-            emit windowWidthChanged(width);
-        }
-    }
-
-    void setWindowLevel(double level) {
-        if (level != m_windowLevel) {
-            m_windowLevel = level;
-            emit windowLevelChanged(level);
-        }
-    }
+    void setWindowWidth(double width);
+    void setWindowLevel(double level);
     Q_INVOKABLE bool loadDicomDirectory(const QString& path);
 
     Q_INVOKABLE void loadSegBrainDirectory(const QString& path);
     
-    Q_INVOKABLE void setSegDataMode(bool enabled) {
-        if (m_isSegDataMode != enabled) {
-            m_isSegDataMode = enabled;
-            emit segDataModeChanged();
-        }
-    }
+    Q_INVOKABLE void setSegDataMode(bool enabled);
 
 signals:
     void axialSliceChanged(int slice);
