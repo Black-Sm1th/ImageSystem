@@ -45,6 +45,7 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#include <functional>
 #include <vtkNIFTIImageReader.h>
 
 // 定义结构体和类
@@ -101,10 +102,13 @@ class LabelPipeline;
 class BrainRegionVisualizer
 {
 public:
+    using ProgressCallback = std::function<void(int, const std::string&)>;
+
     BrainRegionVisualizer(const std::string& niftiPath, const std::string& tsvPath);
     ~BrainRegionVisualizer(); // 如果需要，可以添加析构函数
 
     bool Initialize();
+    void SetProgressCallback(ProgressCallback cb);
 
     vtkSmartPointer<vtkRenderer> Get3DRenderer() const { return renderer3D_; }
     vtkSmartPointer<vtkImageSlice> GetAxialSlice() const { return axialSlice_; }
@@ -166,6 +170,9 @@ private:
 
     vtkSmartPointer<vtkRenderer> renderer3D_;
     vtkSmartPointer<vtkTextActor> labelText_;
+    ProgressCallback progressCallback_;
+
+    void ReportProgress(int percent, const std::string& message);
 
     template<typename T>
     void AccumulateCounts(T* ptr, vtkIdType count, std::unordered_map<int, vtkIdType>& counts)

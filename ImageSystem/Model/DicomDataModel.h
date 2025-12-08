@@ -97,6 +97,7 @@ private:
 
     vtkSmartPointer<vtkImageData> m_imageData;
     std::unique_ptr<BrainRegionVisualizer> m_region;
+    std::unique_ptr<BrainRegionVisualizer> m_pendingRegion;
     BrainSegmentationTableModel* m_segmentationTableModel;
     int m_dims[3] = {1, 1, 1};
     int m_segDims[3] = {1, 1, 1};

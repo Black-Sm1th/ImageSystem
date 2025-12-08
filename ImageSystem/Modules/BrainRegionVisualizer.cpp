@@ -148,22 +148,33 @@ BrainRegionVisualizer::~BrainRegionVisualizer()
 
 bool BrainRegionVisualizer::Initialize()
 {
+    ReportProgress(25, "加载分割体数据...");
     if (!LoadImage())
     {
+        ReportProgress(100, "加载分割体数据失败");
         return false;
     }
+
+    ReportProgress(30, "加载颜色表...");
     if (!LoadColorData())
     {
+        ReportProgress(100, "加载颜色表失败");
         return false;
     }
+    ReportProgress(35, "统计脑区数据...");
     ComputeLabelStatistics();
+    ReportProgress(40, "构建脑区表面...");
     pipeline_ = std::make_unique<LabelPipeline>(imageData_);
     if (!BuildActors())
     {
+        ReportProgress(100, "构建脑区表面失败");
         return false;
     }
+    ReportProgress(85, "构建切片视图...");
     BuildSlices();
+    ReportProgress(90, "构建3D视图...");
     Build3DRenderer();
+    ReportProgress(95, "完成脑区可视化初始化");
     return true;
 }
 
@@ -341,8 +352,19 @@ bool BrainRegionVisualizer::BuildActors()
     {
         pipeline_ = std::make_unique<LabelPipeline>(imageData_);
     }
+    const size_t actorCount = regions_.size();
+    if (actorCount == 0)
+    {
+        ReportProgress(70, "没有可用的脑区用于构建表面");
+        return true;
+    }
 
-    for (size_t i = 0; i < regions_.size(); ++i)
+    constexpr double progressStart = 40.0;
+    constexpr double progressEnd = 75.0;
+    const double progressRange = progressEnd - progressStart;
+    double lastReported = progressStart;
+
+    for (size_t i = 0; i < actorCount; ++i)
     {
         auto& region = regions_[i];
         auto styleIt = labelStyles_.find(region.label);
@@ -360,6 +382,16 @@ bool BrainRegionVisualizer::BuildActors()
         region.actor = actor;
         region.baseOpacity = 1.0;
         actorIndex_[actor.GetPointer()] = i;
+
+        double ratio = static_cast<double>(i + 1) / static_cast<double>(actorCount);
+        double currentPercent = progressStart + ratio * progressRange;
+        if ((currentPercent - lastReported) >= 1.0 || i + 1 == actorCount)
+        {
+            std::ostringstream oss;
+            oss << "构建脑区表面 (" << (i + 1) << "/" << actorCount << ")";
+            ReportProgress(static_cast<int>(currentPercent), oss.str());
+            lastReported = currentPercent;
+        }
     }
     return true;
 }
@@ -686,5 +718,19 @@ vtkSmartPointer<vtkActor> BrainRegionVisualizer::CreateLabelActor(int label, con
     actor->SetPickable(true);
 
     return actor;
+}
+
+void BrainRegionVisualizer::SetProgressCallback(ProgressCallback cb)
+{
+    progressCallback_ = std::move(cb);
+}
+
+void BrainRegionVisualizer::ReportProgress(int percent, const std::string& message)
+{
+    if (progressCallback_)
+    {
+        std::cout << percent << std::endl;
+        progressCallback_(percent, message);
+    }
 }
 
