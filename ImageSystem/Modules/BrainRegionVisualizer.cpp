@@ -267,8 +267,11 @@ void BrainRegionVisualizer::ComputeLabelStatistics()
             region.voxelCount = static_cast<double>(countIt->second);
         }
 
-        region.volume = region.voxelCount * voxelVolume_;
-        totalVolume += region.volume;
+        region.volume = (region.voxelCount * voxelVolume_) / 1000.0; // 转换为 cm³
+        if (region.label != 0)
+        {
+            totalVolume += region.volume;
+        }
         regions_.emplace_back(region);
         labelIndex_[region.label] = regions_.size() - 1;
     }
@@ -280,6 +283,11 @@ void BrainRegionVisualizer::ComputeLabelStatistics()
 
     for (auto& region : regions_)
     {
+        if (region.label == 0 || totalVolume <= 0.0)
+        {
+            region.volumePercent = 0.0;
+            continue;
+        }
         region.volumePercent = (region.volume / totalVolume) * 100.0;
     }
 

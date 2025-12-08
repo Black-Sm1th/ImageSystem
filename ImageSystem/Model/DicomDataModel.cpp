@@ -243,6 +243,9 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     QVector<SegmentationRegion> regions;
     auto& regionEntries = m_region->Regions();
     for (const auto& entry : regionEntries) {
+        if (entry.label == 0) {
+            continue;
+        }
         SegmentationRegion region;
         region.chineseName = QString::fromStdString(entry.chineseName);
         region.hemisphere = QString(QChar(entry.hemisphere));

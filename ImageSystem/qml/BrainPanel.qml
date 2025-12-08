@@ -362,7 +362,7 @@ Rectangle {
                                         border.width: 1
                                         Label {
                                             anchors.centerIn: parent
-                                            text: "容积(mm³)"
+                                            text: "容积(cm³)"
                                             color: "#ffffff"
                                             font.pixelSize: 12
                                             font.bold: true
