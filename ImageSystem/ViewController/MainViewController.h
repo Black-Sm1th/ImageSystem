@@ -135,7 +135,7 @@ public:
     CoronalVtkItem();
 };
 
-// 存储体渲染视图的VTK对象
+// 存储体渲染视图的VTK  
 class VolumeViewData : public vtkObject
 {
 public:

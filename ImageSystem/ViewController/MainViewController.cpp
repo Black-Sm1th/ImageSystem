@@ -56,7 +56,7 @@ void SliceInteractorStyle::OnLeftButtonUp()
 
 void SliceInteractorStyle::OnMouseMove()
 {
-    if (m_isDragging) {
+    if (m_isDragging && !m_dataModel->isSegDataMode()) {
         int* pos = this->GetInteractor()->GetEventPosition();
         int dx = pos[0] - m_lastX;
         int dy = pos[1] - m_lastY;
@@ -224,8 +224,6 @@ void SliceVtkItemBase::onSegDataLoaded()
                 data->imageSlice = m_dataModel->getSegImageData(1);
                 break;
             }
-            data->imageSlice->GetProperty()->SetColorWindow(m_dataModel->windowWidth());
-            data->imageSlice->GetProperty()->SetColorLevel(m_dataModel->windowLevel());
 
             // 创建渲染器
             data->renderer = vtkSmartPointer<vtkRenderer>::New();
@@ -242,19 +240,6 @@ void SliceVtkItemBase::onSegDataLoaded()
             textActor->SetMapper(textMapper);
             textActor->SetPosition(10, 10);
             data->renderer->AddActor2D(textActor);
-
-            // 添加窗宽窗位显示文本（右下角）
-            data->wwwlTextMapper = vtkSmartPointer<vtkTextMapper>::New();
-            updateWWWLText(data);
-            data->wwwlTextMapper->GetTextProperty()->SetFontSize(16);
-            data->wwwlTextMapper->GetTextProperty()->SetColor(0.0, 1.0, 0.0);
-            data->wwwlTextMapper->GetTextProperty()->SetJustificationToRight();
-
-            data->wwwlTextActor = vtkSmartPointer<vtkActor2D>::New();
-            data->wwwlTextActor->SetMapper(data->wwwlTextMapper);
-            data->wwwlTextActor->GetPositionCoordinate()->SetCoordinateSystemToNormalizedViewport();
-            data->wwwlTextActor->SetPosition(0.98, 0.02);
-            data->renderer->AddActor2D(data->wwwlTextActor);
 
             rw->AddRenderer(data->renderer);
 

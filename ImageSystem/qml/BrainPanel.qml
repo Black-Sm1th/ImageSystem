@@ -106,15 +106,6 @@ Rectangle {
         }
     }
     
-    // 监听currentIndex变化，切换数据模式
-    onCurrentIndexChanged: {
-        // 当切换到脑区分割面板（currentIndex === 2）时，启用SegData模式
-        if (currentIndex === 2) {
-            $DicomDataModel.setSegDataMode(true)
-        } else {
-            $DicomDataModel.setSegDataMode(false)
-        }
-    }
     Column{
         spacing: 10
         width: parent.width
@@ -293,8 +284,8 @@ Rectangle {
                     }
                     ///脑区表格
                     Rectangle {
-                        width: parent.width
-                        height: rootPanel.height - 150
+                        width: parent.width - 5
+                        height: segmentationAnalysis.height - 50 - 5
                         color: "#1a1a1a"
                         border.color: "#404040"
                         border.width: 1
@@ -311,6 +302,7 @@ Rectangle {
                             readonly property int colHemisphereWidth: 50
                             readonly property int colVolumeWidth: 70
                             readonly property int colPercentWidth: 70
+                            readonly property int colAsymmetryWidth: 60
 
                             // 表格标题
                             Rectangle {
@@ -388,7 +380,7 @@ Rectangle {
 
                                     // 全脑占比
                                     Rectangle {
-                                        width: segTableColumn.width - segTableColumn.colColorWidth - segTableColumn.colChineseWidth - segTableColumn.colHemisphereWidth - segTableColumn.colVolumeWidth - 10
+                                        width: segTableColumn.colPercentWidth
                                         height: parent.height
                                         color: "transparent"
                                         border.color: "#404040"
@@ -396,6 +388,22 @@ Rectangle {
                                         Label {
                                             anchors.centerIn: parent
                                             text: "全脑占比"
+                                            color: "#ffffff"
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                        }
+                                    }
+
+                                    // 不对称指数
+                                    Rectangle {
+                                        width: segTableColumn.width - segTableColumn.colColorWidth - segTableColumn.colChineseWidth - segTableColumn.colHemisphereWidth - segTableColumn.colVolumeWidth - segTableColumn.colPercentWidth - 10
+                                        height: parent.height
+                                        color: "transparent"
+                                        border.color: "#404040"
+                                        border.width: 1
+                                        Label {
+                                            anchors.centerIn: parent
+                                            text: "不对称"
                                             color: "#ffffff"
                                             font.pixelSize: 12
                                             font.bold: true
@@ -493,12 +501,25 @@ Rectangle {
 
                                         // 全脑占比
                                         Rectangle {
-                                            width: segTableColumn.width - segTableColumn.colColorWidth - segTableColumn.colChineseWidth - segTableColumn.colHemisphereWidth - segTableColumn.colVolumeWidth - 10
+                                            width: segTableColumn.colPercentWidth
                                             height: parent.height
                                             color: "transparent"
                                             Label {
                                                 anchors.centerIn: parent
                                                 text: model.volumePercent
+                                                color: "#cccccc"
+                                                font.pixelSize: 11
+                                            }
+                                        }
+
+                                        // 不对称指数
+                                        Rectangle {
+                                            width: segTableColumn.width - segTableColumn.colColorWidth - segTableColumn.colChineseWidth - segTableColumn.colHemisphereWidth - segTableColumn.colVolumeWidth - segTableColumn.colPercentWidth - 10
+                                            height: parent.height
+                                            color: "transparent"
+                                            Label {
+                                                anchors.centerIn: parent
+                                                text: model.asymmetryIndex
                                                 color: "#cccccc"
                                                 font.pixelSize: 11
                                             }
@@ -593,7 +614,7 @@ Rectangle {
                     // 脑区数据表格
                     Rectangle {
                         width: parent.width - 20
-                        height: rootPanel.height - 500
+                        height: networkAnalysis.height - infoList.height - 60 - 15
                         color: "#1a1a1a"
                         border.color: "#404040"
                         border.width: 1

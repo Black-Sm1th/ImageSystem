@@ -169,14 +169,15 @@ bool DicomDataModel::loadDicomDirectory(const QString& path) {
         .arg(spacing[0]).arg(spacing[1]).arg(spacing[2])
         .arg(origin[0]).arg(origin[1]).arg(origin[2]);
 
+    // 切换到普通数据模式
+    setSegDataMode(false);
+    
     emit dataLoaded();
     // 设置默认切片为中间位置
     setAxialSlice(m_dims[2] / 2);
     setSagittalSlice(m_dims[0] / 2);
     setCoronalSlice(m_dims[1] / 2);
     return true;
-    return true;
-    
 }
 
 void DicomDataModel::loadSegBrainDirectory(const QString& path)
@@ -280,6 +281,7 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
         region.colorB = entry.colorB;
         region.colorA = entry.colorA;
         region.partnerLabel = entry.partnerLabel;
+        region.asymmetryIndex = entry.asymmetryIndex;
         regions.append(region);
         processedLabels.insert(entry.label);
         
@@ -301,6 +303,7 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
                 partnerRegion.colorB = partnerEntry.colorB;
                 partnerRegion.colorA = partnerEntry.colorA;
                 partnerRegion.partnerLabel = partnerEntry.partnerLabel;
+                partnerRegion.asymmetryIndex = partnerEntry.asymmetryIndex;
                 regions.append(partnerRegion);
                 processedLabels.insert(partnerEntry.label);
             }
@@ -316,6 +319,9 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     setSegAxialSlice(m_segDims[2] / 2);
     setSegSagittalSlice(m_segDims[0] / 2);
     setSegCoronalSlice(m_segDims[1] / 2);
+    
+    // 切换到SegData模式
+    setSegDataMode(true);
     
     emit segDataLoaded();
 }

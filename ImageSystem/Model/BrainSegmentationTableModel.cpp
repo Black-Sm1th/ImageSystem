@@ -33,7 +33,7 @@ int BrainSegmentationTableModel::columnCount(const QModelIndex& parent) const
 {
     if (parent.isValid())
         return 0;
-    return 5;  // 颜色、中文名称、位置、容积、全脑占比
+    return 6;  // 颜色、中文名称、位置、容积、全脑占比、不对称指数
 }
 
 QVariant BrainSegmentationTableModel::data(const QModelIndex& index, int role) const
@@ -73,6 +73,12 @@ QVariant BrainSegmentationTableModel::data(const QModelIndex& index, int role) c
             .arg(r, 2, 16, QChar('0'))
             .arg(g, 2, 16, QChar('0'))
             .arg(b, 2, 16, QChar('0'));
+    } else if (role == AsymmetryIndexRole) {
+        // 如果没有配对，返回空字符串
+        if (region.partnerLabel == -1) {
+            return QString("-");
+        }
+        return QString::number(region.asymmetryIndex, 'f', 3);
     }
 
     // 用于传统 TableView 的 DisplayRole
@@ -104,6 +110,13 @@ QVariant BrainSegmentationTableModel::data(const QModelIndex& index, int role) c
         }
         case 3: return QString::number(region.volume, 'f', 2);
         case 4: return QString::number(region.volumePercent, 'f', 2) + "%";
+        case 5: {
+            // 如果没有配对，返回"-"
+            if (region.partnerLabel == -1) {
+                return QString("-");
+            }
+            return QString::number(region.asymmetryIndex, 'f', 3);
+        }
         default: return QVariant();
         }
     }
@@ -123,6 +136,7 @@ QVariant BrainSegmentationTableModel::headerData(int section, Qt::Orientation or
         case 2: return QStringLiteral("位置");
         case 3: return QStringLiteral("容积");
         case 4: return QStringLiteral("全脑占比");
+        case 5: return QStringLiteral("不对称");
         default: return QVariant();
         }
     } else {
@@ -139,6 +153,7 @@ QHash<int, QByteArray> BrainSegmentationTableModel::roleNames() const
     roles[VolumePercentRole] = "volumePercent";
     roles[LabelRole] = "label";
     roles[ColorRole] = "regionColor";
+    roles[AsymmetryIndexRole] = "asymmetryIndex";
     return roles;
 }
 
