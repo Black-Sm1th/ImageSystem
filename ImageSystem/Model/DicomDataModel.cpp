@@ -226,7 +226,7 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     }
     
     // 继续正常加载流程
-    m_region = new BrainRegionVisualizer(niiPath.toStdString(), "Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
+    m_region = std::make_unique<BrainRegionVisualizer>(dirPath.toStdString(), "Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
     m_region->Initialize();
     
     // 获取SegData的维度信息
@@ -253,8 +253,8 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     }
     m_segmentationTableModel->loadRegions(regions);
     
-    m_windowWidth = 0;
-    m_windowLevel = 0;
+    m_windowWidth = 80;
+    m_windowLevel = 40;
     
     // 设置SegData的默认切片为中间位置
     setSegAxialSlice(m_segDims[2] / 2);

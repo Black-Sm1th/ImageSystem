@@ -615,7 +615,7 @@ std::map<int, LabelStyle> BrainRegionVisualizer::BuildLabelStyles(
             style.R = it->second.R / 255.0;
             style.G = it->second.G / 255.0;
             style.B = it->second.B / 255.0;
-            style.A = (label == 0) ? 0.0 : 0.7;
+            style.A = (label == 0) ? 0.0 : /*0.7*/1.0;
             style.EnglishName = it->second.EnglishName;
             style.ChineseName = it->second.ChineseName;
             style.Hemisphere = it->second.Hemisphere;
