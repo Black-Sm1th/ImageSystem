@@ -74,6 +74,9 @@ public:
 
     Q_INVOKABLE void loadSegBrainDirectory(const QString& path);
     
+    // 设置脑区可见性
+    Q_INVOKABLE void setRegionVisible(int row, bool visible);
+    
     Q_INVOKABLE void setSegDataMode(bool enabled);
 
 signals:
@@ -91,6 +94,7 @@ signals:
     void segLoadingStarted();
     void segLoadingProgress(int percent, const QString& message);
     void segLoadingFinished(bool success, const QString& message);
+    void segRefreshRenderer();
 
 private:
     void finalizeSegDataLoad(std::unique_ptr<BrainRegionVisualizer> region);

@@ -17,6 +17,7 @@ struct SegmentationRegion {
     double colorA;          // 透明度分量 (0-1)
     int partnerLabel;       // 配对半球的label值，-1表示无配对
     double asymmetryIndex;  // 不对称指数（仅配对脑区有效）
+    bool visible;           // 是否可见
 };
 
 class BrainSegmentationTableModel : public QAbstractTableModel
@@ -31,7 +32,8 @@ public:
         VolumePercentRole,
         LabelRole,
         ColorRole,
-        AsymmetryIndexRole
+        AsymmetryIndexRole,
+        VisibleRole
     };
 
     explicit BrainSegmentationTableModel(QObject* parent = nullptr);
@@ -39,6 +41,9 @@ public:
     // 加载数据
     void loadRegions(const QVector<SegmentationRegion>& regions);
     void clear();
+    
+    // 更新可见性状态
+    void setRegionVisible(int row, bool visible);
 
     // QAbstractTableModel 接口
     int rowCount(const QModelIndex& parent = QModelIndex()) const override;

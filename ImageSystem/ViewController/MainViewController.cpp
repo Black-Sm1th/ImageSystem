@@ -473,6 +473,8 @@ QQuickVTKItem::vtkUserData VolumeVtkItem::initializeVTK(vtkRenderWindow* renderW
         this, &VolumeVtkItem::onDataLoaded);
     connect(GET_SINGLETON(DicomDataModel), &DicomDataModel::segDataLoaded,
         this, &VolumeVtkItem::onSegDataLoaded);
+    connect(GET_SINGLETON(DicomDataModel), &DicomDataModel::segRefreshRenderer,
+        this, &VolumeVtkItem::onSegRefreshRenderer);
     // 在渲染线程初始化VTK对象
     vtkSmartPointer<vtkImageData> imageData = GET_SINGLETON(DicomDataModel)->getImageData();
     if (imageData) {
@@ -492,6 +494,11 @@ void VolumeVtkItem::onDataLoaded()
             setupView(rw, data, imageData);
         }
         });
+    scheduleRender();
+}
+
+void VolumeVtkItem::onSegRefreshRenderer()
+{
     scheduleRender();
 }
 

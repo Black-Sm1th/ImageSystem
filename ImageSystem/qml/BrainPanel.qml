@@ -297,13 +297,14 @@ Rectangle {
                             spacing: 0
 
                             // 定义列宽常量
+                            readonly property int colVisibleWidth: 40
                             readonly property int colColorWidth: 40
                             readonly property int colChineseWidth: 100
                             readonly property int colHemisphereWidth: 50
                             readonly property int colVolumeWidth: 70
                             readonly property int colPercentWidth: 70
                             readonly property int colAsymmetryWidth: 60
-                            readonly property int totalContentWidth: colColorWidth + colChineseWidth + colHemisphereWidth + colVolumeWidth + colPercentWidth + colAsymmetryWidth
+                            readonly property int totalContentWidth: colVisibleWidth + colColorWidth + colChineseWidth + colHemisphereWidth + colVolumeWidth + colPercentWidth + colAsymmetryWidth
 
                             // 横向滚动的表头容器
                             Item {
@@ -328,6 +329,22 @@ Rectangle {
                                         Row {
                                             width: parent.width
                                             height: parent.height
+
+                                    // 显示列
+                                    Rectangle {
+                                        width: segTableColumn.colVisibleWidth
+                                        height: parent.height
+                                        color: "transparent"
+                                        border.color: "#404040"
+                                        border.width: 1
+                                        Label {
+                                            anchors.centerIn: parent
+                                            text: "显示"
+                                            color: "#ffffff"
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                        }
+                                    }
 
                                     // 颜色列
                                     Rectangle {
@@ -476,6 +493,27 @@ Rectangle {
                                             Row {
                                                 width: parent.width
                                                 height: parent.height
+
+                                        // 可见性眼睛图标
+                                        Rectangle {
+                                            width: segTableColumn.colVisibleWidth
+                                            height: parent.height
+                                            color: "transparent"
+                                            
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    $DicomDataModel.setRegionVisible(index, !model.visible)
+                                                }
+                                                Image{
+                                                    anchors.centerIn: parent
+                                                    source: model.visible ? "qrc:/image/eye.png" : "qrc:/image/eyeSlash.png"
+                                                    width: 16
+                                                    height: 16
+                                                }
+                                            }
+                                        }
 
                                         // 颜色小方块
                                         Rectangle {

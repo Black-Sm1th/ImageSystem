@@ -10,5 +10,7 @@
         <file>qml/KidneyPanel.qml</file>
         <file>qml/BrainPanel.qml</file>
         <file>qml/components/TabSwitcher.qml</file>
+        <file>image/eye.png</file>
+        <file>image/eyeSlash.png</file>
     </qresource>
 </RCC>

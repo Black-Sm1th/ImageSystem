@@ -325,6 +325,7 @@ void DicomDataModel::finalizeSegDataLoad(std::unique_ptr<BrainRegionVisualizer> 
         region.colorA = entry.colorA;
         region.partnerLabel = entry.partnerLabel;
         region.asymmetryIndex = entry.asymmetryIndex;
+        region.visible = true;
         regions.append(region);
         processedLabels.insert(entry.label);
 
@@ -344,6 +345,7 @@ void DicomDataModel::finalizeSegDataLoad(std::unique_ptr<BrainRegionVisualizer> 
                 partnerRegion.colorA = partnerEntry.colorA;
                 partnerRegion.partnerLabel = partnerEntry.partnerLabel;
                 partnerRegion.asymmetryIndex = partnerEntry.asymmetryIndex;
+                partnerRegion.visible = true;
                 regions.append(partnerRegion);
                 processedLabels.insert(partnerEntry.label);
             }
@@ -362,4 +364,29 @@ void DicomDataModel::finalizeSegDataLoad(std::unique_ptr<BrainRegionVisualizer> 
     setSegAxialSlice(m_segDims[2] / 2);
     setSegSagittalSlice(m_segDims[0] / 2);
     setSegCoronalSlice(m_segDims[1] / 2);
+}
+
+void DicomDataModel::setRegionVisible(int row, bool visible)
+{
+    if (!m_region) {
+        return;
+    }
+    
+    // 更新表格模型的visible状态
+    m_segmentationTableModel->setRegionVisible(row, visible);
+    
+    // 获取该行的label
+    auto& regionEntries = m_region->Regions();
+    if (row < 0 || row >= static_cast<int>(regionEntries.size())) {
+        return;
+    }
+    
+    // 从表格模型获取对应行的label
+    QModelIndex idx = m_segmentationTableModel->index(row, 0);
+    int label = m_segmentationTableModel->data(idx, BrainSegmentationTableModel::LabelRole).toInt();
+    
+    // 调用BrainRegionVisualizer设置可见性
+    m_region->SetActorVisible(label, visible);
+
+    emit segRefreshRenderer();
 }

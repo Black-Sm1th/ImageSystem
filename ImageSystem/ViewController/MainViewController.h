@@ -163,6 +163,7 @@ public:
 private slots:
     void onDataLoaded();
     void onSegDataLoaded();
+    void onSegRefreshRenderer();
 
 private:
     static void setupView(vtkRenderWindow* renderWindow, VolumeViewData* data, vtkImageData* imageData);
