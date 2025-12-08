@@ -256,6 +256,10 @@ void BrainRegionVisualizer::ComputeLabelStatistics()
         region.chineseName = entry.second.ChineseName.empty() ? region.englishName : entry.second.ChineseName;
         region.hemisphere = entry.second.Hemisphere;
         region.groupKey = entry.second.GroupKey.empty() ? DeriveGroupKey(region.englishName) : entry.second.GroupKey;
+        region.colorR = entry.second.R;
+        region.colorG = entry.second.G;
+        region.colorB = entry.second.B;
+        region.colorA = entry.second.A;
 
         auto countIt = counts.find(region.label);
         if (countIt != counts.end())
