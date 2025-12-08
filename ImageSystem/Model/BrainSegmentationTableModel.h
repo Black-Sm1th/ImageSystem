@@ -11,6 +11,11 @@ struct SegmentationRegion {
     double volume;          // 容积
     double volumePercent;   // 全脑占比
     int label;              // 标签值
+    double colorR;          // 红色分量 (0-1)
+    double colorG;          // 绿色分量 (0-1)
+    double colorB;          // 蓝色分量 (0-1)
+    double colorA;          // 透明度分量 (0-1)
+    int partnerLabel;       // 配对半球的label值，-1表示无配对
 };
 
 class BrainSegmentationTableModel : public QAbstractTableModel
@@ -23,7 +28,8 @@ public:
         HemisphereRole,
         VolumeRole,
         VolumePercentRole,
-        LabelRole
+        LabelRole,
+        ColorRole
     };
 
     explicit BrainSegmentationTableModel(QObject* parent = nullptr);

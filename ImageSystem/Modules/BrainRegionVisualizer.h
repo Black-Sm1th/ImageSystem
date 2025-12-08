@@ -81,7 +81,7 @@ struct RegionEntry
     double colorR{ 0.0 };
     double colorG{ 0.0 };
     double colorB{ 0.0 };
-    double colorA{ 0.0 };
+    double colorA{ 0.0 };   
     double baseOpacity{ 1.0 };
     bool dimmed{ false };
     vtkSmartPointer<vtkActor> actor;

@@ -306,10 +306,11 @@ Rectangle {
                             spacing: 0
 
                             // 定义列宽常量
+                            readonly property int colColorWidth: 40
                             readonly property int colChineseWidth: 100
-                            readonly property int colHemisphereWidth: 60
-                            readonly property int colVolumeWidth: 80
-                            readonly property int colPercentWidth: 80
+                            readonly property int colHemisphereWidth: 50
+                            readonly property int colVolumeWidth: 70
+                            readonly property int colPercentWidth: 70
 
                             // 表格标题
                             Rectangle {
@@ -320,6 +321,22 @@ Rectangle {
 
                                 Row {
                                     anchors.fill: parent
+
+                                    // 颜色列
+                                    Rectangle {
+                                        width: segTableColumn.colColorWidth
+                                        height: parent.height
+                                        color: "transparent"
+                                        border.color: "#404040"
+                                        border.width: 1
+                                        Label {
+                                            anchors.centerIn: parent
+                                            text: "颜色"
+                                            color: "#ffffff"
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                        }
+                                    }
 
                                     // 中文名称
                                     Rectangle {
@@ -371,7 +388,7 @@ Rectangle {
 
                                     // 全脑占比
                                     Rectangle {
-                                        width: segTableColumn.width - segTableColumn.colChineseWidth - segTableColumn.colHemisphereWidth - segTableColumn.colVolumeWidth - 10
+                                        width: segTableColumn.width - segTableColumn.colColorWidth - segTableColumn.colChineseWidth - segTableColumn.colHemisphereWidth - segTableColumn.colVolumeWidth - 10
                                         height: parent.height
                                         color: "transparent"
                                         border.color: "#404040"
@@ -414,6 +431,23 @@ Rectangle {
 
                                     Row {
                                         anchors.fill: parent
+
+                                        // 颜色小方块
+                                        Rectangle {
+                                            width: segTableColumn.colColorWidth
+                                            height: parent.height
+                                            color: "transparent"
+                                            
+                                            Rectangle {
+                                                anchors.centerIn: parent
+                                                width: 24
+                                                height: 24
+                                                color: model.regionColor
+                                                border.color: "#ffffff"
+                                                border.width: 1
+                                                radius: 2
+                                            }
+                                        }
 
                                         // 中文名称
                                         Rectangle {
@@ -459,7 +493,7 @@ Rectangle {
 
                                         // 全脑占比
                                         Rectangle {
-                                            width: segTableColumn.width - segTableColumn.colChineseWidth - segTableColumn.colHemisphereWidth - segTableColumn.colVolumeWidth - 10
+                                            width: segTableColumn.width - segTableColumn.colColorWidth - segTableColumn.colChineseWidth - segTableColumn.colHemisphereWidth - segTableColumn.colVolumeWidth - 10
                                             height: parent.height
                                             color: "transparent"
                                             Label {

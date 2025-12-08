@@ -2,6 +2,8 @@
 #include <vtkImageSliceMapper.h>
 #include <QFile>
 #include <QProcess>
+#include <unordered_map>
+#include <unordered_set>
 
 // ========== Getter ==========
 int DicomDataModel::axialSlice() const { return m_axialSlice; }
@@ -242,18 +244,69 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     // 加载表格数据
     QVector<SegmentationRegion> regions;
     auto& regionEntries = m_region->Regions();
+    
+    // 创建label到索引的映射
+    std::unordered_map<int, int> labelToIndex;
+    for (size_t i = 0; i < regionEntries.size(); ++i) {
+        if (regionEntries[i].label != 0) {
+            labelToIndex[regionEntries[i].label] = static_cast<int>(i);
+        }
+    }
+    
+    // 记录已处理的label
+    std::unordered_set<int> processedLabels;
+    
+    // 遍历所有脑区，按配对关系组织
     for (const auto& entry : regionEntries) {
+        // 跳过背景标签
         if (entry.label == 0) {
             continue;
         }
+        
+        // 如果已经处理过，跳过
+        if (processedLabels.count(entry.label) > 0) {
+            continue;
+        }
+        
+        // 创建当前脑区
         SegmentationRegion region;
         region.chineseName = QString::fromStdString(entry.chineseName);
         region.hemisphere = QString(QChar(entry.hemisphere));
         region.volume = entry.volume;
         region.volumePercent = entry.volumePercent;
         region.label = entry.label;
+        region.colorR = entry.colorR;
+        region.colorG = entry.colorG;
+        region.colorB = entry.colorB;
+        region.colorA = entry.colorA;
+        region.partnerLabel = entry.partnerLabel;
         regions.append(region);
+        processedLabels.insert(entry.label);
+        
+        // 如果有配对的半球脑区，紧接着添加
+        if (entry.partnerLabel != -1 && labelToIndex.count(entry.partnerLabel) > 0) {
+            int partnerIdx = labelToIndex[entry.partnerLabel];
+            const auto& partnerEntry = regionEntries[partnerIdx];
+            
+            // 检查配对脑区是否已处理
+            if (processedLabels.count(partnerEntry.label) == 0) {
+                SegmentationRegion partnerRegion;
+                partnerRegion.chineseName = QString::fromStdString(partnerEntry.chineseName);
+                partnerRegion.hemisphere = QString(QChar(partnerEntry.hemisphere));
+                partnerRegion.volume = partnerEntry.volume;
+                partnerRegion.volumePercent = partnerEntry.volumePercent;
+                partnerRegion.label = partnerEntry.label;
+                partnerRegion.colorR = partnerEntry.colorR;
+                partnerRegion.colorG = partnerEntry.colorG;
+                partnerRegion.colorB = partnerEntry.colorB;
+                partnerRegion.colorA = partnerEntry.colorA;
+                partnerRegion.partnerLabel = partnerEntry.partnerLabel;
+                regions.append(partnerRegion);
+                processedLabels.insert(partnerEntry.label);
+            }
+        }
     }
+    
     m_segmentationTableModel->loadRegions(regions);
     
     m_windowWidth = 80;
