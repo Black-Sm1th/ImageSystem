@@ -26,8 +26,8 @@ bool DicomDataModel::loadDicomDirectory(const QString& path) {
     m_imageData->GetDimensions(m_dims);
 
     // 设置默认窗宽窗位
-    m_windowWidth = 80;
-    m_windowLevel = 40;
+    m_windowWidth = 2000;
+    m_windowLevel = 0;
 
     // 获取DICOM信息
     double* spacing = m_imageData->GetSpacing();
@@ -60,7 +60,8 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     }
     dirPath += "/sourcedata/freesurfer/sub-01/mri/aparc+aseg.nii.gz";
     qDebug() << dirPath;
-    m_region = new BrainRegionVisualizer(dirPath.toStdString(), "Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
+    //m_region = new BrainRegionVisualizer(dirPath.toStdString(), "Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
+	m_region = std::make_unique<BrainRegionVisualizer>(dirPath.toStdString(), "Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
     m_region->Initialize();
     
     // 获取SegData的维度信息
@@ -87,8 +88,8 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     }
     m_segmentationTableModel->loadRegions(regions);
     
-    m_windowWidth = 0;
-    m_windowLevel = 0;
+    m_windowWidth = 80;
+    m_windowLevel = 40;
     
     // 设置SegData的默认切片为中间位置
     setSegAxialSlice(m_segDims[2] / 2);
