@@ -26,8 +26,8 @@ bool DicomDataModel::loadDicomDirectory(const QString& path) {
     m_imageData->GetDimensions(m_dims);
 
     // 设置默认窗宽窗位
-    m_windowWidth = 2000;
-    m_windowLevel = 0;
+    m_windowWidth = 80;
+    m_windowLevel = 40;
 
     // 获取DICOM信息
     double* spacing = m_imageData->GetSpacing();
