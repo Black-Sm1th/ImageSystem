@@ -184,13 +184,10 @@ bool DicomDataModel::loadDicomDirectory(const QString& path) {
 void DicomDataModel::loadSegBrainDirectory(const QString& path)
 {
     if (path.isEmpty()) {
-        qWarning() << QStringLiteral("分割数据路径为空");
-        emit segLoadingFinished(false, QStringLiteral("分割数据路径为空"));
         return;
     }
 
     if (m_segLoadingInProgress) {
-        qWarning() << QStringLiteral("分割数据正在加载中，忽略重复请求");
         return;
     }
 
@@ -203,8 +200,6 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     QString mgzPath = mriDirPath + "/aparc+aseg.mgz";
     QString niiPath = mriDirPath + "/aparc+aseg.nii.gz";
 
-    emit segLoadingStarted();
-    emit segLoadingProgress(0, QStringLiteral("准备分割数据..."));
 
     // 检查nii文件是否存在，如果不存在则从mgz转换
     if (!QFile::exists(niiPath)) {
@@ -213,8 +208,6 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
         // 检查mgz文件是否存在
         if (!QFile::exists(mgzPath)) {
             qWarning() << QStringLiteral("mgz文件也不存在，无法转换: ") << mgzPath;
-            emit segLoadingProgress(100, QStringLiteral("缺少分割源数据"));
-            emit segLoadingFinished(false, QStringLiteral("缺少分割源数据"));
             return;
         }
 
@@ -224,13 +217,10 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
         process.setArguments({mgzPath, niiPath});
 
         qDebug() << QStringLiteral("开始转换mgz到nii: ") << mgzPath << " -> " << niiPath;
-        emit segLoadingProgress(10, QStringLiteral("正在转换分割数据..."));
         process.start();
 
         if (!process.waitForFinished(60000)) { // 等待最多60秒
             qWarning() << QStringLiteral("mgz2nii转换超时");
-            emit segLoadingProgress(100, QStringLiteral("mgz2nii转换超时"));
-            emit segLoadingFinished(false, QStringLiteral("mgz2nii转换超时"));
             return;
         }
 
@@ -238,8 +228,6 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
             qWarning() << QStringLiteral("mgz2nii转换失败，退出代码: ") << process.exitCode();
             qWarning() << QStringLiteral("标准输出: ") << process.readAllStandardOutput();
             qWarning() << QStringLiteral("错误输出: ") << process.readAllStandardError();
-            emit segLoadingProgress(100, QStringLiteral("mgz2nii转换失败"));
-            emit segLoadingFinished(false, QStringLiteral("mgz2nii转换失败"));
             return;
         }
 
@@ -249,26 +237,26 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     }
 
     m_segLoadingInProgress = true;
-    emit segLoadingProgress(20, QStringLiteral("初始化脑区可视化..."));
 
     const QString colorTablePath = QStringLiteral("Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
-    QtConcurrent::run([this, niiPath, colorTablePath]() {
-        auto region = std::make_unique<BrainRegionVisualizer>(niiPath.toStdString(), colorTablePath.toStdString());
-        bool ok = region->Initialize();
-        BrainRegionVisualizer* regionRaw = ok ? region.release() : nullptr;
+    m_pendingRegion = std::make_unique<BrainRegionVisualizer>(niiPath.toStdString(), colorTablePath.toStdString());
+    m_pendingRegion->SetProgressCallback([this](int percent, const std::string& message) {
+        QString text = QString::fromStdString(message);
+        QMetaObject::invokeMethod(this, [this, percent, text]() {
+            emit segLoadingProgress(percent, text);
+        }, Qt::QueuedConnection);
+    });
 
-        QMetaObject::invokeMethod(this, [this, ok, regionRaw]() {
-            std::unique_ptr<BrainRegionVisualizer> regionPtr(regionRaw);
-            if (!ok || !regionPtr) {
-                emit segLoadingProgress(100, QStringLiteral("脑区可视化初始化失败"));
+    BrainRegionVisualizer* regionRaw = m_pendingRegion.get();
+    QtConcurrent::run([this, regionRaw]() {
+        bool ok = regionRaw->Initialize();
+        QMetaObject::invokeMethod(this, [this, ok]() {
+            if (!ok) {
+                m_pendingRegion.reset();
                 m_segLoadingInProgress = false;
-                emit segLoadingFinished(false, QStringLiteral("脑区可视化初始化失败"));
                 return;
             }
-
-            emit segLoadingProgress(70, QStringLiteral("准备界面数据..."));
-            finalizeSegDataLoad(std::move(regionPtr));
-            emit segLoadingProgress(100, QStringLiteral("脑区分割加载完成"));
+            finalizeSegDataLoad(std::move(m_pendingRegion));
             m_segLoadingInProgress = false;
             emit segLoadingFinished(true, QString());
         }, Qt::QueuedConnection);
