@@ -4,6 +4,7 @@
 #include <QProcess>
 #include <unordered_map>
 #include <unordered_set>
+#include <QtConcurrent/QtConcurrent>
 
 // ========== Getter ==========
 int DicomDataModel::axialSlice() const { return m_axialSlice; }
@@ -181,7 +182,16 @@ bool DicomDataModel::loadDicomDirectory(const QString& path) {
 
 void DicomDataModel::loadSegBrainDirectory(const QString& path)
 {
-    if (path.isEmpty()) return;
+    if (path.isEmpty()) {
+        qWarning() << QStringLiteral("分割数据路径为空");
+        emit segLoadingFinished(false, QStringLiteral("分割数据路径为空"));
+        return;
+    }
+
+    if (m_segLoadingInProgress) {
+        qWarning() << QStringLiteral("分割数据正在加载中，忽略重复请求");
+        return;
+    }
 
     QString dirPath = path;
     if (dirPath.startsWith("file:///")) {
@@ -191,47 +201,87 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
 
     QString mgzPath = mriDirPath + "/aparc+aseg.mgz";
     QString niiPath = mriDirPath + "/aparc+aseg.nii.gz";
-    
+
+    emit segLoadingStarted();
+    emit segLoadingProgress(0, QStringLiteral("准备分割数据..."));
+
     // 检查nii文件是否存在，如果不存在则从mgz转换
     if (!QFile::exists(niiPath)) {
         qDebug() << QStringLiteral("nii文件不存在，尝试从mgz转换: ") << niiPath;
-        
+
         // 检查mgz文件是否存在
         if (!QFile::exists(mgzPath)) {
             qWarning() << QStringLiteral("mgz文件也不存在，无法转换: ") << mgzPath;
+            emit segLoadingProgress(100, QStringLiteral("缺少分割源数据"));
+            emit segLoadingFinished(false, QStringLiteral("缺少分割源数据"));
             return;
         }
-        
+
         // 调用转换脚本
         QProcess process;
         process.setProgram("Scripts/mgz2nii.exe");
         process.setArguments({mgzPath, niiPath});
-        
+
         qDebug() << QStringLiteral("开始转换mgz到nii: ") << mgzPath << " -> " << niiPath;
+        emit segLoadingProgress(10, QStringLiteral("正在转换分割数据..."));
         process.start();
-        
+
         if (!process.waitForFinished(60000)) { // 等待最多60秒
             qWarning() << QStringLiteral("mgz2nii转换超时");
+            emit segLoadingProgress(100, QStringLiteral("mgz2nii转换超时"));
+            emit segLoadingFinished(false, QStringLiteral("mgz2nii转换超时"));
             return;
         }
-        
+
         if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
             qWarning() << QStringLiteral("mgz2nii转换失败，退出代码: ") << process.exitCode();
             qWarning() << QStringLiteral("标准输出: ") << process.readAllStandardOutput();
             qWarning() << QStringLiteral("错误输出: ") << process.readAllStandardError();
+            emit segLoadingProgress(100, QStringLiteral("mgz2nii转换失败"));
+            emit segLoadingFinished(false, QStringLiteral("mgz2nii转换失败"));
             return;
         }
-        
+
         qDebug() << QStringLiteral("mgz2nii转换成功: ") << niiPath;
     } else {
         qDebug() << QStringLiteral("nii文件已存在，直接使用: ") << niiPath;
     }
-    
-    // 继续正常加载流程
-    m_region = std::make_unique<BrainRegionVisualizer>(niiPath.toStdString(), "Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
-    m_region->Initialize();
-    
-    // 获取SegData的维度信息
+
+    m_segLoadingInProgress = true;
+    emit segLoadingProgress(20, QStringLiteral("初始化脑区可视化..."));
+
+    const QString colorTablePath = QStringLiteral("Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
+    QtConcurrent::run([this, niiPath, colorTablePath]() {
+        auto region = std::make_unique<BrainRegionVisualizer>(niiPath.toStdString(), colorTablePath.toStdString());
+        bool ok = region->Initialize();
+        BrainRegionVisualizer* regionRaw = ok ? region.release() : nullptr;
+
+        QMetaObject::invokeMethod(this, [this, ok, regionRaw]() {
+            std::unique_ptr<BrainRegionVisualizer> regionPtr(regionRaw);
+            if (!ok || !regionPtr) {
+                emit segLoadingProgress(100, QStringLiteral("脑区可视化初始化失败"));
+                m_segLoadingInProgress = false;
+                emit segLoadingFinished(false, QStringLiteral("脑区可视化初始化失败"));
+                return;
+            }
+
+            emit segLoadingProgress(70, QStringLiteral("准备界面数据..."));
+            finalizeSegDataLoad(std::move(regionPtr));
+            emit segLoadingProgress(100, QStringLiteral("脑区分割加载完成"));
+            m_segLoadingInProgress = false;
+            emit segLoadingFinished(true, QString());
+        }, Qt::QueuedConnection);
+    });
+}
+
+void DicomDataModel::finalizeSegDataLoad(std::unique_ptr<BrainRegionVisualizer> region)
+{
+    if (!region) {
+        return;
+    }
+
+    m_region = std::move(region);
+
     vtkSmartPointer<vtkImageSlice> axialSlice = m_region->GetAxialSlice();
     if (axialSlice && axialSlice->GetMapper()) {
         vtkImageSliceMapper* mapper = vtkImageSliceMapper::SafeDownCast(axialSlice->GetMapper());
@@ -240,55 +290,44 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
             qDebug() << "SegData dimensions:" << m_segDims[0] << "x" << m_segDims[1] << "x" << m_segDims[2];
         }
     }
-    
-    // 加载表格数据
+
     QVector<SegmentationRegion> regions;
     auto& regionEntries = m_region->Regions();
-    
-    // 创建label到索引的映射
+
     std::unordered_map<int, int> labelToIndex;
     for (size_t i = 0; i < regionEntries.size(); ++i) {
         if (regionEntries[i].label != 0) {
             labelToIndex[regionEntries[i].label] = static_cast<int>(i);
         }
     }
-    
-    // 记录已处理的label
+
     std::unordered_set<int> processedLabels;
-    
-    // 遍历所有脑区，按配对关系组织
+
     for (const auto& entry : regionEntries) {
-        // 跳过背景标签
         if (entry.label == 0) {
             continue;
         }
-        
-        // 如果已经处理过，跳过
         if (processedLabels.count(entry.label) > 0) {
             continue;
         }
-        
-        // 创建当前脑区
-        SegmentationRegion region;
-        region.chineseName = QString::fromStdString(entry.chineseName);
-        region.hemisphere = QString(QChar(entry.hemisphere));
-        region.volume = entry.volume;
-        region.volumePercent = entry.volumePercent;
-        region.label = entry.label;
-        region.colorR = entry.colorR;
-        region.colorG = entry.colorG;
-        region.colorB = entry.colorB;
-        region.colorA = entry.colorA;
-        region.partnerLabel = entry.partnerLabel;
-        regions.append(region);
+
+        SegmentationRegion regionRow;
+        regionRow.chineseName = QString::fromStdString(entry.chineseName);
+        regionRow.hemisphere = QString(QChar(entry.hemisphere));
+        regionRow.volume = entry.volume;
+        regionRow.volumePercent = entry.volumePercent;
+        regionRow.label = entry.label;
+        regionRow.colorR = entry.colorR;
+        regionRow.colorG = entry.colorG;
+        regionRow.colorB = entry.colorB;
+        regionRow.colorA = entry.colorA;
+        regionRow.partnerLabel = entry.partnerLabel;
+        regions.append(regionRow);
         processedLabels.insert(entry.label);
-        
-        // 如果有配对的半球脑区，紧接着添加
+
         if (entry.partnerLabel != -1 && labelToIndex.count(entry.partnerLabel) > 0) {
             int partnerIdx = labelToIndex[entry.partnerLabel];
             const auto& partnerEntry = regionEntries[partnerIdx];
-            
-            // 检查配对脑区是否已处理
             if (processedLabels.count(partnerEntry.label) == 0) {
                 SegmentationRegion partnerRegion;
                 partnerRegion.chineseName = QString::fromStdString(partnerEntry.chineseName);
@@ -306,16 +345,15 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
             }
         }
     }
-    
+
     m_segmentationTableModel->loadRegions(regions);
-    
+
     m_windowWidth = 80;
     m_windowLevel = 40;
-    
-    // 设置SegData的默认切片为中间位置
+
     setSegAxialSlice(m_segDims[2] / 2);
     setSegSagittalSlice(m_segDims[0] / 2);
     setSegCoronalSlice(m_segDims[1] / 2);
-    
+
     emit segDataLoaded();
 }
