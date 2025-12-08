@@ -60,13 +60,12 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     }
     dirPath += "/sourcedata/freesurfer/sub-01/mri/aparc+aseg.nii.gz";
     qDebug() << dirPath;
-   // m_region = new BrainRegionVisualizer(dirPath.toStdString(), "Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
-   //m_region->Initialize();
-	m_regionPtr = std::make_unique<BrainRegionVisualizer>(dirPath.toStdString(), "Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
-	m_regionPtr->Initialize();
+    m_region = new BrainRegionVisualizer(dirPath.toStdString(), "Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
+    m_region->Initialize();
+    
     // 加载表格数据
     QVector<SegmentationRegion> regions;
-    auto& regionEntries = m_regionPtr->Regions();
+    auto& regionEntries = m_region->Regions();
     for (const auto& entry : regionEntries) {
         SegmentationRegion region;
         region.chineseName = QString::fromStdString(entry.chineseName);
@@ -78,10 +77,8 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     }
     m_segmentationTableModel->loadRegions(regions);
     
-    //m_windowWidth = 2000;
-    //m_windowLevel = 0;
-    m_windowWidth = 80;
-    m_windowLevel = 40;
+    m_windowWidth = 2000;
+    m_windowLevel = 0;
     emit segDataLoaded();
     setAxialSlice(m_dims[2] / 2);
     setSagittalSlice(m_dims[0] / 2);
