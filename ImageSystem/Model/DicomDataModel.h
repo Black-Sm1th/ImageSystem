@@ -37,14 +37,14 @@ public:
     vtkSmartPointer<vtkImageData> getImageData() { return m_imageData; }
     vtkSmartPointer<vtkImageSlice> getSegImageData(int index) {
         if (index == 0) {
-            return m_region->GetAxialSlice();
+            return m_regionPtr->GetAxialSlice();
         }if (index == 1) {
-            return m_region->GetCoronalSlice();
+            return m_regionPtr->GetCoronalSlice();
         }if (index == 2) {
-            return m_region->GetSagittalSlice();
+            return m_regionPtr->GetSagittalSlice();
         }
     }
-    vtkSmartPointer<vtkRenderer> getSeg3DRenderer() {return m_region->Get3DRenderer();}
+    vtkSmartPointer<vtkRenderer> getSeg3DRenderer() {return m_regionPtr->Get3DRenderer();}
     
     BrainSegmentationTableModel* getSegmentationTableModel() { return m_segmentationTableModel; }
 
@@ -97,7 +97,8 @@ signals:
 
 private:
     vtkSmartPointer<vtkImageData> m_imageData;
-    BrainRegionVisualizer* m_region;
+    //BrainRegionVisualizer* m_region;
+	std::unique_ptr<BrainRegionVisualizer> m_regionPtr;
     BrainSegmentationTableModel* m_segmentationTableModel;
     int m_dims[3] = {1, 1, 1};
     int m_axialSlice = 0;

@@ -61,10 +61,11 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>E:\VTK-9.4.2\install-debug\include\vtk-9.4;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\repos\gitclone\vtk-install\include\vtk-9.4;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>E:\VTK-9.4.2\install-debug\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\repos\gitclone\vtk-install\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vtkCommonCore-9.4d.lib;vtkCommonDataModel-9.4d.lib;vtkCommonExecutionModel-9.4d.lib;vtkCommonTransforms-9.4d.lib;vtkCommonMath-9.4d.lib;vtkCommonColor-9.4d.lib;vtkCommonSystem-9.4d.lib;vtkCommonMisc-9.4d.lib;vtkRenderingCore-9.4d.lib;vtkRenderingOpenGL2-9.4d.lib;vtkRenderingFreeType-9.4d.lib;vtkRenderingVolume-9.4d.lib;vtkRenderingVolumeOpenGL2-9.4d.lib;vtkRenderingImage-9.4d.lib;vtkInteractionWidgets-9.4d.lib;vtkInteractionStyle-9.4d.lib;vtkInteractionImage-9.4d.lib;vtkImagingCore-9.4d.lib;vtkImagingColor-9.4d.lib;vtkIOCore-9.4d.lib;vtkIOImage-9.4d.lib;vtkGUISupportQt-9.4d.lib;vtkGUISupportQtQuick-9.4d.lib;vtksys-9.4d.lib;vtkglad-9.4d.lib;vtkFiltersSources-9.4d.lib;vtkFiltersExtraction-9.4d.lib;vtkFiltersCore-9.4d.lib;vtkFiltersModeling-9.4d.lib;vtkFiltersGeometry-9.4d.lib;vtkRenderingAnnotation-9.4d.lib;vtkImagingMorphological-9.4d.lib;vtkImagingGeneral-9.4d.lib;vtkFiltersGeneral-9.4d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
