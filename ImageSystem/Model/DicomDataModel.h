@@ -88,8 +88,13 @@ signals:
     void dataLoaded();
     void segDataLoaded();
     void segDataModeChanged();
+    void segLoadingStarted();
+    void segLoadingProgress(int percent, const QString& message);
+    void segLoadingFinished(bool success, const QString& message);
 
 private:
+    void finalizeSegDataLoad(std::unique_ptr<BrainRegionVisualizer> region);
+
     vtkSmartPointer<vtkImageData> m_imageData;
     std::unique_ptr<BrainRegionVisualizer> m_region;
     BrainSegmentationTableModel* m_segmentationTableModel;
@@ -105,5 +110,6 @@ private:
     double m_windowWidth = 2000;
     double m_windowLevel = 0;
     QString m_dicomInfo;
+    bool m_segLoadingInProgress = false;
 };
 
