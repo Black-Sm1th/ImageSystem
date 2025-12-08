@@ -340,15 +340,14 @@ void DicomDataModel::finalizeSegDataLoad(std::unique_ptr<BrainRegionVisualizer> 
 
     m_segmentationTableModel->loadRegions(regions);
 
-    m_windowWidth = 80;
-    m_windowLevel = 40;
+    // 先切换到SegData模式，再设置切片
+    // 这样可以避免切片信号触发时模式还未切换导致的问题
+    setSegDataMode(true);
 
+
+    emit segDataLoaded();
+    // 设置SegData的默认切片为中间位置
     setSegAxialSlice(m_segDims[2] / 2);
     setSegSagittalSlice(m_segDims[0] / 2);
     setSegCoronalSlice(m_segDims[1] / 2);
-    
-    // 切换到SegData模式
-    setSegDataMode(true);
-    
-    emit segDataLoaded();
 }

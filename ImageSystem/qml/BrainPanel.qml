@@ -303,16 +303,31 @@ Rectangle {
                             readonly property int colVolumeWidth: 70
                             readonly property int colPercentWidth: 70
                             readonly property int colAsymmetryWidth: 60
+                            readonly property int totalContentWidth: colColorWidth + colChineseWidth + colHemisphereWidth + colVolumeWidth + colPercentWidth + colAsymmetryWidth
 
-                            // 表格标题
-                            Rectangle {
-                                id: segTableHeader
-                                width: parent.width
+                            // 横向滚动的表头容器
+                            Item {
+                                width: parent.width - 8  // 留出纵向滚动条的空间
                                 height: 35
-                                color: "#2a2a2a"
+                                clip: true
 
-                                Row {
+                                Flickable {
+                                    id: headerFlickable
                                     anchors.fill: parent
+                                    contentWidth: segTableColumn.totalContentWidth
+                                    contentHeight: height
+                                    interactive: false  // 表头不直接交互，跟随内容滚动
+                                    clip: true
+
+                                    Rectangle {
+                                        id: segTableHeader
+                                        width: segTableColumn.totalContentWidth
+                                        height: 35
+                                        color: "#2a2a2a"
+
+                                        Row {
+                                            width: parent.width
+                                            height: parent.height
 
                                     // 颜色列
                                     Rectangle {
@@ -394,51 +409,73 @@ Rectangle {
                                         }
                                     }
 
-                                    // 不对称指数
-                                    Rectangle {
-                                        width: segTableColumn.width - segTableColumn.colColorWidth - segTableColumn.colChineseWidth - segTableColumn.colHemisphereWidth - segTableColumn.colVolumeWidth - segTableColumn.colPercentWidth - 10
-                                        height: parent.height
-                                        color: "transparent"
-                                        border.color: "#404040"
-                                        border.width: 1
-                                        Label {
-                                            anchors.centerIn: parent
-                                            text: "不对称"
-                                            color: "#ffffff"
-                                            font.pixelSize: 12
-                                            font.bold: true
+                                            // 不对称指数
+                                            Rectangle {
+                                                width: segTableColumn.colAsymmetryWidth
+                                                height: parent.height
+                                                color: "transparent"
+                                                border.color: "#404040"
+                                                border.width: 1
+                                                Label {
+                                                    anchors.centerIn: parent
+                                                    text: "不对称"
+                                                    color: "#ffffff"
+                                                    font.pixelSize: 12
+                                                    font.bold: true
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
 
-                            // 表格内容
-                            ListView {
-                                id: segmentationTableView
+                            // 表格内容（支持横向滚动）
+                            Item {
                                 width: parent.width
                                 height: parent.height - 35
-                                clip: true
-                                model: $BrainSegmentationTableModel
 
-                                ScrollBar.vertical: ScrollBar {
-                                    policy: ScrollBar.AlwaysOn
-                                    background: Rectangle {
-                                        color: "#1a1a1a"
+                                Flickable {
+                                    id: contentFlickable
+                                    anchors.fill: parent
+                                    anchors.rightMargin: 8  // 为纵向滚动条留空间
+                                    contentWidth: segTableColumn.totalContentWidth
+                                    contentHeight: segmentationTableView.contentHeight
+                                    clip: true
+                                    
+                                    // 同步表头的横向滚动
+                                    onContentXChanged: {
+                                        headerFlickable.contentX = contentX
                                     }
-                                    contentItem: Rectangle {
-                                        implicitWidth: 8
-                                        radius: 4
-                                        color: "#404040"
+
+                                    // 横向滚动条
+                                    ScrollBar.horizontal: ScrollBar {
+                                        policy: ScrollBar.AsNeeded
+                                        background: Rectangle {
+                                            color: "#1a1a1a"
+                                        }
+                                        contentItem: Rectangle {
+                                            implicitHeight: 8
+                                            radius: 4
+                                            color: "#404040"
+                                        }
                                     }
-                                }
 
-                                delegate: Rectangle {
-                                    width: segmentationTableView.width - 10
-                                    height: 30
-                                    color: index % 2 === 0 ? "#1a1a1a" : "#252525"
+                                    ListView {
+                                        id: segmentationTableView
+                                        width: segTableColumn.totalContentWidth
+                                        height: parent.height
+                                        interactive: false  // 禁用ListView自身的交互，使用Flickable的交互
+                                        clip: true
+                                        model: $BrainSegmentationTableModel
 
-                                    Row {
-                                        anchors.fill: parent
+                                        delegate: Rectangle {
+                                            width: segTableColumn.totalContentWidth
+                                            height: 30
+                                            color: index % 2 === 0 ? "#1a1a1a" : "#252525"
+
+                                            Row {
+                                                width: parent.width
+                                                height: parent.height
 
                                         // 颜色小方块
                                         Rectangle {
@@ -512,18 +549,47 @@ Rectangle {
                                             }
                                         }
 
-                                        // 不对称指数
-                                        Rectangle {
-                                            width: segTableColumn.width - segTableColumn.colColorWidth - segTableColumn.colChineseWidth - segTableColumn.colHemisphereWidth - segTableColumn.colVolumeWidth - segTableColumn.colPercentWidth - 10
-                                            height: parent.height
-                                            color: "transparent"
-                                            Label {
-                                                anchors.centerIn: parent
-                                                text: model.asymmetryIndex
-                                                color: "#cccccc"
-                                                font.pixelSize: 11
+                                                // 不对称指数
+                                                Rectangle {
+                                                    width: segTableColumn.colAsymmetryWidth
+                                                    height: parent.height
+                                                    color: "transparent"
+                                                    Label {
+                                                        anchors.centerIn: parent
+                                                        text: model.asymmetryIndex
+                                                        color: "#cccccc"
+                                                        font.pixelSize: 11
+                                                    }
+                                                }
                                             }
                                         }
+                                    }
+                                }
+
+                                // 固定的纵向滚动条
+                                ScrollBar {
+                                    id: verticalScrollBar
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
+                                    anchors.bottom: contentFlickable.bottom
+                                    orientation: Qt.Vertical
+                                    policy: ScrollBar.AlwaysOn
+                                    size: contentFlickable.height / segmentationTableView.contentHeight
+                                    position: contentFlickable.contentY / segmentationTableView.contentHeight
+                                    
+                                    onPositionChanged: {
+                                        if (pressed) {
+                                            contentFlickable.contentY = position * segmentationTableView.contentHeight
+                                        }
+                                    }
+                                    
+                                    background: Rectangle {
+                                        color: "#1a1a1a"
+                                    }
+                                    contentItem: Rectangle {
+                                        implicitWidth: 8
+                                        radius: 4
+                                        color: "#404040"
                                     }
                                 }
                             }
