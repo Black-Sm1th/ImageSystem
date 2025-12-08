@@ -226,7 +226,7 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     }
     
     // 继续正常加载流程
-    m_region = std::make_unique<BrainRegionVisualizer>(dirPath.toStdString(), "Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
+    m_region = std::make_unique<BrainRegionVisualizer>(niiPath.toStdString(), "Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
     m_region->Initialize();
     
     // 获取SegData的维度信息
