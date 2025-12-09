@@ -16,7 +16,7 @@ Rectangle {
     // 四视图容器（当在脑分割面板时使用）
     property alias fourViewContainer: brainSegmentationContainer
     property var messageManager: null
-    
+    property bool showResult: false
     FileDialog {
         id: fileDialog
         title: qsTr("选择要上传的文件")
@@ -57,6 +57,29 @@ Rectangle {
             var baseDir = lastSlash >= 0 ? path.substring(0, lastSlash + 1) : path
             bidsDir.text = baseDir + "Bids"
             outputDir.text = baseDir + "Output"
+            outputDetailDir.text = baseDir + "Output"
+        }
+    }
+
+    FileDialog {
+        id: outputDetailDialog
+        title: qsTr("选择要上传的文件")
+        selectFolder: true
+        onAccepted: {
+            if (fileUrls.length === 0)
+                return
+
+            var url = fileUrls[0].toString()
+            var path = url
+            if (path.startsWith("file:///")) {
+                path = path.substring("file:///".length)
+            }
+            // 统一为正斜杠，方便字符串处理
+            path = path.replace(/\\/g, "/")
+
+            outputDetailDir.text = path
+            preResult.url = fileUrls[0].toString() + "/sub-01.html"
+            showResult = true
         }
     }
     
@@ -170,6 +193,7 @@ Rectangle {
                     textColor: "#ffffff"
                     onClicked: {
                         currentIndex = 1
+                        showResult = false
                     }
                 }
                 CustomButton{
@@ -180,6 +204,7 @@ Rectangle {
                     textColor: "#ffffff"
                     onClicked: {
                         currentIndex = 2
+                        showResult = false
                     }
                 }
                 CustomButton{
@@ -190,6 +215,7 @@ Rectangle {
                     textColor: "#ffffff"
                     onClicked: {
                         currentIndex = 3
+                        showResult = false
                     }
                 }
                 CustomButton{
@@ -200,6 +226,7 @@ Rectangle {
                     textColor: "#ffffff"
                     onClicked: {
                         currentIndex = 4
+                        showResult = false
                     }
                 }
                 CustomButton{
@@ -210,6 +237,7 @@ Rectangle {
                     textColor: "#ffffff"
                     onClicked: {
                         currentIndex = 5
+                        showResult = false
                     }
                 }
             }
@@ -224,7 +252,15 @@ Rectangle {
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
                 width: parent.width - 380
-                visible: currentIndex === 1 || currentIndex === 2 || currentIndex === 4 || currentIndex === 5
+                visible: (currentIndex === 1 && !showResult) || currentIndex === 2 || currentIndex === 4 || currentIndex === 5
+            }
+            WebEngineView {
+                id: preResult
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                width: parent.width - 380
+                visible: currentIndex === 1 && showResult
             }
             Rectangle{
                 id: networkMain
@@ -300,7 +336,7 @@ Rectangle {
                         tabTitles: ["fmriprep", "详情"]
                     }
                     Column{
-                        id: preCol
+                        id: fmriprepCol
                         width: parent.width - 15
                         spacing: 20
                         visible: tabSwitcher.currentIndex === 0
@@ -316,14 +352,14 @@ Rectangle {
                                 text: qsTr("输入Dicom文件夹：")
                                 color: "#ffffff"
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: preCol.maxLabelWidth
+                                width: fmriprepCol.maxLabelWidth
                             }
                             SingleLineTextInput{
                                 id: dicomDir
                                 width: 150
                             }
                             CustomButton{
-                                width: preCol.width - label1.width - 150 - 10
+                                width: fmriprepCol.width - label1.width - 150 - 10
                                 height: 30
                                 text: qsTr("导入")
                                 onClicked: {
@@ -339,11 +375,11 @@ Rectangle {
                                 text: qsTr("输出Bids文件夹：")
                                 color: "#ffffff"
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: preCol.maxLabelWidth
+                                width: fmriprepCol.maxLabelWidth
                             }
                             SingleLineTextInput{
                                 id: bidsDir
-                                width: preCol.width - label2.width - 5
+                                width: fmriprepCol.width - label2.width - 5
                             }
                         }
                         Row{
@@ -354,11 +390,11 @@ Rectangle {
                                 text: qsTr("输出Output文件夹：")
                                 color: "#ffffff"
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: preCol.maxLabelWidth
+                                width: fmriprepCol.maxLabelWidth
                             }
                             SingleLineTextInput{
                                 id: outputDir
-                                width: preCol.width - label3.width - 5
+                                width: fmriprepCol.width - label3.width - 5
                             }
                         }
                         Row{
@@ -369,14 +405,14 @@ Rectangle {
                                 text: qsTr("license文件地址：")
                                 color: "#ffffff"
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: preCol.maxLabelWidth
+                                width: fmriprepCol.maxLabelWidth
                             }
                             SingleLineTextInput{
                                 id: licenseFile
                                 width: 150
                             }
                             CustomButton{
-                                width: preCol.width - label4.width - 150 - 10
+                                width: fmriprepCol.width - label4.width - 150 - 10
                                 height: 30
                                 text: qsTr("导入")
                                 onClicked: {
@@ -495,6 +531,118 @@ Rectangle {
                                     }
                                 }
                             }
+                        }
+                    }
+                    Column{
+                        id: preDetailCol
+                        width: parent.width - 15
+                        spacing: 20
+                        visible: tabSwitcher.currentIndex === 1
+                        Row{
+                            height: 30
+                            spacing: 5
+                            Label {
+                                id: label5
+                                text: qsTr("预处理后文件夹：")
+                                color: "#ffffff"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            SingleLineTextInput{
+                                id: outputDetailDir
+                                width: 150
+                            }
+                            CustomButton{
+                                width: fmriprepCol.width - label5.width - 150 - 10
+                                height: 30
+                                text: qsTr("导入")
+                                onClicked: {
+                                    outputDetailDialog.open()
+                                }
+                            }
+                        }
+                        Label {
+                            text: qsTr("结构相")
+                            font.pixelSize: 16
+                            color: "#ffffff"
+                        }
+                        CustomButton{
+                            backgroundColor: "transparent"
+                            textColor: "#ffffff"
+                            borderColor: "#ffffff"
+                            borderWidth: 1
+                            fontSize: 14
+                            text: qsTr("Segmentation")
+                        }
+                        CustomButton{
+                            backgroundColor: "transparent"
+                            textColor: "#ffffff"
+                            borderColor: "#ffffff"
+                            borderWidth: 1
+                            fontSize: 14
+                            text: qsTr("Registration")
+                        }
+                        Label {
+                            text: qsTr("Standard Space")
+                            font.pixelSize: 16
+                            color: "#ffffff"
+                        }
+                        CustomButton{
+                            backgroundColor: "transparent"
+                            textColor: "#ffffff"
+                            borderColor: "#ffffff"
+                            borderWidth: 1
+                            fontSize: 14
+                            text: qsTr("MN152NLin2009cAsym")
+                        }
+                        Label {
+                            text: qsTr("Functional Phase")
+                            font.pixelSize: 16
+                            color: "#ffffff"
+                        }
+                        CustomButton{
+                            backgroundColor: "transparent"
+                            textColor: "#ffffff"
+                            borderColor: "#ffffff"
+                            borderWidth: 1
+                            fontSize: 14
+                            text: qsTr("T1 to Fun")
+                        }
+                        CustomButton{
+                            backgroundColor: "transparent"
+                            textColor: "#ffffff"
+                            borderColor: "#ffffff"
+                            borderWidth: 1
+                            fontSize: 14
+                            text: qsTr("BOLD summary")
+                        }
+                        Label {
+                            text: qsTr("QC quality control")
+                            font.pixelSize: 16
+                            color: "#ffffff"
+                        }
+                        CustomButton{
+                            backgroundColor: "transparent"
+                            textColor: "#ffffff"
+                            borderColor: "#ffffff"
+                            borderWidth: 1
+                            fontSize: 14
+                            text: qsTr("CompCor ROIs")
+                        }
+                        CustomButton{
+                            backgroundColor: "transparent"
+                            textColor: "#ffffff"
+                            borderColor: "#ffffff"
+                            borderWidth: 1
+                            fontSize: 14
+                            text: qsTr("Variance")
+                        }
+                        CustomButton{
+                            backgroundColor: "transparent"
+                            textColor: "#ffffff"
+                            borderColor: "#ffffff"
+                            borderWidth: 1
+                            fontSize: 14
+                            text: qsTr("nuisance regressors Correlations")
                         }
                     }
                 }

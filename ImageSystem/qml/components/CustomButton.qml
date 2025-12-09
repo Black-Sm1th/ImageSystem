@@ -5,7 +5,7 @@ Rectangle {
     id: customButton
     
     // 可配置属性
-    property int buttonWidth: 120
+    property int buttonWidth: buttonText.width + 20
     property int buttonHeight: 40
     property color borderColor: "#E0E0E0"
     property color textColor: "#FFFFFF"
