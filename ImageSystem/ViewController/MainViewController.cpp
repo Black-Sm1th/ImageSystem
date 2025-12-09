@@ -627,6 +627,14 @@ MainViewController::MainViewController(QObject* parent)
     
     // 初始化表格模型
     m_brainRegionTableModel = new BrainRegionTableModel(this);
+
+    // 应用退出时停止 fmriprep 进程并停止日志轮询
+    if (QCoreApplication::instance()) {
+        connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit,
+                this, [this]() {
+                    stopFmriprepProcess();
+                });
+    }
 }
 
 void MainViewController::calculateKidney() {
@@ -854,6 +862,9 @@ void MainViewController::startfmriprepAnalysis(const QString& dicomDir,
                                                const QString& licenseFile,
                                                bool useFreesurfer)
 {
+    // 如果已有进程在跑，先停止
+    stopFmriprepProcess();
+
     QString exePath = "Scripts/run_fmriprep.exe";
 
     QStringList arguments;
@@ -865,36 +876,133 @@ void MainViewController::startfmriprepAnalysis(const QString& dicomDir,
         arguments << "--freesurfer";
     }
 
-    QProcess* process = new QProcess(this);
+    m_fmriprepProcess = new QProcess(this);
 
-    connect(process, &QProcess::errorOccurred, this, [=](QProcess::ProcessError error) {
-        Q_UNUSED(error);
-        QString errorOutput = QString::fromUtf8(process->readAllStandardError());
-        emit errorMsg(QStringLiteral("无法启动 fmriprep！\n%1").arg(errorOutput));
-        emit brainAnalysisFinished(false);
-        process->deleteLater();
+    // 清空日志，记录路径，重置读取位置
+    clearFmriprepLog();
+    m_fmriprepLogFilePath = outputDir + "/fmriprep-docker.log";
+    m_fmriprepLogReadPos = 0;
+    m_fmriprepPid = -1;
+
+    // 实时读取进程输出
+    connect(m_fmriprepProcess, &QProcess::readyReadStandardOutput, this, [=]() {
+        appendFmriprepLog(QString::fromUtf8(m_fmriprepProcess->readAllStandardOutput()));
+    });
+    connect(m_fmriprepProcess, &QProcess::readyReadStandardError, this, [=]() {
+        appendFmriprepLog(QString::fromUtf8(m_fmriprepProcess->readAllStandardError()));
     });
 
-    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+    connect(m_fmriprepProcess, &QProcess::errorOccurred, this, [=](QProcess::ProcessError error) {
+        Q_UNUSED(error);
+        QString errorOutput = QString::fromUtf8(m_fmriprepProcess->readAllStandardError());
+        emit errorMsg(QStringLiteral("无法启动 fmriprep！\n%1").arg(errorOutput));
+        emit brainAnalysisFinished(false);
+        stopFmriprepProcess();
+        stopLogTimer();
+    });
+
+    connect(m_fmriprepProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
         [=](int exitCode, QProcess::ExitStatus exitStatus) {
             if (exitStatus == QProcess::NormalExit && exitCode == 0) {
                 qDebug() << QStringLiteral("fmriprep 运行成功！");
                 emit brainAnalysisFinished(true);
             } else {
-                QString errorOutput = QString::fromUtf8(process->readAllStandardError());
+                QString errorOutput = QString::fromUtf8(m_fmriprepProcess->readAllStandardError());
                 emit errorMsg(QStringLiteral("fmriprep 运行失败！\n错误代码: %1\n%2")
                     .arg(exitCode)
                     .arg(errorOutput));
                 emit brainAnalysisFinished(false);
             }
-            process->deleteLater();
+            stopFmriprepProcess();
+            stopLogTimer();
+            // 完成后尝试读取剩余日志一次
+            startLogTimer(m_fmriprepLogFilePath);
+            stopLogTimer();
         });
-    process->start(exePath, arguments);
+    // 合并输出，减少缓冲延迟；同时设置无缓冲环境变量（若可用）
+    m_fmriprepProcess->setProcessChannelMode(QProcess::MergedChannels);
+    // 尝试追加 PYTHONUNBUFFERED，但若 QProcessEnvironment 不可用（某些头被去除），则跳过
+
+    startLogTimer(m_fmriprepLogFilePath);
+    m_fmriprepProcess->start(exePath, arguments);
+    m_fmriprepPid = m_fmriprepProcess->processId();
+}
+
+void MainViewController::stopFmriprepProcess()
+{
+    if (m_fmriprepProcess) {
+        if (m_fmriprepProcess->state() != QProcess::NotRunning) {
+            // 优先杀死进程树，避免子进程（如 docker）存活
+#if defined(Q_OS_WIN)
+            if (m_fmriprepPid > 0) {
+                QProcess::execute("taskkill", {"/PID", QString::number(m_fmriprepPid), "/T", "/F"});
+            }
+#elif defined(Q_OS_UNIX)
+            if (m_fmriprepPid > 0) {
+                QProcess::execute("pkill", {"-P", QString::number(m_fmriprepPid)});
+            }
+#endif
+            m_fmriprepProcess->kill();
+            m_fmriprepProcess->waitForFinished(3000);
+        }
+        m_fmriprepProcess->deleteLater();
+        m_fmriprepProcess = nullptr;
+        m_fmriprepPid = -1;
+    }
+    stopLogTimer();
 }
 
 BrainRegionTableModel* MainViewController::getBrainRegionTableModel() const
 {
     return m_brainRegionTableModel;
+}
+
+void MainViewController::appendFmriprepLog(const QString& text)
+{
+    if (text.isEmpty())
+        return;
+    m_fmriprepLog.append(text);
+    emit fmriprepLogUpdated();
+}
+
+void MainViewController::clearFmriprepLog()
+{
+    m_fmriprepLog.clear();
+    emit fmriprepLogUpdated();
+}
+
+void MainViewController::startLogTimer(const QString& logFilePath)
+{
+    m_fmriprepLogFilePath = logFilePath;
+    if (!m_fmriprepLogTimer) {
+        m_fmriprepLogTimer = new QTimer(this);
+        m_fmriprepLogTimer->setInterval(1000);
+        connect(m_fmriprepLogTimer, &QTimer::timeout, this, [this]() {
+            if (m_fmriprepLogFilePath.isEmpty()) return;
+            QFile f(m_fmriprepLogFilePath);
+            if (!f.exists()) return;
+            if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return;
+            if (m_fmriprepLogReadPos > f.size()) {
+                m_fmriprepLogReadPos = 0;
+            }
+            if (!f.seek(m_fmriprepLogReadPos)) return;
+            QByteArray data = f.readAll();
+            m_fmriprepLogReadPos = f.pos();
+            if (!data.isEmpty()) {
+                appendFmriprepLog(QString::fromUtf8(data));
+            }
+        });
+    }
+    if (!m_fmriprepLogTimer->isActive()) {
+        m_fmriprepLogTimer->start();
+    }
+}
+
+void MainViewController::stopLogTimer()
+{
+    if (m_fmriprepLogTimer && m_fmriprepLogTimer->isActive()) {
+        m_fmriprepLogTimer->stop();
+    }
 }
 
 void MainViewController::processBrainNetworkAnalysis(const QString& boldPath, const QString& confoundsPath, const QString& outputDir)

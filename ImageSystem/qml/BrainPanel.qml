@@ -463,6 +463,39 @@ Rectangle {
                                 $MainViewController.startfmriprepAnalysis(d, b, o, l, freesurferCheckBox.checked)
                             }
                         }
+                        // log 日志展示
+                        Rectangle {
+                            width: parent.width
+                            height: preAnalysis.height - 140 - 180 - tabSwitcher.height - 10
+                            color: "#0f0f0f"
+                            radius: 4
+                            border.color: "#303030"
+                            border.width: 1
+
+                            ScrollView {
+                                anchors.fill: parent
+                                clip: true
+                                TextArea {
+                                    id: logArea
+                                    readOnly: true
+                                    wrapMode: TextEdit.Wrap
+                                    font.pixelSize: 12
+                                    font.family: "Alibaba PuHuiTi 3.0"
+                                    color: "#ffffff"
+                                    text: $MainViewController.fmriprepLog
+                                    background: null
+
+                                    onTextChanged: {
+                                        // 自动滚动到底部
+                                        logArea.cursorPosition = logArea.length
+                                        if (logArea.flickableItem) {
+                                            var flick = logArea.flickableItem
+                                            flick.contentY = Math.max(0, flick.contentHeight - flick.height)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

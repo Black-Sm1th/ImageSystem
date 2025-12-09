@@ -21,6 +21,9 @@
 #include <vtkPiecewiseFunction.h>
 #include <vtkVolumeProperty.h>
 #include <QProcess.h>
+#include <QTimer.h>
+#include <QPointer.h>
+#include <QFile.h>
 
 // 枚举类型：切片方向
 enum class SliceOrientation {
@@ -203,6 +206,10 @@ public:
                                            const QString& outputDir,
                                            const QString& licenseFile,
                                            bool useFreesurfer);
+    Q_INVOKABLE void stopFmriprepProcess();
+    Q_INVOKABLE void clearFmriprepLog();
+    Q_PROPERTY(QString fmriprepLog READ fmriprepLog NOTIFY fmriprepLogUpdated)
+    QString fmriprepLog() const { return m_fmriprepLog; }
     // 获取表格模型
     BrainRegionTableModel* getBrainRegionTableModel() const;
     
@@ -211,11 +218,21 @@ signals:
     void brainAnalysisStarted();
     void brainAnalysisFinished(bool success);
     void networkTableIndexChanged(int index);
+    void fmriprepLogUpdated();
     
 private:
     bool loadOutputData(const QString& path);
     void processBrainNetworkAnalysis(const QString& boldPath, const QString& confoundsPath, const QString& outputDir);
+    void appendFmriprepLog(const QString& text);
+    void startLogTimer(const QString& logFilePath);
+    void stopLogTimer();
     
     BrainRegionTableModel* m_brainRegionTableModel;
+    QPointer<QProcess> m_fmriprepProcess;
+    qint64 m_fmriprepPid = -1;
+    QString m_fmriprepLog;
+    QString m_fmriprepLogFilePath;
+    qint64 m_fmriprepLogReadPos = 0;
+    QTimer* m_fmriprepLogTimer = nullptr;
 };
 
