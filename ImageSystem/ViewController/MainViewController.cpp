@@ -896,7 +896,6 @@ void MainViewController::startfmriprepAnalysis(const QString& dicomDir,
         Q_UNUSED(error);
         QString errorOutput = QString::fromUtf8(m_fmriprepProcess->readAllStandardError());
         emit errorMsg(QStringLiteral("无法启动 fmriprep！\n%1").arg(errorOutput));
-        emit brainAnalysisFinished(false);
         stopFmriprepProcess();
         stopLogTimer();
     });
@@ -905,13 +904,11 @@ void MainViewController::startfmriprepAnalysis(const QString& dicomDir,
         [=](int exitCode, QProcess::ExitStatus exitStatus) {
             if (exitStatus == QProcess::NormalExit && exitCode == 0) {
                 qDebug() << QStringLiteral("fmriprep 运行成功！");
-                emit brainAnalysisFinished(true);
             } else {
                 QString errorOutput = QString::fromUtf8(m_fmriprepProcess->readAllStandardError());
                 emit errorMsg(QStringLiteral("fmriprep 运行失败！\n错误代码: %1\n%2")
                     .arg(exitCode)
                     .arg(errorOutput));
-                emit brainAnalysisFinished(false);
             }
             stopFmriprepProcess();
             stopLogTimer();
