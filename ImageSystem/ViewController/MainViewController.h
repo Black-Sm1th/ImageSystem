@@ -198,7 +198,11 @@ public:
     Q_INVOKABLE void importBrainData(const QString& url);
     Q_INVOKABLE void importBrainSegData(const QString& url);
     Q_INVOKABLE void selectBrainRegion(int row);
-    
+    Q_INVOKABLE void startfmriprepAnalysis(const QString& dicomDir,
+                                           const QString& bidsDir,
+                                           const QString& outputDir,
+                                           const QString& licenseFile,
+                                           bool useFreesurfer);
     // 获取表格模型
     BrainRegionTableModel* getBrainRegionTableModel() const;
     

@@ -14,6 +14,11 @@ ApplicationWindow {
     property int analysisPanelIndex: 0
     font.family: "Alibaba PuHuiTi 3.0"
     font.pixelSize: 14
+    // 对话框消息组件
+    MessageBox {
+        id: dialogMessageBox
+        anchors.fill: parent
+    }
     // 顶部工具栏
     Rectangle {
         id: topToolbar
@@ -645,6 +650,7 @@ ApplicationWindow {
         anchors.top: topToolbar.bottom
         anchors.bottom: bottomStatusBar.top
         fourViewPanel: fourViewPanel
+        messageManager: dialogMessageBox
     }
 
     // 全局唯一的四视图实例

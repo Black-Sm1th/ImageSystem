@@ -5,7 +5,7 @@ Rectangle {
     id: root
     width: 148
     height: 32
-    color: "#73000000"
+    color: "#383838"
     radius: 8
     
     property int currentIndex: 0
@@ -19,7 +19,7 @@ Rectangle {
         width: 68
         height: 24
         radius: 6
-        color: "#FFFFFF"
+        color: "grey"
         x: 4 + root.currentIndex * (68 + 4)
         y: 4
         z: 0
@@ -55,7 +55,7 @@ Rectangle {
                     text: modelData
                     font.family: "Alibaba PuHuiTi 3.0"
                     font.pixelSize: 14
-                    color: root.currentIndex === index ? "#D9000000" : "#73000000"
+                    color: root.currentIndex === index ? "#ffffff" : "#c3c3c3"
                 }
                 
                 MouseArea {

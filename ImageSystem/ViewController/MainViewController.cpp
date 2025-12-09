@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QProcess>
 #include "Modules/BrainNetworkData.h"
 vtkStandardNewMacro(SliceInteractorStyle);
 vtkStandardNewMacro(SliceViewData);
@@ -845,6 +846,50 @@ void MainViewController::selectBrainRegion(int row)
     emit networkTableIndexChanged(row);
     qDebug() << QStringLiteral("选中脑区:") << row << imagePath;
     setcurrentRegionplotsUrl(imagePath);
+}
+
+void MainViewController::startfmriprepAnalysis(const QString& dicomDir,
+                                               const QString& bidsDir,
+                                               const QString& outputDir,
+                                               const QString& licenseFile,
+                                               bool useFreesurfer)
+{
+    QString exePath = "Scripts/run_fmriprep.exe";
+
+    QStringList arguments;
+    arguments << "--dicom_dir" << dicomDir
+              << "--bids_dir" << bidsDir
+              << "--output_dir" << outputDir
+              << "--fs_license_file" << licenseFile;
+    if (useFreesurfer) {
+        arguments << "--freesurfer";
+    }
+
+    QProcess* process = new QProcess(this);
+
+    connect(process, &QProcess::errorOccurred, this, [=](QProcess::ProcessError error) {
+        Q_UNUSED(error);
+        QString errorOutput = QString::fromUtf8(process->readAllStandardError());
+        emit errorMsg(QStringLiteral("无法启动 fmriprep！\n%1").arg(errorOutput));
+        emit brainAnalysisFinished(false);
+        process->deleteLater();
+    });
+
+    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        [=](int exitCode, QProcess::ExitStatus exitStatus) {
+            if (exitStatus == QProcess::NormalExit && exitCode == 0) {
+                qDebug() << QStringLiteral("fmriprep 运行成功！");
+                emit brainAnalysisFinished(true);
+            } else {
+                QString errorOutput = QString::fromUtf8(process->readAllStandardError());
+                emit errorMsg(QStringLiteral("fmriprep 运行失败！\n错误代码: %1\n%2")
+                    .arg(exitCode)
+                    .arg(errorOutput));
+                emit brainAnalysisFinished(false);
+            }
+            process->deleteLater();
+        });
+    process->start(exePath, arguments);
 }
 
 BrainRegionTableModel* MainViewController::getBrainRegionTableModel() const

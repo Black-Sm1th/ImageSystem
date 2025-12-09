@@ -12,5 +12,8 @@
         <file>qml/components/TabSwitcher.qml</file>
         <file>image/eye.png</file>
         <file>image/eyeSlash.png</file>
+        <file>qml/components/SingleLineTextInput.qml</file>
+        <file>image/vector.png</file>
+        <file>qml/components/MessageBox.qml</file>
     </qresource>
 </RCC>

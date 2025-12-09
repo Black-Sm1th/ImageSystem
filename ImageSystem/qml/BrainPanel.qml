@@ -15,6 +15,7 @@ Rectangle {
     
     // 四视图容器（当在脑分割面板时使用）
     property alias fourViewContainer: brainSegmentationContainer
+    property var messageManager: null
     
     FileDialog {
         id: fileDialog
@@ -31,6 +32,50 @@ Rectangle {
         selectFolder: true
         onAccepted: {
             $DicomDataModel.loadSegBrainDirectory(segFileDialog.fileUrls[0])
+        }
+    }
+
+    FileDialog {
+        id: preFileDialog
+        title: qsTr("选择要上传的文件")
+        selectFolder: true
+        onAccepted: {
+            if (fileUrls.length === 0)
+                return
+
+            var url = fileUrls[0].toString()
+            var path = url
+            if (path.startsWith("file:///")) {
+                path = path.substring("file:///".length)
+            }
+            // 统一为正斜杠，方便字符串处理
+            path = path.replace(/\\/g, "/")
+
+            dicomDir.text = path
+
+            var lastSlash = path.lastIndexOf("/")
+            var baseDir = lastSlash >= 0 ? path.substring(0, lastSlash + 1) : path
+            bidsDir.text = baseDir + "Bids"
+            outputDir.text = baseDir + "Output"
+        }
+    }
+    
+    FileDialog {
+        id: licenseFileDialog
+        title: qsTr("选择license")
+        onAccepted: {
+            if (fileUrls.length === 0)
+                return
+
+            var url = fileUrls[0].toString()
+            var path = url
+            if (path.startsWith("file:///")) {
+                path = path.substring("file:///".length)
+            }
+            // 统一为正斜杠，方便字符串处理
+            path = path.replace(/\\/g, "/")
+
+            licenseFile.text = path
         }
     }
     
@@ -247,7 +292,178 @@ Rectangle {
                 color: "transparent"
                 visible: currentIndex === 1
                 Column{
-                    spacing: 10
+                    width: parent.width
+                    spacing: 20
+                    padding: 5
+                    TabSwitcher{
+                        id: tabSwitcher
+                        tabTitles: ["fmriprep", "详情"]
+                    }
+                    Column{
+                        id: preCol
+                        width: parent.width - 15
+                        spacing: 20
+                        visible: tabSwitcher.currentIndex === 0
+                        // 四个标签的最大宽度，保持对齐
+                        property int maxLabelWidth: Math.max(
+                                                        Math.max(label1.implicitWidth, label2.implicitWidth),
+                                                        Math.max(label3.implicitWidth, label4.implicitWidth))
+                        Row{
+                            height: 30
+                            spacing: 5
+                            Label {
+                                id:label1
+                                text: qsTr("输入Dicom文件夹：")
+                                color: "#ffffff"
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: preCol.maxLabelWidth
+                            }
+                            SingleLineTextInput{
+                                id: dicomDir
+                                width: 150
+                            }
+                            CustomButton{
+                                width: preCol.width - label1.width - 150 - 10
+                                height: 30
+                                text: qsTr("导入")
+                                onClicked: {
+                                    preFileDialog.open()
+                                }
+                            }
+                        }
+                        Row{
+                            height: 30
+                            spacing: 5
+                            Label {
+                                id:label2
+                                text: qsTr("输出Bids文件夹：")
+                                color: "#ffffff"
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: preCol.maxLabelWidth
+                            }
+                            SingleLineTextInput{
+                                id: bidsDir
+                                width: preCol.width - label2.width - 5
+                            }
+                        }
+                        Row{
+                            height: 30
+                            spacing: 5
+                            Label {
+                                id:label3
+                                text: qsTr("输出Output文件夹：")
+                                color: "#ffffff"
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: preCol.maxLabelWidth
+                            }
+                            SingleLineTextInput{
+                                id: outputDir
+                                width: preCol.width - label3.width - 5
+                            }
+                        }
+                        Row{
+                            height: 30
+                            spacing: 5
+                            Label {
+                                id:label4
+                                text: qsTr("license文件地址：")
+                                color: "#ffffff"
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: preCol.maxLabelWidth
+                            }
+                            SingleLineTextInput{
+                                id: licenseFile
+                                width: 150
+                            }
+                            CustomButton{
+                                width: preCol.width - label4.width - 150 - 10
+                                height: 30
+                                text: qsTr("导入")
+                                onClicked: {
+                                    licenseFileDialog.open()
+                                }
+                            }
+                        }
+                        Row{
+                            height: 30
+                            spacing: 5
+                            CheckBox {
+                                id: freesurferCheckBox
+                                checked: false
+                                width: 16
+                                height: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                                indicator: Rectangle {
+                                    implicitWidth: 16
+                                    implicitHeight: 16
+                                    radius: 4
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    border.color: freesurferCheckBox.checked ? "#006BFF" : "#40000000"
+                                    border.width: 1
+                                    color: freesurferCheckBox.checked ? "#006BFF" : "#ffffff"
+
+                                    Image{
+                                        source: "qrc:/image/vector.png"
+                                        anchors.centerIn: parent
+                                        visible: freesurferCheckBox.checked
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: freesurferCheckBox.checked = !freesurferCheckBox.checked
+                                    }
+                                }
+                            }
+                            Label{
+                                text: qsTr("使用freesurfer")
+                                color: "#ffffff"
+                                anchors.verticalCenter: parent.verticalCenter
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: freesurferCheckBox.checked = !freesurferCheckBox.checked
+                                }
+                            }
+                        }
+                        CustomButton{
+                            width: parent.width
+                            height: 30
+                            text: qsTr("分析")
+                            onClicked: {
+                                function warn(msg) {
+                                    if (messageManager) {
+                                        messageManager.warning(msg, 2000)
+                                    } else {
+                                        console.log(msg)
+                                    }
+                                }
+
+                                var d = dicomDir.text.trim()
+                                var b = bidsDir.text.trim()
+                                var o = outputDir.text.trim()
+                                var l = licenseFile.text.trim()
+
+                                if (d === "") {
+                                    warn(qsTr("请输入 Dicom 文件夹路径"))
+                                    return
+                                }
+                                if (b === "") {
+                                    warn(qsTr("请输入 Bids 文件夹路径"))
+                                    return
+                                }
+                                if (o === "") {
+                                    warn(qsTr("请输入 Output 文件夹路径"))
+                                    return
+                                }
+                                if (l === "") {
+                                    warn(qsTr("请输入 license 文件路径"))
+                                    return
+                                }
+
+                                $MainViewController.startfmriprepAnalysis(d, b, o, l, freesurferCheckBox.checked)
+                            }
+                        }
+                    }
                 }
             }
             Rectangle{
