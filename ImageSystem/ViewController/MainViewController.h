@@ -191,6 +191,8 @@ class MainViewController : public QObject
         QUICK_PROPERTY(double, richClubConnections)
         QUICK_PROPERTY(double, bridgeConnections)
         QUICK_PROPERTY(double, localConnections)
+        QUICK_PROPERTY(double, predictedBrainAge)
+        QUICK_PROPERTY(bool, brainAgeProcessing)
 
         QUICK_PROPERTY(QString, currentAlffUrl)
         QUICK_PROPERTY(QString, currentCovarianceUrl)
@@ -208,6 +210,7 @@ public:
                                            bool useFreesurfer);
     Q_INVOKABLE void stopFmriprepProcess();
     Q_INVOKABLE void clearFmriprepLog();
+    Q_INVOKABLE void startAnalysisBrainAge(const QString& path);
     Q_PROPERTY(QString fmriprepLog READ fmriprepLog NOTIFY fmriprepLogUpdated)
     QString fmriprepLog() const { return m_fmriprepLog; }
     // 获取表格模型

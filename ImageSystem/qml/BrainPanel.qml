@@ -101,6 +101,47 @@ Rectangle {
             licenseFile.text = path
         }
     }
+
+    FileDialog {
+        id: niiGzDialog
+        title: "选择 NII.GZ 文件"
+        selectMultiple: false
+        // 确保是文件选择模式
+        selectFolder: false
+        nameFilters: ["NIfTI Files (*.nii.gz)", "All Files (*)"]
+        onAccepted: {
+            if (fileUrls.length === 0)
+                return
+
+            var url = fileUrls[0].toString()
+            var path = url
+            if (path.startsWith("file:///")) {
+                path = path.substring("file:///".length)
+            }
+            // 统一为正斜杠，方便字符串处理
+            path = path.replace(/\\/g, "/")
+            brainAgePath.text = path;
+        }
+    }
+    FileDialog {
+        id: dcmFolderDialog
+        title: "选择 DCM 文件夹"
+        // 确保是文件夹选择模式
+        selectFolder: true
+        onAccepted: {
+            if (fileUrls.length === 0)
+                return
+
+            var url = fileUrls[0].toString()
+            var path = url
+            if (path.startsWith("file:///")) {
+                path = path.substring("file:///".length)
+            }
+            // 统一为正斜杠，方便字符串处理
+            path = path.replace(/\\/g, "/")
+            brainAgePath.text = path;
+        }
+    }
     
     // 脑网络分析进度对话框
     Rectangle {
@@ -1365,6 +1406,94 @@ Rectangle {
                                 }
                             }
                         }
+                    }
+                }
+            }
+            Rectangle{
+                id: aiAnalysis
+                width: 380
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: parent.right
+                color: "transparent"
+                visible: currentIndex === 4
+                Column {
+                    padding: 10
+                    width: parent.width
+                    spacing: 10
+                    Label{
+                        text: qsTr("导入数据（nii.gz或dicom文件夹）：")
+                        color: "#ffffff"
+                        font.pixelSize: 16
+                    }
+                    Label{
+                        id:brainAgePath
+                        text: qsTr("")
+                        color: "#ffffff"
+                        font.pixelSize: 16
+                        visible: text !== ""
+                        width: parent.width - 20
+                        elide: Text.ElideMiddle
+                    }
+                    Row {
+                        spacing: 5
+                        height: 40
+                        CustomButton {
+                            width: 120
+                            height: 40
+                            text: "导入nii.gz"
+                            backgroundColor: "#004578"
+                            onClicked: {
+                                niiGzDialog.open()
+                            }
+                        }
+                        CustomButton {
+                            width: 120
+                            height: 40
+                            text: "导入dcm文件夹"
+                            backgroundColor: "#004578"
+                            onClicked: {
+                                dcmFolderDialog.open()
+                            }
+                        }
+                    }
+                    CustomButton {
+                        width: parent.width - 20
+                        height: 40
+                        text: "开始分析"
+                        backgroundColor: "#004578"
+                        onClicked: {
+                            if(brainAgePath.text !== ""){
+                                $MainViewController.startAnalysisBrainAge(brainAgePath.text)
+                            }else{
+                                messageManager.error("请先选择文件！")
+                            }
+                        }
+                    }
+                    Row{
+                        width: parent.width - 20
+                        spacing: 8
+                        visible: $MainViewController.brainAgeProcessing
+                        anchors.left: parent.left
+                        BusyIndicator{
+                            running: $MainViewController.brainAgeProcessing
+                            width: 28
+                            height: 28
+                        }
+                        Label{
+                            text: qsTr("正在分析中...")
+                            color: "#ffffff"
+                            font.pixelSize: 16
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                    }
+                    Label{
+                        width: parent.width - 20
+                        text: $MainViewController.predictedBrainAge > 0 ? qsTr("预测年龄：") + $MainViewController.predictedBrainAge.toFixed(2) : ""
+                        color: "#ffffff"
+                        font.pixelSize: 18
+                        visible: $MainViewController.predictedBrainAge > 0
+                        wrapMode: Text.WrapAnywhere
                     }
                 }
             }
