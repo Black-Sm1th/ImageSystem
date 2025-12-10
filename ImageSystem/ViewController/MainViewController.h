@@ -102,6 +102,7 @@ private slots:
 
 private:
     void setupView(vtkRenderWindow* renderWindow, SliceViewData* data, vtkImageData* imageData);
+    void applyParallelScale(vtkImageSlice* imageSlice, vtkRenderer* renderer);
     void setMapperOrientation(vtkImageSliceMapper* mapper);
     void setupCamera(vtkRenderer* renderer);
 

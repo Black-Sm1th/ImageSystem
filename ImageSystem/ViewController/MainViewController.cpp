@@ -251,6 +251,7 @@ void SliceVtkItemBase::onSegDataLoaded()
 
             // 设置相机方向
             setupCamera(data->renderer);
+            applyParallelScale(data->imageSlice, data->renderer);
         }
     });
     scheduleRender();
@@ -365,8 +366,9 @@ void SliceVtkItemBase::setupView(vtkRenderWindow* renderWindow, SliceViewData* d
     style->SetOrientation(m_orientation);
     renderWindow->GetInteractor()->SetInteractorStyle(style);
 
-    // 设置相机方向
+    // 设置相机方向并锁定并行缩放（保持视口尺寸稳定）
     setupCamera(data->renderer);
+    applyParallelScale(data->imageSlice, data->renderer);
 }
 
 void SliceVtkItemBase::setMapperOrientation(vtkImageSliceMapper* mapper)
@@ -406,8 +408,47 @@ void SliceVtkItemBase::setupCamera(vtkRenderer* renderer)
         camera->SetFocalPoint(0, 0, 0);
         break;
     }
-
     renderer->ResetCamera();
+}
+
+void SliceVtkItemBase::applyParallelScale(vtkImageSlice* imageSlice, vtkRenderer* renderer)
+{
+    if (!imageSlice || !renderer) {
+        return;
+    }
+    vtkCamera* cam = renderer->GetActiveCamera();
+    if (!cam) {
+        return;
+    }
+    cam->SetParallelProjection(true);
+
+    auto* mapper = vtkImageSliceMapper::SafeDownCast(imageSlice->GetMapper());
+    if (!mapper) {
+        return;
+    }
+    auto* img = vtkImageData::SafeDownCast(mapper->GetInput());
+    if (!img) {
+        return;
+    }
+
+    int extent[6];
+    double spacing[3];
+    img->GetExtent(extent);
+    img->GetSpacing(spacing);
+
+    double w = (extent[1] - extent[0] + 1) * spacing[0];
+    double h = (extent[3] - extent[2] + 1) * spacing[1];
+    if (m_orientation == SliceOrientation::Sagittal) {
+        w = (extent[3] - extent[2] + 1) * spacing[1];
+        h = (extent[5] - extent[4] + 1) * spacing[2];
+    } else if (m_orientation == SliceOrientation::Coronal) {
+        w = (extent[1] - extent[0] + 1) * spacing[0];
+        h = (extent[5] - extent[4] + 1) * spacing[2];
+    }
+
+    // 让切片占用视口 80%（可按需调整）
+    const double targetFill = 0.8;
+    cam->SetParallelScale(0.5 * std::max(w, h) / targetFill);
 }
 
 int SliceVtkItemBase::getCurrentSlice() const
