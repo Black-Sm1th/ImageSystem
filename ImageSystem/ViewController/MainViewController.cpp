@@ -1038,9 +1038,10 @@ void MainViewController::startAnalysisBrainAge(const QString& path)
 
     const QString exePath = QStringLiteral("Scripts/run_brain_age.exe");
     const QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
-    const QString outputPath = QDir(QDir::currentPath()).filePath(QStringLiteral("Prediction_%1.csv").arg(timestamp));
+    const QString outputPath = QStringLiteral("AppData/outputs/Prediction_%1.csv").arg(timestamp);
 
     QStringList arguments;
+
     arguments << "--input" << inputPath
         << "--output" << outputPath
         << "--docker-image" << "deepbrain";

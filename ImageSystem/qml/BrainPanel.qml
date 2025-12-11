@@ -17,6 +17,7 @@ Rectangle {
     property alias fourViewContainer: brainSegmentationContainer
     property var messageManager: null
     property bool showResult: false
+    property int preShowResultIndex: -1
     FileDialog {
         id: fileDialog
         title: qsTr("选择要上传的文件")
@@ -76,10 +77,8 @@ Rectangle {
             }
             // 统一为正斜杠，方便字符串处理
             path = path.replace(/\\/g, "/")
-
             outputDetailDir.text = path
-            preResult.url = fileUrls[0].toString() + "/sub-01.html"
-            showResult = true
+            segmentationBtn.clicked()
         }
     }
     
@@ -234,7 +233,7 @@ Rectangle {
                     textColor: "#ffffff"
                     onClicked: {
                         currentIndex = 1
-                        showResult = false
+                        showResult = true
                     }
                 }
                 CustomButton{
@@ -301,6 +300,7 @@ Rectangle {
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
                 width: parent.width - 380
+                backgroundColor: "#000000"
                 visible: currentIndex === 1 && showResult
             }
             Rectangle{
@@ -602,25 +602,36 @@ Rectangle {
                             }
                         }
                         Label {
-                            text: qsTr("结构相")
+                            text: qsTr("Structural Phase")
                             font.pixelSize: 16
                             color: "#ffffff"
                         }
                         CustomButton{
-                            backgroundColor: "transparent"
+                            id: segmentationBtn
+                            backgroundColor: preShowResultIndex === 0 ? "green" : "transparent"
                             textColor: "#ffffff"
                             borderColor: "#ffffff"
                             borderWidth: 1
                             fontSize: 14
                             text: qsTr("Segmentation")
+                            onClicked: {
+                                preShowResultIndex = 0
+                                showResult = true
+                                preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_dseg.svg"
+                            }
                         }
                         CustomButton{
-                            backgroundColor: "transparent"
+                            backgroundColor: preShowResultIndex === 1 ? "green" : "transparent"
                             textColor: "#ffffff"
                             borderColor: "#ffffff"
                             borderWidth: 1
                             fontSize: 14
                             text: qsTr("Registration")
+                            onClicked: {
+                                preShowResultIndex = 1
+                                showResult = true
+                                preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_space-MNI152NLin2009cAsym_T1w.svg"
+                            }
                         }
                         Label {
                             text: qsTr("Standard Space")
@@ -628,12 +639,17 @@ Rectangle {
                             color: "#ffffff"
                         }
                         CustomButton{
-                            backgroundColor: "transparent"
+                            backgroundColor: preShowResultIndex === 2 ? "green" : "transparent"
                             textColor: "#ffffff"
                             borderColor: "#ffffff"
                             borderWidth: 1
                             fontSize: 14
                             text: qsTr("MN152NLin2009cAsym")
+                            onClicked: {
+                                preShowResultIndex = 2
+                                showResult = true
+                                preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_space-MNI152NLin2009cAsym_T1w.svg"
+                            }
                         }
                         Label {
                             text: qsTr("Functional Phase")
@@ -641,20 +657,30 @@ Rectangle {
                             color: "#ffffff"
                         }
                         CustomButton{
-                            backgroundColor: "transparent"
+                            backgroundColor: preShowResultIndex === 3 ? "green" : "transparent"
                             textColor: "#ffffff"
                             borderColor: "#ffffff"
                             borderWidth: 1
                             fontSize: 14
                             text: qsTr("T1 to Fun")
+                            onClicked: {
+                                preShowResultIndex = 3
+                                showResult = true
+                                preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_task-rest_desc-coreg_bold.svg"
+                            }
                         }
                         CustomButton{
-                            backgroundColor: "transparent"
+                            backgroundColor: preShowResultIndex === 4 ? "green" : "transparent"
                             textColor: "#ffffff"
                             borderColor: "#ffffff"
                             borderWidth: 1
                             fontSize: 14
                             text: qsTr("BOLD summary")
+                            onClicked: {
+                                preShowResultIndex = 4
+                                showResult = true
+                                preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_task-rest_desc-carpetplot_bold.svg"
+                            }
                         }
                         Label {
                             text: qsTr("QC quality control")
@@ -662,28 +688,43 @@ Rectangle {
                             color: "#ffffff"
                         }
                         CustomButton{
-                            backgroundColor: "transparent"
+                            backgroundColor: preShowResultIndex === 5 ? "green" : "transparent"
                             textColor: "#ffffff"
                             borderColor: "#ffffff"
                             borderWidth: 1
                             fontSize: 14
                             text: qsTr("CompCor ROIs")
+                            onClicked: {
+                                preShowResultIndex = 5
+                                showResult = true
+                                preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_task-rest_desc-rois_bold.svg"
+                            }
                         }
                         CustomButton{
-                            backgroundColor: "transparent"
+                            backgroundColor: preShowResultIndex === 6 ? "green" : "transparent"
                             textColor: "#ffffff"
                             borderColor: "#ffffff"
                             borderWidth: 1
                             fontSize: 14
                             text: qsTr("Variance")
+                            onClicked: {
+                                preShowResultIndex = 6
+                                showResult = true
+                                preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_task-rest_desc-compcorvar_bold.svg"
+                            }
                         }
                         CustomButton{
-                            backgroundColor: "transparent"
+                            backgroundColor: preShowResultIndex === 7 ? "green" : "transparent"
                             textColor: "#ffffff"
                             borderColor: "#ffffff"
                             borderWidth: 1
                             fontSize: 14
                             text: qsTr("nuisance regressors Correlations")
+                            onClicked: {
+                                preShowResultIndex = 7
+                                showResult = true
+                                preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_task-rest_desc-confoundcorr_bold.svg"
+                            }
                         }
                     }
                 }
