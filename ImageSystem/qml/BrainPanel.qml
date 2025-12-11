@@ -9,6 +9,16 @@ Rectangle {
     id: rootPanel
     color: "transparent"
     property int currentIndex: 1
+    // 三步联合处理状态
+    property bool batchProcessing: false
+    property bool preprocessDone: false
+    property bool segmentationDone: false
+    property bool networkDone: false
+    property int preprocessProgress: 0
+    property int segmentationProgress: 0
+    property int networkProgress: 0
+    property bool networkIndeterminate: false
+    property string selectedOutputPath: ""
     
     // 接收从外部传入的 FourViewPanel 实例
     property var fourViewPanel: null
@@ -18,22 +28,40 @@ Rectangle {
     property var messageManager: null
     property bool showResult: false
     property int preShowResultIndex: -1
-    FileDialog {
-        id: fileDialog
-        title: qsTr("选择要上传的文件")
-        selectFolder: true
-        onAccepted: {
-            $MainViewController.importBrainData(fileDialog.fileUrls[0])
+    
+    function resetBatchProgress() {
+        batchProcessing = true
+        preprocessDone = false
+        segmentationDone = false
+        networkDone = false
+        preprocessProgress = 0
+        segmentationProgress = 0
+        networkProgress = 0
+        networkIndeterminate = true
+    }
+
+    function completePreprocessStep() {
+        preprocessDone = true
+        preprocessProgress = 100
+        tryFinishBatch()
+    }
+
+    function tryFinishBatch() {
+        if (preprocessDone && segmentationDone && networkDone) {
+            batchProcessing = false
         }
     }
 
-    FileDialog {
-        id: segFileDialog
-        title: qsTr("选择要上传的文件")
-        selectFolder: true
-        onAccepted: {
-            $DicomDataModel.loadSegBrainDirectory(segFileDialog.fileUrls[0])
-        }
+    function startUnifiedImports(url, normalizedPath) {
+        selectedOutputPath = normalizedPath
+        outputDetailDir.text = normalizedPath
+        resetBatchProgress()
+        completePreprocessStep()
+        // 同步触发脑区分割与脑网络分析
+        $DicomDataModel.loadSegBrainDirectory(url)
+        $MainViewController.importBrainData(url)
+        // 默认展示分割结果预览
+        segmentationBtn.clicked()
     }
 
     FileDialog {
@@ -77,8 +105,7 @@ Rectangle {
             }
             // 统一为正斜杠，方便字符串处理
             path = path.replace(/\\/g, "/")
-            outputDetailDir.text = path
-            segmentationBtn.clicked()
+            startUnifiedImports(url, path)
         }
     }
     
@@ -142,18 +169,18 @@ Rectangle {
         }
     }
     
-    // 脑网络分析进度对话框
+    // 联合处理进度对话框
     Rectangle {
-        id: analysisProgressDialog
+        id: batchProgressDialog
         anchors.fill: parent
         color: "#80000000"
-        visible: false
+        visible: batchProcessing
         z: 1000
         
         Rectangle {
             anchors.centerIn: parent
-            width: 400
-            height: 200
+            width: 460
+            height: 260
             color: "#2a2a2a"
             border.color: "#0078d4"
             border.width: 2
@@ -162,30 +189,65 @@ Rectangle {
             Column {
                 anchors.fill: parent
                 anchors.margins: 20
-                spacing: 15
+                spacing: 18
                 
                 Label {
                     width: parent.width
-                    text: qsTr("脑网络分析进行中...")
+                    text: qsTr("数据处理中，请稍候...")
                     color: "#ffffff"
                     font.pixelSize: 18
                     font.bold: true
                     horizontalAlignment: Text.AlignHCenter
                 }
-                
-                BusyIndicator {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    running: analysisProgressDialog.visible
-                    width: 60
-                    height: 60
-                }
-                
-                Label {
-                    id: progressText
+
+                Column {
                     width: parent.width
-                    text: qsTr("正在初始化...")
+                    spacing: 10
+
+                    Row {
+                        spacing: 10
+                        width: parent.width
+                        Label { text: qsTr("预处理结果"); color: "#ffffff"; font.pixelSize: 14; width: 110 }
+                        ProgressBar {
+                            id: preprocessBar
+                            from: 0; to: 100
+                            indeterminate: !preprocessDone && preprocessProgress === 0
+                            value: preprocessProgress
+                            width: parent.width - 130
+                        }
+                    }
+
+                    Row {
+                        spacing: 10
+                        width: parent.width
+                        Label { text: qsTr("脑区分割"); color: "#ffffff"; font.pixelSize: 14; width: 110 }
+                        ProgressBar {
+                            id: segBar
+                            from: 0; to: 100
+                            indeterminate: !segmentationDone && segmentationProgress === 0
+                            value: segmentationProgress
+                            width: parent.width - 130
+                        }
+                    }
+
+                    Row {
+                        spacing: 10
+                        width: parent.width
+                        Label { text: qsTr("脑网络分析"); color: "#ffffff"; font.pixelSize: 14; width: 110 }
+                        ProgressBar {
+                            id: netBar
+                            from: 0; to: 100
+                            indeterminate: networkIndeterminate
+                            value: networkProgress
+                            width: parent.width - 130
+                        }
+                    }
+                }
+                Label {
+                    width: parent.width
+                    text: qsTr("请等待三个步骤全部完成后继续操作")
                     color: "#cccccc"
-                    font.pixelSize: 14
+                    font.pixelSize: 12
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
                 }
@@ -198,19 +260,47 @@ Rectangle {
         target: $MainViewController
         
         function onBrainAnalysisStarted() {
-            analysisProgressDialog.visible = true
-            progressText.text = qsTr("开始脑网络分析...")
+            networkDone = false
+            networkProgress = 0
+            networkIndeterminate = true
+            batchProcessing = true
         }
         
         function onBrainAnalysisFinished(success) {
-            analysisProgressDialog.visible = false
-            if (success) {
-                progressText.text = qsTr("分析完成！")
+            networkIndeterminate = false
+            networkProgress = success ? 100 : networkProgress
+            networkDone = true
+            if (!success && messageManager) {
+                messageManager.error(qsTr("脑网络分析失败，请检查数据"))
             }
+            tryFinishBatch()
         }
 
         function onNetworkTableIndexChanged(index){
             regionTableView.currentIndex = index
+        }
+    }
+
+    Connections {
+        target: $DicomDataModel
+
+        function onSegLoadingStarted() {
+            segmentationDone = false
+            segmentationProgress = 0
+            batchProcessing = true
+        }
+
+        function onSegLoadingProgress(percent, message) {
+            segmentationProgress = percent
+        }
+
+        function onSegLoadingFinished(success, message) {
+            segmentationProgress = success ? 100 : segmentationProgress
+            segmentationDone = true
+            if (!success && messageManager) {
+                messageManager.error(qsTr("脑区分割加载失败"))
+            }
+            tryFinishBatch()
         }
     }
     
@@ -318,6 +408,9 @@ Rectangle {
                     anchors.leftMargin: 5
                     width: (parent.width - 15) / 2
                     height: (parent.height - 15) / 2
+                    color: "#000000"
+                    border.color: "#404040"
+                    border.width: 1
                     Image{
                         anchors.fill: parent
                         source: $MainViewController.currentAlffUrl
@@ -330,6 +423,9 @@ Rectangle {
                     anchors.rightMargin: 5
                     width: (parent.width - 15) / 2
                     height: (parent.height - 15) / 2
+                    color: "#000000"
+                    border.color: "#404040"
+                    border.width: 1
                     Image{
                         anchors.fill: parent
                         source: $MainViewController.currentCovarianceUrl
@@ -342,6 +438,9 @@ Rectangle {
                     anchors.leftMargin: 5
                     width: (parent.width - 15) / 2
                     height: (parent.height - 15) / 2
+                    color: "#000000"
+                    border.color: "#404040"
+                    border.width: 1
                     Image{
                         anchors.fill: parent
                         source: $MainViewController.currentRegionplotsUrl
@@ -354,8 +453,12 @@ Rectangle {
                     anchors.rightMargin: 5
                     width: (parent.width - 15) / 2
                     height: (parent.height - 15) / 2
+                    color: "#000000"
+                    border.color: "#404040"
+                    border.width: 1
                     WebEngineView{
                         anchors.fill: parent
+                        visible: $MainViewController.currentViewConnectomeUrl !== ""
                         url: $MainViewController.currentViewConnectomeUrl
                     }
                 }
@@ -374,7 +477,7 @@ Rectangle {
                     padding: 5
                     TabSwitcher{
                         id: tabSwitcher
-                        tabTitles: ["fmriprep", "详情"]
+                        tabTitles: ["传统处理", "深度学习", "数据详情"]
                     }
                     Column{
                         id: fmriprepCol
@@ -575,10 +678,16 @@ Rectangle {
                         }
                     }
                     Column{
-                        id: preDetailCol
+                        id: deepprepCol
                         width: parent.width - 15
                         spacing: 20
                         visible: tabSwitcher.currentIndex === 1
+                    }
+                    Column{
+                        id: preDetailCol
+                        width: parent.width - 15
+                        spacing: 20
+                        visible: tabSwitcher.currentIndex === 2
                         Row{
                             height: 30
                             spacing: 5
@@ -615,6 +724,9 @@ Rectangle {
                             fontSize: 14
                             text: qsTr("Segmentation")
                             onClicked: {
+                                if(outputDetailDir.text === ""){
+                                    return
+                                }
                                 preShowResultIndex = 0
                                 showResult = true
                                 preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_dseg.svg"
@@ -628,6 +740,9 @@ Rectangle {
                             fontSize: 14
                             text: qsTr("Registration")
                             onClicked: {
+                                if(outputDetailDir.text === ""){
+                                    return
+                                }
                                 preShowResultIndex = 1
                                 showResult = true
                                 preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_space-MNI152NLin2009cAsym_T1w.svg"
@@ -646,6 +761,9 @@ Rectangle {
                             fontSize: 14
                             text: qsTr("MN152NLin2009cAsym")
                             onClicked: {
+                                if(outputDetailDir.text === ""){
+                                    return
+                                }
                                 preShowResultIndex = 2
                                 showResult = true
                                 preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_space-MNI152NLin2009cAsym_T1w.svg"
@@ -664,6 +782,9 @@ Rectangle {
                             fontSize: 14
                             text: qsTr("T1 to Fun")
                             onClicked: {
+                                if(outputDetailDir.text === ""){
+                                    return
+                                }
                                 preShowResultIndex = 3
                                 showResult = true
                                 preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_task-rest_desc-coreg_bold.svg"
@@ -677,6 +798,9 @@ Rectangle {
                             fontSize: 14
                             text: qsTr("BOLD summary")
                             onClicked: {
+                                if(outputDetailDir.text === ""){
+                                    return
+                                }
                                 preShowResultIndex = 4
                                 showResult = true
                                 preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_task-rest_desc-carpetplot_bold.svg"
@@ -695,6 +819,9 @@ Rectangle {
                             fontSize: 14
                             text: qsTr("CompCor ROIs")
                             onClicked: {
+                                if(outputDetailDir.text === ""){
+                                    return
+                                }
                                 preShowResultIndex = 5
                                 showResult = true
                                 preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_task-rest_desc-rois_bold.svg"
@@ -708,6 +835,9 @@ Rectangle {
                             fontSize: 14
                             text: qsTr("Variance")
                             onClicked: {
+                                if(outputDetailDir.text === ""){
+                                    return
+                                }
                                 preShowResultIndex = 6
                                 showResult = true
                                 preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_task-rest_desc-compcorvar_bold.svg"
@@ -721,6 +851,9 @@ Rectangle {
                             fontSize: 14
                             text: qsTr("nuisance regressors Correlations")
                             onClicked: {
+                                if(outputDetailDir.text === ""){
+                                    return
+                                }
                                 preShowResultIndex = 7
                                 showResult = true
                                 preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_task-rest_desc-confoundcorr_bold.svg"
@@ -740,27 +873,12 @@ Rectangle {
                 Column{
                     width: parent.width
                     spacing: 10
-                    Row {
-                        spacing: 5
-                        height: 40
-                        Label{
-                            text: qsTr("导入数据：")
-                            anchors.verticalCenter: parent.verticalCenter
-                            color: "#ffffff"
-                            font.pixelSize: 16
-                        }
-                        // 文件选择按钮
-                        CustomButton {
-                            id: openButton
-                            width: 160
-                            height: 40
-                            text: "选择预处理后数据"
-                            backgroundColor: "#004578"
-                            onClicked: {
-                                segFileDialog.open()
-                            }
-                        }
-                    }
+                Label{
+                    text: qsTr("使用预处理路径：") + outputDetailDir.text
+                    color: "#ffffff"
+                    font.pixelSize: 14
+                    wrapMode: Text.WrapAnywhere
+                }
                     ///脑区表格
                     Rectangle {
                         width: parent.width - 5
@@ -1126,25 +1244,11 @@ Rectangle {
                     padding: 10
                     width: parent.width
                     spacing: 10
-                    Row {
-                        spacing: 5
-                        height: 40
-                        Label{
-                            text: qsTr("导入数据：")
-                            anchors.verticalCenter: parent.verticalCenter
-                            color: "#ffffff"
-                            font.pixelSize: 16
-                        }
-                        // 文件选择按钮
-                        CustomButton {
-                            width: 160
-                            height: 40
-                            text: "选择预处理后数据"
-                            backgroundColor: "#004578"
-                            onClicked: {
-                                fileDialog.open()
-                            }
-                        }
+                    Label{
+                        text: qsTr("使用预处理路径：") + outputDetailDir.text
+                        color: "#ffffff"
+                        font.pixelSize: 14
+                        wrapMode: Text.WrapAnywhere
                     }
                     Rectangle{
                         width: parent.width - 20
@@ -1480,7 +1584,7 @@ Rectangle {
                         spacing: 5
                         height: 40
                         CustomButton {
-                            width: 120
+                            width: (aiAnalysis.width - 25) / 2
                             height: 40
                             text: "导入nii.gz"
                             backgroundColor: "#004578"
@@ -1489,7 +1593,7 @@ Rectangle {
                             }
                         }
                         CustomButton {
-                            width: 120
+                            width: (aiAnalysis.width - 25) / 2
                             height: 40
                             text: "导入dcm文件夹"
                             backgroundColor: "#004578"
@@ -1498,6 +1602,55 @@ Rectangle {
                             }
                         }
                     }
+                    Row{
+                        height: 30
+                        spacing: 5
+                        CheckBox {
+                            id: preprocessCheckBox
+                            checked: true
+                            width: 16
+                            height: 16
+                            anchors.verticalCenter: parent.verticalCenter
+                            indicator: Rectangle {
+                                implicitWidth: 16
+                                implicitHeight: 16
+                                radius: 4
+                                anchors.verticalCenter: parent.verticalCenter
+                                border.color: preprocessCheckBox.checked ? "#006BFF" : "#40000000"
+                                border.width: 1
+                                color: preprocessCheckBox.checked ? "#006BFF" : "#ffffff"
+
+                                Image{
+                                    source: "qrc:/image/vector.png"
+                                    anchors.centerIn: parent
+                                    visible: preprocessCheckBox.checked
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: preprocessCheckBox.checked = !preprocessCheckBox.checked
+                                }
+                            }
+                        }
+                        Label{
+                            text: qsTr("去颅骨+与标准空间对齐")
+                            color: "#ffffff"
+                            anchors.verticalCenter: parent.verticalCenter
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: preprocessCheckBox.checked = !preprocessCheckBox.checked
+                            }
+                        }
+                    }
+                    Label{
+                        text: qsTr("注：不进行预处理的数据可能会导致模型预测结果误差过大！")
+                        color: "#ffffff"
+                        font.pixelSize: 16
+                        visible: !preprocessCheckBox.checked
+                        width: parent.width - 20
+                        wrapMode: Text.WordWrap
+                    }
                     CustomButton {
                         width: parent.width - 20
                         height: 40
@@ -1505,7 +1658,7 @@ Rectangle {
                         backgroundColor: "#004578"
                         onClicked: {
                             if(brainAgePath.text !== ""){
-                                $MainViewController.startAnalysisBrainAge(brainAgePath.text)
+                                $MainViewController.startAnalysisBrainAge(brainAgePath.text, preprocessCheckBox.checked)
                             }else{
                                 messageManager.error("请先选择文件！")
                             }
@@ -1513,19 +1666,24 @@ Rectangle {
                     }
                     Row{
                         width: parent.width - 20
+                        height: 32
                         spacing: 8
                         visible: $MainViewController.brainAgeProcessing
-                        anchors.left: parent.left
-                        BusyIndicator{
-                            running: $MainViewController.brainAgeProcessing
-                            width: 28
-                            height: 28
+                        AnimatedImage {
+                            id: loadingIcon
+                            width: 16
+                            height: 16
+                            source: "qrc:/image/loading.gif"
+                            playing: $MainViewController.brainAgeProcessing
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                         Label{
                             text: qsTr("正在分析中...")
                             color: "#ffffff"
                             font.pixelSize: 16
-                            verticalAlignment: Text.AlignVCenter
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                     }
                     Label{

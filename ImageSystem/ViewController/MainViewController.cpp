@@ -763,7 +763,8 @@ void MainViewController::calculateKidney() {
 void MainViewController::importBrainData(const QString& url)
 {
     if (url.isEmpty()) {
-        emit errorMsg(QStringLiteral("路径为空"));
+        qDebug() << QStringLiteral("路径为空");
+        emit brainAnalysisFinished(false);
         return;
     }
     
@@ -774,7 +775,8 @@ void MainViewController::importBrainData(const QString& url)
     
     QDir baseDir(dirPath);
     if (!baseDir.exists()) {
-        emit errorMsg(QStringLiteral("路径不存在: ") + dirPath);
+        qDebug() << QStringLiteral("路径不存在: ") << dirPath;
+        emit brainAnalysisFinished(false);
         return;
     }
     
@@ -813,6 +815,8 @@ void MainViewController::importBrainData(const QString& url)
                     qDebug() << QStringLiteral("检测到完整的脑网络分析结果!!!");
                     
                     if (loadOutputData(outputDir.absolutePath())) {
+                        emit brainAnalysisStarted();
+                        emit brainAnalysisFinished(true);
                         return;
                     }
                 } else {
@@ -838,7 +842,8 @@ void MainViewController::importBrainData(const QString& url)
         QDir outputDirObj(outputDir);
         if (!outputDirObj.exists()) {
             if (!outputDirObj.mkpath(".")) {
-                emit errorMsg(QStringLiteral("无法创建输出目录: ") + outputDir);
+                qDebug() << QStringLiteral("无法创建输出目录: ") << outputDir;
+                emit brainAnalysisFinished(false);
                 return;
             }
         }
@@ -850,14 +855,8 @@ void MainViewController::importBrainData(const QString& url)
     }
     
     // ========== 不符合任何逻辑，发出错误信号 ==========
-    QString errorMessage = QStringLiteral("未找到有效的脑功能数据!!!");
-    
-    emit errorMsg(errorMessage);
-}
-
-void MainViewController::importBrainSegData(const QString& url)
-{
-    
+    qDebug() << QStringLiteral("未找到有效的脑功能数据!!!");
+    emit brainAnalysisFinished(false);
 }
 
 bool MainViewController::loadOutputData(const QString& path)
@@ -941,7 +940,7 @@ void MainViewController::startfmriprepAnalysis(const QString& dicomDir,
     connect(m_fmriprepProcess, &QProcess::errorOccurred, this, [=](QProcess::ProcessError error) {
         Q_UNUSED(error);
         QString errorOutput = QString::fromUtf8(m_fmriprepProcess->readAllStandardError());
-        emit errorMsg(QStringLiteral("无法启动 fmriprep！\n%1").arg(errorOutput));
+        qDebug() << QStringLiteral("无法启动 fmriprep！\n%1").arg(errorOutput);
         stopFmriprepProcess();
         stopLogTimer();
     });
@@ -952,9 +951,9 @@ void MainViewController::startfmriprepAnalysis(const QString& dicomDir,
                 qDebug() << QStringLiteral("fmriprep 运行成功！");
             } else {
                 QString errorOutput = QString::fromUtf8(m_fmriprepProcess->readAllStandardError());
-                emit errorMsg(QStringLiteral("fmriprep 运行失败！\n错误代码: %1\n%2")
+                qDebug() << QStringLiteral("fmriprep 运行失败！\n错误代码: %1\n%2")
                     .arg(exitCode)
-                    .arg(errorOutput));
+                    .arg(errorOutput);
             }
             stopFmriprepProcess();
             stopLogTimer();
@@ -1014,10 +1013,10 @@ void MainViewController::clearFmriprepLog()
     emit fmriprepLogUpdated();
 }
 
-void MainViewController::startAnalysisBrainAge(const QString& path)
+void MainViewController::startAnalysisBrainAge(const QString& path, bool preprocess)
 {
     if (path.isEmpty()) {
-        emit errorMsg(QStringLiteral("路径为空"));
+        qDebug() << QStringLiteral("路径为空");
         return;
     }
 
@@ -1028,7 +1027,7 @@ void MainViewController::startAnalysisBrainAge(const QString& path)
     inputPath = QDir::toNativeSeparators(inputPath);
 
     if (!QFileInfo::exists(inputPath)) {
-        emit errorMsg(QStringLiteral("路径不存在: %1").arg(inputPath));
+        qDebug() << QStringLiteral("路径不存在: %1").arg(inputPath);
         return;
     }
 
@@ -1045,12 +1044,14 @@ void MainViewController::startAnalysisBrainAge(const QString& path)
     arguments << "--input" << inputPath
         << "--output" << outputPath
         << "--docker-image" << "deepbrain";
-              //<< "--preprocess";
+    if (preprocess) {
+        arguments << "--preprocess";
+    }
     QProcess* process = new QProcess(this);
 
     connect(process, &QProcess::errorOccurred, this, [=](QProcess::ProcessError error) {
         Q_UNUSED(error);
-        emit errorMsg(QStringLiteral("脑龄预测任务启动失败: %1").arg(process->errorString()));
+        qDebug() << QStringLiteral("脑龄预测任务启动失败: %1").arg(process->errorString());
         setbrainAgeProcessing(false);
         process->deleteLater();
     });
@@ -1182,7 +1183,7 @@ void MainViewController::processBrainNetworkAnalysis(const QString& boldPath, co
                     emit brainAnalysisFinished(true);
                 } else {
                     qWarning() << QStringLiteral("结果加载失败");
-                    emit errorMsg(QStringLiteral("脑网络分析完成，但加载结果失败"));
+                    qDebug() << QStringLiteral("脑网络分析完成，但加载结果失败");
                     emit brainAnalysisFinished(false);
                 }
             } else {
@@ -1190,9 +1191,7 @@ void MainViewController::processBrainNetworkAnalysis(const QString& boldPath, co
                 qWarning() << QStringLiteral("脑网络分析失败！退出代码:") << exitCode;
                 qWarning() << QStringLiteral("错误信息:") << errorOutput;
                 
-                emit errorMsg(QStringLiteral("脑网络分析失败！\n错误代码: %1\n\n%2")
-                    .arg(exitCode)
-                    .arg(errorOutput.isEmpty() ? QStringLiteral("未知错误") : errorOutput));
+                qDebug() << QStringLiteral("脑网络分析失败！错误代码: %1，信息: %2").arg(exitCode).arg(errorOutput.isEmpty() ? QStringLiteral("未知错误") : errorOutput);
                 emit brainAnalysisFinished(false);
             }
             process->deleteLater();
@@ -1217,7 +1216,7 @@ void MainViewController::processBrainNetworkAnalysis(const QString& boldPath, co
         }
         
         qWarning() << QStringLiteral("进程错误:") << errorMsg;
-        emit this->errorMsg(errorMsg);
+        qDebug() << errorMsg;
         emit brainAnalysisFinished(false);
         process->deleteLater();
     });

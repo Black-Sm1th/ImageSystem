@@ -202,7 +202,6 @@ class MainViewController : public QObject
 public:
     Q_INVOKABLE void calculateKidney();
     Q_INVOKABLE void importBrainData(const QString& url);
-    Q_INVOKABLE void importBrainSegData(const QString& url);
     Q_INVOKABLE void selectBrainRegion(int row);
     Q_INVOKABLE void startfmriprepAnalysis(const QString& dicomDir,
                                            const QString& bidsDir,
@@ -211,14 +210,13 @@ public:
                                            bool useFreesurfer);
     Q_INVOKABLE void stopFmriprepProcess();
     Q_INVOKABLE void clearFmriprepLog();
-    Q_INVOKABLE void startAnalysisBrainAge(const QString& path);
+    Q_INVOKABLE void startAnalysisBrainAge(const QString& path, bool preprocess);
     Q_PROPERTY(QString fmriprepLog READ fmriprepLog NOTIFY fmriprepLogUpdated)
     QString fmriprepLog() const { return m_fmriprepLog; }
     // 获取表格模型
     BrainRegionTableModel* getBrainRegionTableModel() const;
     
 signals:
-    void errorMsg(const QString& warning);
     void brainAnalysisStarted();
     void brainAnalysisFinished(bool success);
     void networkTableIndexChanged(int index);

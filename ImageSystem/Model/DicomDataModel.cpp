@@ -184,6 +184,7 @@ bool DicomDataModel::loadDicomDirectory(const QString& path) {
 void DicomDataModel::loadSegBrainDirectory(const QString& path)
 {
     if (path.isEmpty()) {
+        emit segLoadingFinished(false, QStringLiteral("分割路径为空"));
         return;
     }
 
@@ -201,6 +202,9 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     QString niiPath = mriDirPath + "/aparc+aseg.nii.gz";
 
 
+    // 通知开始
+    emit segLoadingStarted();
+
     // 检查nii文件是否存在，如果不存在则从mgz转换
     if (!QFile::exists(niiPath)) {
         qDebug() << QStringLiteral("nii文件不存在，尝试从mgz转换: ") << niiPath;
@@ -208,6 +212,7 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
         // 检查mgz文件是否存在
         if (!QFile::exists(mgzPath)) {
             qWarning() << QStringLiteral("mgz文件也不存在，无法转换: ") << mgzPath;
+            emit segLoadingFinished(false, QStringLiteral("未找到分割文件: %1").arg(mgzPath));
             return;
         }
 
@@ -221,6 +226,7 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
 
         if (!process.waitForFinished(60000)) { // 等待最多60秒
             qWarning() << QStringLiteral("mgz2nii转换超时");
+            emit segLoadingFinished(false, QStringLiteral("mgz2nii转换超时"));
             return;
         }
 
@@ -228,6 +234,7 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
             qWarning() << QStringLiteral("mgz2nii转换失败，退出代码: ") << process.exitCode();
             qWarning() << QStringLiteral("标准输出: ") << process.readAllStandardOutput();
             qWarning() << QStringLiteral("错误输出: ") << process.readAllStandardError();
+            emit segLoadingFinished(false, QStringLiteral("mgz2nii转换失败"));
             return;
         }
 
@@ -254,6 +261,7 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
             if (!ok) {
                 m_pendingRegion.reset();
                 m_segLoadingInProgress = false;
+                emit segLoadingFinished(false, QStringLiteral("分割数据加载失败"));
                 return;
             }
             finalizeSegDataLoad(std::move(m_pendingRegion));

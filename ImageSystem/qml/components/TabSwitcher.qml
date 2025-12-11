@@ -3,7 +3,7 @@ import QtQuick.Controls 2.15
 
 Rectangle {
     id: root
-    width: 148
+    width: tabTitles.length * 68 + (tabTitles.length - 1) * 4 + 8
     height: 32
     color: "#383838"
     radius: 8

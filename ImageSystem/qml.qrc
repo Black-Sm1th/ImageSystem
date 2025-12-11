@@ -15,5 +15,6 @@
         <file>qml/components/SingleLineTextInput.qml</file>
         <file>image/vector.png</file>
         <file>qml/components/MessageBox.qml</file>
+        <file>image/loading.gif</file>
     </qresource>
 </RCC>
