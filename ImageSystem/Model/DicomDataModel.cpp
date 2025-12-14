@@ -196,10 +196,23 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     if (dirPath.startsWith("file:///")) {
         dirPath = dirPath.mid(8);
     }
+    
+    // 首先尝试fMRIPrep格式的路径
     QString mriDirPath = dirPath + "/sourcedata/freesurfer/sub-01/mri";
-
     QString mgzPath = mriDirPath + "/aparc+aseg.mgz";
     QString niiPath = mriDirPath + "/aparc+aseg.nii.gz";
+    
+    // 如果fMRIPrep格式不存在，尝试DeepPrep格式
+    if (!QFile::exists(mgzPath) && !QFile::exists(niiPath)) {
+        qDebug() << QStringLiteral("未找到fMRIPrep格式的分割文件，尝试DeepPrep格式...");
+        mriDirPath = dirPath + "/Recon/fsaverage/mri";
+        mgzPath = mriDirPath + "/aparc+aseg.mgz";
+        niiPath = mriDirPath + "/aparc+aseg.nii.gz";
+        
+        if (QFile::exists(mgzPath) || QFile::exists(niiPath)) {
+            qDebug() << QStringLiteral("检测到DeepPrep格式的分割文件!");
+        }
+    }
 
 
     // 通知开始

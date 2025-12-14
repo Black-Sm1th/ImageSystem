@@ -838,8 +838,18 @@ void MainViewController::importBrainData(const QString& url)
     }
     
     // ========== 逻辑二：检查原始数据文件是否存在 ==========
+    // 首先检查fMRIPrep格式
     QString boldPath = baseDir.filePath("sub-01/func/sub-01_task-rest_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz");
     QString confoundsPath = baseDir.filePath("sub-01/func/sub-01_task-rest_desc-confounds_timeseries.tsv");
+    
+    // 如果fMRIPrep格式不存在，检查DeepPrep格式
+    if (!QFile::exists(boldPath) || !QFile::exists(confoundsPath)) {
+        boldPath = baseDir.filePath("BOLD/sub-01/func/sub-01_task-rest_space-MNI152NLin6Asym_res-02_desc-preproc_bold.nii.gz");
+        confoundsPath = baseDir.filePath("BOLD/sub-01/func/sub-01_task-rest_desc-confounds_timeseries.tsv");
+        if (QFile::exists(boldPath) && QFile::exists(confoundsPath)) {
+            qDebug() << QStringLiteral("检测到DeepPrep格式的脑功能数据文件!!!");
+        }
+    }
     
     if (QFile::exists(boldPath) && QFile::exists(confoundsPath)) {
         // ========== 符合逻辑二：原始数据文件存在，需要处理 ==========
@@ -1663,4 +1673,37 @@ void MainViewController::stopDeepprepLogTimer()
     if (m_deepprepLogTimer && m_deepprepLogTimer->isActive()) {
         m_deepprepLogTimer->stop();
     }
+}
+
+bool MainViewController::isDeepprepOutput(const QString& outputPath)
+{
+    if (outputPath.isEmpty()) {
+        return false;
+    }
+    
+    QString path = outputPath;
+    if (path.startsWith("file:///")) {
+        path = path.mid(8);
+    }
+    
+    // 检查DeepPrep特有的目录结构
+    QDir outputDir(path);
+    
+    // DeepPrep有QC、BOLD、Recon这三个主要文件夹
+    bool hasQC = outputDir.exists("QC/sub-01/figures");
+    bool hasBOLD = outputDir.exists("BOLD/sub-01/func");
+    bool hasRecon = outputDir.exists("Recon/fsaverage/mri");
+    
+    // 如果至少有两个特征目录存在，就认为是DeepPrep输出
+    int score = (hasQC ? 1 : 0) + (hasBOLD ? 1 : 0) + (hasRecon ? 1 : 0);
+    bool isDeepPrep = score >= 2;
+    
+    qDebug() << QStringLiteral("检测输出类型 - 路径: %1, DeepPrep: %2 (QC:%3, BOLD:%4, Recon:%5)")
+        .arg(path)
+        .arg(isDeepPrep ? "是" : "否")
+        .arg(hasQC ? "✓" : "✗")
+        .arg(hasBOLD ? "✓" : "✗")
+        .arg(hasRecon ? "✓" : "✗");
+    
+    return isDeepPrep;
 }

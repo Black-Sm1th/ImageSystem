@@ -219,6 +219,7 @@ public:
     Q_INVOKABLE void clearDeepprepLog();
     Q_INVOKABLE void startAnalysisBrainAge(const QString& path, bool preprocess);
     Q_INVOKABLE void generatePdfReport(const QString& savePath);
+    Q_INVOKABLE bool isDeepprepOutput(const QString& outputPath);
     Q_PROPERTY(QString fmriprepLog READ fmriprepLog NOTIFY fmriprepLogUpdated)
     QString fmriprepLog() const { return m_fmriprepLog; }
     Q_PROPERTY(QString deepprepLog READ deepprepLog NOTIFY deepprepLogUpdated)

@@ -28,6 +28,7 @@ Rectangle {
     property var messageManager: null
     property bool showResult: false
     property int preShowResultIndex: -1
+    property bool isDeepprepOutput: false  // 标记是否为DeepPrep输出结构
     
     function resetBatchProgress() {
         batchProcessing = true
@@ -52,9 +53,16 @@ Rectangle {
         }
     }
 
+    function detectOutputType(path) {
+        // 使用C++方法检测输出类型
+        isDeepprepOutput = $MainViewController.isDeepprepOutput(path)
+        console.log("Detected output type - DeepPrep:", isDeepprepOutput, "Path:", path)
+    }
+
     function startUnifiedImports(url, normalizedPath) {
         selectedOutputPath = normalizedPath
         outputDetailDir.text = normalizedPath
+        detectOutputType(normalizedPath)
         resetBatchProgress()
         completePreprocessStep()
         // 同步触发脑区分割与脑网络分析
@@ -105,6 +113,7 @@ Rectangle {
             }
             // 统一为正斜杠，方便字符串处理
             path = path.replace(/\\/g, "/")
+            detectOutputType(path)
             startUnifiedImports(url, path)
         }
     }
@@ -952,7 +961,9 @@ Rectangle {
                                 }
                                 preShowResultIndex = 0
                                 showResult = true
-                                preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_dseg.svg"
+                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
+                                var fileName = isDeepprepOutput ? "sub-01_desc-volparc_T1w.svg" : "sub-01_dseg.svg"
+                                preResult.url = outputDetailDir.text + basePath + fileName
                             }
                         }
                         CustomButton{
@@ -968,7 +979,9 @@ Rectangle {
                                 }
                                 preShowResultIndex = 1
                                 showResult = true
-                                preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_space-MNI152NLin2009cAsym_T1w.svg"
+                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
+                                var fileName = isDeepprepOutput ? "sub-01_task-rest_desc-coreg_bold.svg" : "sub-01_space-MNI152NLin2009cAsym_T1w.svg"
+                                preResult.url = outputDetailDir.text + basePath + fileName
                             }
                         }
                         Label {
@@ -989,7 +1002,9 @@ Rectangle {
                                 }
                                 preShowResultIndex = 2
                                 showResult = true
-                                preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_space-MNI152NLin2009cAsym_T1w.svg"
+                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
+                                var fileName = isDeepprepOutput ? "sub-01_desc-T1toMNI152_combine.svg" : "sub-01_space-MNI152NLin2009cAsym_T1w.svg"
+                                preResult.url = outputDetailDir.text + basePath + fileName
                             }
                         }
                         Label {
@@ -1010,7 +1025,9 @@ Rectangle {
                                 }
                                 preShowResultIndex = 3
                                 showResult = true
-                                preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_task-rest_desc-coreg_bold.svg"
+                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
+                                var fileName = "sub-01_task-rest_desc-coreg_bold.svg"
+                                preResult.url = outputDetailDir.text + basePath + fileName
                             }
                         }
                         CustomButton{
@@ -1026,11 +1043,13 @@ Rectangle {
                                 }
                                 preShowResultIndex = 4
                                 showResult = true
-                                preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_task-rest_desc-carpetplot_bold.svg"
+                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
+                                var fileName = isDeepprepOutput ? "sub-01_task-rest_desc-carpet_bold.svg" : "sub-01_task-rest_desc-carpetplot_bold.svg"
+                                preResult.url = outputDetailDir.text + basePath + fileName
                             }
                         }
                         Label {
-                            text: qsTr("QC quality control")
+                            text: isDeepprepOutput ? qsTr("DeepPrep Outputs") : qsTr("QC quality control")
                             font.pixelSize: 16
                             color: "#ffffff"
                         }
@@ -1040,14 +1059,16 @@ Rectangle {
                             borderColor: "#ffffff"
                             borderWidth: 1
                             fontSize: 14
-                            text: qsTr("CompCor ROIs")
+                            text: isDeepprepOutput ? qsTr("Cortical surface") : qsTr("CompCor ROIs")
                             onClicked: {
                                 if(outputDetailDir.text === ""){
                                     return
                                 }
                                 preShowResultIndex = 5
                                 showResult = true
-                                preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_task-rest_desc-rois_bold.svg"
+                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
+                                var fileName = isDeepprepOutput ? "sub-01_desc-surfparc_T1w.svg" : "sub-01_task-rest_desc-rois_bold.svg"
+                                preResult.url = outputDetailDir.text + basePath + fileName
                             }
                         }
                         CustomButton{
@@ -1056,14 +1077,16 @@ Rectangle {
                             borderColor: "#ffffff"
                             borderWidth: 1
                             fontSize: 14
-                            text: qsTr("Variance")
+                            text: isDeepprepOutput ? qsTr("tSNR") : qsTr("Variance")
                             onClicked: {
                                 if(outputDetailDir.text === ""){
                                     return
                                 }
                                 preShowResultIndex = 6
                                 showResult = true
-                                preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_task-rest_desc-compcorvar_bold.svg"
+                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
+                                var fileName = isDeepprepOutput ? "sub-01_task-rest_bold_desc-tsnr_bold.svg" : "sub-01_task-rest_desc-compcorvar_bold.svg"
+                                preResult.url = outputDetailDir.text + basePath + fileName
                             }
                         }
                         CustomButton{
@@ -1072,14 +1095,16 @@ Rectangle {
                             borderColor: "#ffffff"
                             borderWidth: 1
                             fontSize: 14
-                            text: qsTr("nuisance regressors Correlations")
+                            text: isDeepprepOutput ? qsTr("Surface reconstruction") : qsTr("nuisance regressors Correlations")
                             onClicked: {
                                 if(outputDetailDir.text === ""){
                                     return
                                 }
                                 preShowResultIndex = 7
                                 showResult = true
-                                preResult.url = outputDetailDir.text + "/sub-01/figures/sub-01_task-rest_desc-confoundcorr_bold.svg"
+                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
+                                var fileName = isDeepprepOutput ? "sub-01_desc-volsurf_T1w.svg" : "sub-01_task-rest_desc-confoundcorr_bold.svg"
+                                preResult.url = outputDetailDir.text + basePath + fileName
                             }
                         }
                     }
