@@ -168,6 +168,34 @@ Rectangle {
             brainAgePath.text = path;
         }
     }
+
+    FileDialog {
+        id: pdfSaveDialog
+        title: qsTr("选择报告保存路径")
+        selectExisting: false
+        selectFolder: false
+        nameFilters: ["PDF Files (*.pdf)"]
+        defaultSuffix: "pdf"
+        onAccepted: {
+            if (fileUrls.length === 0)
+                return
+
+            var url = fileUrls[0].toString()
+            var path = url
+            if (path.startsWith("file:///")) {
+                path = path.substring("file:///".length)
+            }
+            // 统一为正斜杠，方便字符串处理
+            path = path.replace(/\\/g, "/")
+            
+            // 如果路径没有 .pdf 后缀，添加它
+            if (!path.toLowerCase().endsWith(".pdf")) {
+                path += ".pdf"
+            }
+            
+            reportSavePath.text = path;
+        }
+    }
     
     // 联合处理进度对话框
     Rectangle {
@@ -1693,6 +1721,127 @@ Rectangle {
                         font.pixelSize: 18
                         visible: $MainViewController.predictedBrainAge > 0
                         wrapMode: Text.WrapAnywhere
+                    }
+                }
+            }
+            Rectangle{
+                id: reportAnalysis
+                width: 380
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: parent.right
+                color: "transparent"
+                visible: currentIndex === 5
+                Column {
+                    padding: 10
+                    width: parent.width
+                    spacing: 20
+                    
+                    Label{
+                        text: qsTr("生成分析报告")
+                        color: "#ffffff"
+                        font.pixelSize: 18
+                        font.bold: true
+                    }
+                    
+                    Label{
+                        text: qsTr("将脑网络和脑区分割的数据生成为PDF报告")
+                        color: "#cccccc"
+                        font.pixelSize: 14
+                        width: parent.width - 20
+                        wrapMode: Text.WordWrap
+                    }
+                    
+                    Rectangle {
+                        width: parent.width - 20
+                        height: 1
+                        color: "#404040"
+                    }
+                    
+                    Label{
+                        text: qsTr("选择报告保存路径：")
+                        color: "#ffffff"
+                        font.pixelSize: 14
+                    }
+                    
+                    SingleLineTextInput{
+                        id: reportSavePath
+                        width: parent.width - 20
+                        placeholderText: qsTr("点击下方按钮选择保存路径...")
+                    }
+                    
+                    CustomButton{
+                        width: parent.width - 20
+                        height: 40
+                        text: qsTr("选择保存路径")
+                        backgroundColor: "#004578"
+                        onClicked: {
+                            pdfSaveDialog.open()
+                        }
+                    }
+                    
+                    Rectangle {
+                        width: parent.width - 20
+                        height: 1
+                        color: "#404040"
+                    }
+                    
+                    Label{
+                        text: qsTr("报告将包含以下内容：")
+                        color: "#ffffff"
+                        font.pixelSize: 14
+                    }
+                    
+                    Column {
+                        width: parent.width - 40
+                        spacing: 10
+                        x: 20
+                        
+                        Label{
+                            text: qsTr("• 脑网络统计信息")
+                            color: "#cccccc"
+                            font.pixelSize: 12
+                        }
+                        Label{
+                            text: qsTr("• 脑网络区域详细数据表格")
+                            color: "#cccccc"
+                            font.pixelSize: 12
+                        }
+                        Label{
+                            text: qsTr("• 脑区分割详细数据表格")
+                            color: "#cccccc"
+                            font.pixelSize: 12
+                        }
+                    }
+                    
+                    CustomButton{
+                        width: parent.width - 20
+                        height: 50
+                        text: qsTr("生成 PDF 报告")
+                        backgroundColor: "#00875A"
+                        fontSize: 16
+                        onClicked: {
+                            if(reportSavePath.text === ""){
+                                if (messageManager) {
+                                    messageManager.warning(qsTr("请先选择报告保存路径！"), 2000)
+                                }
+                                return
+                            }
+                            
+                            $MainViewController.generatePdfReport(reportSavePath.text)
+                            
+                            if (messageManager) {
+                                messageManager.success(qsTr("PDF 报告生成成功！"), 2000)
+                            }
+                        }
+                    }
+                    
+                    Label{
+                        text: qsTr("提示：生成报告前请确保已完成脑网络分析和脑区分割")
+                        color: "#888888"
+                        font.pixelSize: 11
+                        width: parent.width - 20
+                        wrapMode: Text.WordWrap
                     }
                 }
             }

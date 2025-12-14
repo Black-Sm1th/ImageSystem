@@ -8,7 +8,12 @@
 #include <QProcess>
 #include <QRegularExpression>
 #include <QTextStream>
+#include <QPdfWriter>
+#include <QPainter>
+#include <QPageSize>
+#include <QFont>
 #include "Modules/BrainNetworkData.h"
+#include "Model/DicomDataModel.h"
 vtkStandardNewMacro(SliceInteractorStyle);
 vtkStandardNewMacro(SliceViewData);
 vtkStandardNewMacro(VolumeViewData);
@@ -673,6 +678,7 @@ MainViewController::MainViewController(QObject* parent)
     
     // 初始化表格模型
     m_brainRegionTableModel = new BrainRegionTableModel(this);
+    m_brainSegmentationTableModel = GET_SINGLETON(DicomDataModel)->getSegmentationTableModel();
 
     // 应用退出时停止 fmriprep 进程并停止日志轮询
     if (QCoreApplication::instance()) {
@@ -999,6 +1005,11 @@ BrainRegionTableModel* MainViewController::getBrainRegionTableModel() const
     return m_brainRegionTableModel;
 }
 
+BrainSegmentationTableModel* MainViewController::getBrainSegmentationTableModel() const
+{
+    return m_brainSegmentationTableModel;
+}
+
 void MainViewController::appendFmriprepLog(const QString& text)
 {
     if (text.isEmpty())
@@ -1225,4 +1236,294 @@ void MainViewController::processBrainNetworkAnalysis(const QString& boldPath, co
     qDebug() << QStringLiteral("启动脑网络分析程序:") << scriptPath;
     
     process->start(scriptPath, arguments);
+}
+
+void MainViewController::generatePdfReport(const QString& savePath)
+{
+    QString pdfPath = savePath;
+    if (pdfPath.startsWith("file:///")) {
+        pdfPath = pdfPath.mid(8);
+    }
+    
+    qDebug() << QStringLiteral("生成 PDF 报告:") << pdfPath;
+    
+    // 创建 PDF Writer
+    QPdfWriter writer(pdfPath);
+    writer.setPageSize(QPageSize(QPageSize::A4));
+    writer.setPageMargins(QMarginsF(20, 20, 20, 20));
+    
+    QPainter painter(&writer);
+    if (!painter.isActive()) {
+        qWarning() << QStringLiteral("无法创建 PDF 文件");
+        return;
+    }
+    
+    // 设置字体 - 使用更大的字体
+    QFont titleFont("Microsoft YaHei", 24, QFont::Bold);
+    QFont headerFont("Microsoft YaHei", 16, QFont::Bold);
+    QFont normalFont("Microsoft YaHei", 13);
+    QFont smallFont("Microsoft YaHei", 11);
+    
+    int pageWidth = writer.width();
+    int pageHeight = writer.height();
+    int y = 300;  // 增加顶部留白
+    
+    // ========== 第1页：标题和脑网络统计 ==========
+    painter.setFont(titleFont);
+    int titleHeight = painter.fontMetrics().height();
+    painter.drawText(QRect(0, y, pageWidth, titleHeight + 50), Qt::AlignCenter, QStringLiteral("脑功能分析报告"));
+    y += titleHeight + 120;  // 标题高度 + 额外间距
+    
+    painter.setFont(normalFont);
+    int dateHeight = painter.fontMetrics().height();
+    QString dateTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+    painter.drawText(QRect(0, y, pageWidth, dateHeight + 40), Qt::AlignCenter, QStringLiteral("生成时间: ") + dateTime);
+    y += dateHeight + 100;  // 日期高度 + 额外间距
+    
+    // 脑网络统计信息
+    painter.setFont(headerFont);
+    int headerHeight = painter.fontMetrics().height();
+    painter.drawText(50, y, QStringLiteral("一、脑网络分析结果"));
+    y += headerHeight + 80;  // 标题字体高度 + 额外间距
+    
+    painter.setFont(normalFont);
+    QStringList networkStats;
+    networkStats << QStringLiteral("全局效率: %1").arg(getglobalEfficiency(), 0, 'f', 4);
+    networkStats << QStringLiteral("平均局部效率: %1").arg(getaverageLocalEfficiency(), 0, 'f', 4);
+    networkStats << QStringLiteral("平均聚类系数: %1").arg(getaverageClusteringCoefficient(), 0, 'f', 4);
+    networkStats << QStringLiteral("富俱乐部连接: %1").arg(getrichClubConnections(), 0, 'f', 4);
+    networkStats << QStringLiteral("桥接连接: %1").arg(getbridgeConnections(), 0, 'f', 4);
+    networkStats << QStringLiteral("局部连接: %1").arg(getlocalConnections(), 0, 'f', 4);
+    
+    int lineHeight = painter.fontMetrics().height();  // 获取字体实际高度
+    for (const QString& stat : networkStats) {
+        painter.drawText(100, y, stat);
+        y += lineHeight + 60;  // 字体高度 + 额外间距
+    }
+    
+    y += 150;  // 增加段落间距
+    
+    // ========== 脑网络表格 ==========
+    painter.setFont(headerFont);
+    int header2Height = painter.fontMetrics().height();
+    painter.drawText(50, y, QStringLiteral("二、脑网络区域详细数据"));
+    y += header2Height + 80;  // 标题字体高度 + 额外间距
+    
+    // 表格列宽 - 使用百分比分配，确保均衡
+    int availableWidth = pageWidth - 100;  // 留出左右边距
+    int colWidths[6];
+    // 序号8%, 中文名28%, Mricro28%, 度12%, 聚类12%, 局部效率12%
+    colWidths[0] = (int)(availableWidth * 0.08);  // 序号
+    colWidths[1] = (int)(availableWidth * 0.28);  // 中文名称
+    colWidths[2] = (int)(availableWidth * 0.28);  // Mricro命名
+    colWidths[3] = (int)(availableWidth * 0.12);  // 度
+    colWidths[4] = (int)(availableWidth * 0.12);  // 聚类
+    colWidths[5] = (int)(availableWidth * 0.12);  // 局部效率
+    
+    int totalWidth = 0;
+    for (int w : colWidths) totalWidth += w;
+    
+    // 表头
+    QStringList headers = {QStringLiteral("序号"), QStringLiteral("中文名称"), 
+                           QStringLiteral("Mricro命名"), QStringLiteral("度"), 
+                           QStringLiteral("聚类"), QStringLiteral("局部效率")};
+    
+    painter.setFont(smallFont);
+    painter.setPen(Qt::black);
+    
+    // 绘制表头 - 居中对齐
+    int startX = (pageWidth - totalWidth) / 2;
+    if (startX < 50) startX = 50;  // 至少保留50的左边距
+    int x = startX;
+    // 根据字体高度动态计算行高
+    int cellFontHeight = painter.fontMetrics().height();
+    int rowHeight = cellFontHeight * 3;  // 字体高度的3倍，确保足够空间
+    
+    for (int i = 0; i < headers.size(); i++) {
+        painter.drawRect(x, y, colWidths[i], rowHeight);
+        painter.drawText(QRect(x + 10, y, colWidths[i] - 20, rowHeight), 
+                        Qt::AlignCenter | Qt::AlignVCenter, headers[i]);
+        x += colWidths[i];
+    }
+    y += rowHeight;
+    
+    // 绘制数据行
+    int rowCount = m_brainRegionTableModel->rowCount();
+    int maxRowsPerPage = (pageHeight - y - 100) / rowHeight;
+    int currentRow = 0;
+    
+    for (int row = 0; row < rowCount; row++) {
+        if (currentRow >= maxRowsPerPage) {
+            // 换页
+            writer.newPage();
+            y = 300;  // 统一顶部留白
+            currentRow = 0;
+            
+            // 重新绘制表头
+            x = startX;
+            for (int i = 0; i < headers.size(); i++) {
+                painter.drawRect(x, y, colWidths[i], rowHeight);
+                painter.drawText(QRect(x + 10, y, colWidths[i] - 20, rowHeight), 
+                                Qt::AlignCenter | Qt::AlignVCenter, headers[i]);
+                x += colWidths[i];
+            }
+            y += rowHeight;
+        }
+        
+        x = startX;
+        QModelIndex idx = m_brainRegionTableModel->index(row, 0);
+        
+        // 序号
+        painter.drawRect(x, y, colWidths[0], rowHeight);
+        painter.drawText(QRect(x + 10, y, colWidths[0] - 20, rowHeight), 
+                        Qt::AlignCenter | Qt::AlignVCenter, QString::number(row + 1));
+        x += colWidths[0];
+        
+            // 中文名称
+            QString chName = m_brainRegionTableModel->data(idx, BrainRegionTableModel::ChineseNameRole).toString();
+            painter.drawRect(x, y, colWidths[1], rowHeight);
+            QRect chNameRect(x + 10, y, colWidths[1] - 20, rowHeight);
+            painter.drawText(chNameRect, Qt::AlignLeft | Qt::AlignVCenter, chName);
+            x += colWidths[1];
+            
+            // Mricro命名
+            QString enName = m_brainRegionTableModel->data(idx, BrainRegionTableModel::EnglishNameRole).toString();
+            painter.drawRect(x, y, colWidths[2], rowHeight);
+            QRect enNameRect(x + 10, y, colWidths[2] - 20, rowHeight);
+            painter.drawText(enNameRect, Qt::AlignLeft | Qt::AlignVCenter, enName);
+            x += colWidths[2];
+        
+            // 度
+            QString degree = m_brainRegionTableModel->data(idx, BrainRegionTableModel::DegreeRole).toString();
+            painter.drawRect(x, y, colWidths[3], rowHeight);
+            painter.drawText(QRect(x + 10, y, colWidths[3] - 20, rowHeight), 
+                            Qt::AlignCenter | Qt::AlignVCenter, degree);
+            x += colWidths[3];
+            
+            // 聚类
+            QString clustering = m_brainRegionTableModel->data(idx, BrainRegionTableModel::ClusteringRole).toString();
+            painter.drawRect(x, y, colWidths[4], rowHeight);
+            painter.drawText(QRect(x + 10, y, colWidths[4] - 20, rowHeight), 
+                            Qt::AlignCenter | Qt::AlignVCenter, clustering);
+            x += colWidths[4];
+            
+            // 局部效率
+            QString localEff = m_brainRegionTableModel->data(idx, BrainRegionTableModel::LocalEfficiencyRole).toString();
+            painter.drawRect(x, y, colWidths[5], rowHeight);
+            painter.drawText(QRect(x + 10, y, colWidths[5] - 20, rowHeight), 
+                            Qt::AlignCenter | Qt::AlignVCenter, localEff);
+        
+        y += rowHeight;
+        currentRow++;
+    }
+    
+    // ========== 新页：脑区分割表格 =========
+    writer.newPage();
+    y = 300;  // 统一顶部留白
+    
+    painter.setFont(headerFont);
+    int header3Height = painter.fontMetrics().height();
+    painter.drawText(50, y, QStringLiteral("三、脑区分割详细数据"));
+    y += header3Height + 80;  // 标题字体高度 + 额外间距
+    
+    // 脑分割表格列宽 - 使用百分比分配，确保均衡deepde
+    int segAvailableWidth = pageWidth - 100;  // 留出左右边距
+    int segColWidths[5];
+    // 中文名35%, 位置15%, 容积17%, 全脑占比17%, 不对称16%
+    segColWidths[0] = (int)(segAvailableWidth * 0.35);  // 中文名称
+    segColWidths[1] = (int)(segAvailableWidth * 0.15);  // 位置
+    segColWidths[2] = (int)(segAvailableWidth * 0.17);  // 容积(cm³)
+    segColWidths[3] = (int)(segAvailableWidth * 0.17);  // 全脑占比
+    segColWidths[4] = (int)(segAvailableWidth * 0.16);  // 不对称指数
+    
+    int segTotalWidth = 0;
+    for (int w : segColWidths) segTotalWidth += w;
+    
+    QStringList segHeaders = {QStringLiteral("中文名称"), QStringLiteral("位置"), 
+                              QStringLiteral("容积(cm³)"), QStringLiteral("全脑占比"), 
+                              QStringLiteral("不对称指数")};
+    
+    painter.setFont(smallFont);
+    
+    // 绘制表头 - 居中对齐
+    startX = (pageWidth - segTotalWidth) / 2;
+    if (startX < 50) startX = 50;  // 至少保留50的左边距
+    x = startX;
+    
+    for (int i = 0; i < segHeaders.size(); i++) {
+        painter.drawRect(x, y, segColWidths[i], rowHeight);
+        painter.drawText(QRect(x + 10, y, segColWidths[i] - 20, rowHeight), 
+                        Qt::AlignCenter | Qt::AlignVCenter, segHeaders[i]);
+        x += segColWidths[i];
+    }
+    y += rowHeight;
+    
+    // 绘制脑分割数据
+    if (m_brainSegmentationTableModel) {
+        int segRowCount = m_brainSegmentationTableModel->rowCount();
+        maxRowsPerPage = (pageHeight - y - 100) / rowHeight;
+        currentRow = 0;
+        
+        for (int row = 0; row < segRowCount; row++) {
+            if (currentRow >= maxRowsPerPage) {
+                // 换页
+                writer.newPage();
+                y = 300;  // 统一顶部留白
+                currentRow = 0;
+                
+                // 重新绘制表头
+                x = startX;
+                for (int i = 0; i < segHeaders.size(); i++) {
+                    painter.drawRect(x, y, segColWidths[i], rowHeight);
+                    painter.drawText(QRect(x + 10, y, segColWidths[i] - 20, rowHeight), 
+                                    Qt::AlignCenter | Qt::AlignVCenter, segHeaders[i]);
+                    x += segColWidths[i];
+                }
+                y += rowHeight;
+            }
+            
+            x = startX;
+            QModelIndex idx = m_brainSegmentationTableModel->index(row, 0);
+            
+            // 中文名称
+            QString chName = m_brainSegmentationTableModel->data(idx, BrainSegmentationTableModel::ChineseNameRole).toString();
+            painter.drawRect(x, y, segColWidths[0], rowHeight);
+            QRect chNameRect(x + 10, y, segColWidths[0] - 20, rowHeight);
+            painter.drawText(chNameRect, Qt::AlignLeft | Qt::AlignVCenter, chName);
+            x += segColWidths[0];
+            
+            // 位置
+            QString hemisphere = m_brainSegmentationTableModel->data(idx, BrainSegmentationTableModel::HemisphereRole).toString();
+            painter.drawRect(x, y, segColWidths[1], rowHeight);
+            painter.drawText(QRect(x + 10, y, segColWidths[1] - 20, rowHeight), 
+                            Qt::AlignCenter | Qt::AlignVCenter, hemisphere);
+            x += segColWidths[1];
+            
+            // 容积
+            QString volume = m_brainSegmentationTableModel->data(idx, BrainSegmentationTableModel::VolumeRole).toString();
+            painter.drawRect(x, y, segColWidths[2], rowHeight);
+            painter.drawText(QRect(x + 10, y, segColWidths[2] - 20, rowHeight), 
+                            Qt::AlignCenter | Qt::AlignVCenter, volume);
+            x += segColWidths[2];
+            
+            // 全脑占比
+            QString volumePercent = m_brainSegmentationTableModel->data(idx, BrainSegmentationTableModel::VolumePercentRole).toString();
+            painter.drawRect(x, y, segColWidths[3], rowHeight);
+            painter.drawText(QRect(x + 10, y, segColWidths[3] - 20, rowHeight), 
+                            Qt::AlignCenter | Qt::AlignVCenter, volumePercent);
+            x += segColWidths[3];
+            
+            // 不对称指数
+            QString asymmetry = m_brainSegmentationTableModel->data(idx, BrainSegmentationTableModel::AsymmetryIndexRole).toString();
+            painter.drawRect(x, y, segColWidths[4], rowHeight);
+            painter.drawText(QRect(x + 10, y, segColWidths[4] - 20, rowHeight), 
+                            Qt::AlignCenter | Qt::AlignVCenter, asymmetry);
+            
+            y += rowHeight;
+            currentRow++;
+        }
+    }
+    
+    painter.end();
+    qDebug() << QStringLiteral("PDF 报告生成成功: ") << pdfPath;
 }

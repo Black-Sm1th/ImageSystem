@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Model/DicomDataModel.h"
 #include "Model/BrainRegionTableModel.h"
+#include "Model/BrainSegmentationTableModel.h"
 #include "Modules/CommonFunc.h"
 #include <vtkInteractorStyleImage.h>
 #include <vtkRenderWindowInteractor.h>
@@ -211,10 +212,12 @@ public:
     Q_INVOKABLE void stopFmriprepProcess();
     Q_INVOKABLE void clearFmriprepLog();
     Q_INVOKABLE void startAnalysisBrainAge(const QString& path, bool preprocess);
+    Q_INVOKABLE void generatePdfReport(const QString& savePath);
     Q_PROPERTY(QString fmriprepLog READ fmriprepLog NOTIFY fmriprepLogUpdated)
     QString fmriprepLog() const { return m_fmriprepLog; }
     // 获取表格模型
     BrainRegionTableModel* getBrainRegionTableModel() const;
+    BrainSegmentationTableModel* getBrainSegmentationTableModel() const;
     
 signals:
     void brainAnalysisStarted();
@@ -230,6 +233,7 @@ private:
     void stopLogTimer();
     
     BrainRegionTableModel* m_brainRegionTableModel;
+    BrainSegmentationTableModel* m_brainSegmentationTableModel;
     QPointer<QProcess> m_fmriprepProcess;
     qint64 m_fmriprepPid = -1;
     QString m_fmriprepLog;
