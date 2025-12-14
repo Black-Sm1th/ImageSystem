@@ -129,6 +129,50 @@ Rectangle {
     }
 
     FileDialog {
+        id: inputDirDialog
+        title: qsTr("选择输入文件夹")
+        selectFolder: true
+        onAccepted: {
+            if (fileUrls.length === 0)
+                return
+
+            var url = fileUrls[0].toString()
+            var path = url
+            if (path.startsWith("file:///")) {
+                path = path.substring("file:///".length)
+            }
+            // 统一为正斜杠，方便字符串处理
+            path = path.replace(/\\/g, "/")
+
+            inputDirDeep.text = path
+
+            var lastSlash = path.lastIndexOf("/")
+            var baseDir = lastSlash >= 0 ? path.substring(0, lastSlash + 1) : path
+            bidsDirDeep.text = baseDir + "Bids"
+            outputDirDeep.text = baseDir + "Output_deepprep"
+        }
+    }
+
+    FileDialog {
+        id: licenseFileDialogDeep
+        title: qsTr("选择license")
+        onAccepted: {
+            if (fileUrls.length === 0)
+                return
+
+            var url = fileUrls[0].toString()
+            var path = url
+            if (path.startsWith("file:///")) {
+                path = path.substring("file:///".length)
+            }
+            // 统一为正斜杠，方便字符串处理
+            path = path.replace(/\\/g, "/")
+
+            licenseFileDeep.text = path
+        }
+    }
+
+    FileDialog {
         id: niiGzDialog
         title: "选择 NII.GZ 文件"
         selectMultiple: false
@@ -710,6 +754,157 @@ Rectangle {
                         width: parent.width - 15
                         spacing: 20
                         visible: tabSwitcher.currentIndex === 1
+                        // 四个标签的最大宽度，保持对齐
+                        property int maxLabelWidth: Math.max(
+                                                        Math.max(label_dp1.implicitWidth, label_dp2.implicitWidth),
+                                                        Math.max(label_dp3.implicitWidth, label_dp4.implicitWidth))
+                        Row{
+                            height: 30
+                            spacing: 5
+                            Label {
+                                id:label_dp1
+                                text: qsTr("输入文件夹：")
+                                color: "#ffffff"
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: deepprepCol.maxLabelWidth
+                            }
+                            SingleLineTextInput{
+                                id: inputDirDeep
+                                width: 150
+                            }
+                            CustomButton{
+                                width: deepprepCol.width - label_dp1.width - 150 - 10
+                                height: 30
+                                text: qsTr("导入")
+                                onClicked: {
+                                    inputDirDialog.open()
+                                }
+                            }
+                        }
+                        Row{
+                            height: 30
+                            spacing: 5
+                            Label {
+                                id:label_dp2
+                                text: qsTr("输出Bids文件夹：")
+                                color: "#ffffff"
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: deepprepCol.maxLabelWidth
+                            }
+                            SingleLineTextInput{
+                                id: bidsDirDeep
+                                width: deepprepCol.width - label_dp2.width - 5
+                            }
+                        }
+                        Row{
+                            height: 30
+                            spacing: 5
+                            Label {
+                                id:label_dp3
+                                text: qsTr("输出Output文件夹：")
+                                color: "#ffffff"
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: deepprepCol.maxLabelWidth
+                            }
+                            SingleLineTextInput{
+                                id: outputDirDeep
+                                width: deepprepCol.width - label_dp3.width - 5
+                            }
+                        }
+                        Row{
+                            height: 30
+                            spacing: 5
+                            Label {
+                                id:label_dp4
+                                text: qsTr("license文件地址：")
+                                color: "#ffffff"
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: deepprepCol.maxLabelWidth
+                            }
+                            SingleLineTextInput{
+                                id: licenseFileDeep
+                                width: 150
+                            }
+                            CustomButton{
+                                width: deepprepCol.width - label_dp4.width - 150 - 10
+                                height: 30
+                                text: qsTr("导入")
+                                onClicked: {
+                                    licenseFileDialogDeep.open()
+                                }
+                            }
+                        }
+                        CustomButton{
+                            width: parent.width
+                            height: 30
+                            text: qsTr("分析")
+                            onClicked: {
+                                function warn(msg) {
+                                    if (messageManager) {
+                                        messageManager.warning(msg, 2000)
+                                    } else {
+                                        console.log(msg)
+                                    }
+                                }
+
+                                var i = inputDirDeep.text.trim()
+                                var b = bidsDirDeep.text.trim()
+                                var o = outputDirDeep.text.trim()
+                                var l = licenseFileDeep.text.trim()
+
+                                if (i === "") {
+                                    warn(qsTr("请输入 Input 文件夹路径"))
+                                    return
+                                }
+                                if (b === "") {
+                                    warn(qsTr("请输入 Bids 文件夹路径"))
+                                    return
+                                }
+                                if (o === "") {
+                                    warn(qsTr("请输入 Output 文件夹路径"))
+                                    return
+                                }
+                                if (l === "") {
+                                    warn(qsTr("请输入 license 文件路径"))
+                                    return
+                                }
+
+                                $MainViewController.startDeepprepAnalysis(i, b, o, l)
+                            }
+                        }
+                        // log 日志展示
+                        Rectangle {
+                            width: parent.width
+                            height: preAnalysis.height - 140 - 140 - tabSwitcher.height - 10
+                            color: "#0f0f0f"
+                            radius: 4
+                            border.color: "#303030"
+                            border.width: 1
+
+                            ScrollView {
+                                anchors.fill: parent
+                                clip: true
+                                TextArea {
+                                    id: logAreaDeep
+                                    readOnly: true
+                                    wrapMode: TextEdit.Wrap
+                                    font.pixelSize: 12
+                                    font.family: "Alibaba PuHuiTi 3.0"
+                                    color: "#ffffff"
+                                    text: $MainViewController.deepprepLog
+                                    background: null
+
+                                    onTextChanged: {
+                                        // 自动滚动到底部
+                                        logAreaDeep.cursorPosition = logAreaDeep.length
+                                        if (logAreaDeep.flickableItem) {
+                                            var flick = logAreaDeep.flickableItem
+                                            flick.contentY = Math.max(0, flick.contentHeight - flick.height)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     Column{
                         id: preDetailCol

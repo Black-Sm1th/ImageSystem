@@ -211,10 +211,18 @@ public:
                                            bool useFreesurfer);
     Q_INVOKABLE void stopFmriprepProcess();
     Q_INVOKABLE void clearFmriprepLog();
+    Q_INVOKABLE void startDeepprepAnalysis(const QString& inputDir,
+                                           const QString& bidsDir,
+                                           const QString& outputDir,
+                                           const QString& licenseFile);
+    Q_INVOKABLE void stopDeepprepProcess();
+    Q_INVOKABLE void clearDeepprepLog();
     Q_INVOKABLE void startAnalysisBrainAge(const QString& path, bool preprocess);
     Q_INVOKABLE void generatePdfReport(const QString& savePath);
     Q_PROPERTY(QString fmriprepLog READ fmriprepLog NOTIFY fmriprepLogUpdated)
     QString fmriprepLog() const { return m_fmriprepLog; }
+    Q_PROPERTY(QString deepprepLog READ deepprepLog NOTIFY deepprepLogUpdated)
+    QString deepprepLog() const { return m_deepprepLog; }
     // 获取表格模型
     BrainRegionTableModel* getBrainRegionTableModel() const;
     BrainSegmentationTableModel* getBrainSegmentationTableModel() const;
@@ -224,6 +232,7 @@ signals:
     void brainAnalysisFinished(bool success);
     void networkTableIndexChanged(int index);
     void fmriprepLogUpdated();
+    void deepprepLogUpdated();
     
 private:
     bool loadOutputData(const QString& path);
@@ -231,6 +240,9 @@ private:
     void appendFmriprepLog(const QString& text);
     void startLogTimer(const QString& logFilePath);
     void stopLogTimer();
+    void appendDeepprepLog(const QString& text);
+    void startDeepprepLogTimer(const QString& logFilePath);
+    void stopDeepprepLogTimer();
     
     BrainRegionTableModel* m_brainRegionTableModel;
     BrainSegmentationTableModel* m_brainSegmentationTableModel;
@@ -240,5 +252,12 @@ private:
     QString m_fmriprepLogFilePath;
     qint64 m_fmriprepLogReadPos = 0;
     QTimer* m_fmriprepLogTimer = nullptr;
+    
+    QPointer<QProcess> m_deepprepProcess;
+    qint64 m_deepprepPid = -1;
+    QString m_deepprepLog;
+    QString m_deepprepLogFilePath;
+    qint64 m_deepprepLogReadPos = 0;
+    QTimer* m_deepprepLogTimer = nullptr;
 };
 

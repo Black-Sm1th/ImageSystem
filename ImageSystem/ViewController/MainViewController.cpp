@@ -680,11 +680,12 @@ MainViewController::MainViewController(QObject* parent)
     m_brainRegionTableModel = new BrainRegionTableModel(this);
     m_brainSegmentationTableModel = GET_SINGLETON(DicomDataModel)->getSegmentationTableModel();
 
-    // 应用退出时停止 fmriprep 进程并停止日志轮询
+    // 应用退出时停止 fmriprep 和 deepprep 进程并停止日志轮询
     if (QCoreApplication::instance()) {
         connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit,
                 this, [this]() {
                     stopFmriprepProcess();
+                    stopDeepprepProcess();
                 });
     }
 }
@@ -1526,4 +1527,140 @@ void MainViewController::generatePdfReport(const QString& savePath)
     
     painter.end();
     qDebug() << QStringLiteral("PDF 报告生成成功: ") << pdfPath;
+}
+
+void MainViewController::startDeepprepAnalysis(const QString& inputDir,
+                                               const QString& bidsDir,
+                                               const QString& outputDir,
+                                               const QString& licenseFile)
+{
+    // 如果已有进程在跑，先停止
+    stopDeepprepProcess();
+
+    QString exePath = "Scripts/run_deepprep.exe";
+
+    QStringList arguments;
+    arguments << "--input_dir" << inputDir
+              << "--bids_dir" << bidsDir
+              << "--output_dir" << outputDir
+              << "--license_file" << licenseFile;
+
+    m_deepprepProcess = new QProcess(this);
+
+    // 清空日志，记录路径，重置读取位置
+    clearDeepprepLog();
+    m_deepprepLogFilePath = outputDir + "/deepprep-docker.log";
+    m_deepprepLogReadPos = 0;
+    m_deepprepPid = -1;
+
+    // 实时读取进程输出
+    connect(m_deepprepProcess, &QProcess::readyReadStandardOutput, this, [=]() {
+        appendDeepprepLog(QString::fromUtf8(m_deepprepProcess->readAllStandardOutput()));
+    });
+    connect(m_deepprepProcess, &QProcess::readyReadStandardError, this, [=]() {
+        appendDeepprepLog(QString::fromUtf8(m_deepprepProcess->readAllStandardError()));
+    });
+
+    connect(m_deepprepProcess, &QProcess::errorOccurred, this, [=](QProcess::ProcessError error) {
+        Q_UNUSED(error);
+        QString errorOutput = QString::fromUtf8(m_deepprepProcess->readAllStandardError());
+        qDebug() << QStringLiteral("无法启动 DeepPrep！\n%1").arg(errorOutput);
+        stopDeepprepProcess();
+        stopDeepprepLogTimer();
+    });
+
+    connect(m_deepprepProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        [=](int exitCode, QProcess::ExitStatus exitStatus) {
+            if (exitStatus == QProcess::NormalExit && exitCode == 0) {
+                qDebug() << QStringLiteral("DeepPrep 运行成功！");
+            } else {
+                QString errorOutput = QString::fromUtf8(m_deepprepProcess->readAllStandardError());
+                qDebug() << QStringLiteral("DeepPrep 运行失败！\n错误代码: %1\n%2")
+                    .arg(exitCode)
+                    .arg(errorOutput);
+            }
+            stopDeepprepProcess();
+            stopDeepprepLogTimer();
+            // 完成后尝试读取剩余日志一次
+            startDeepprepLogTimer(m_deepprepLogFilePath);
+            stopDeepprepLogTimer();
+        });
+
+    m_deepprepProcess->setProcessChannelMode(QProcess::MergedChannels);
+
+    startDeepprepLogTimer(m_deepprepLogFilePath);
+    m_deepprepProcess->start(exePath, arguments);
+    m_deepprepPid = m_deepprepProcess->processId();
+}
+
+void MainViewController::stopDeepprepProcess()
+{
+    if (m_deepprepProcess) {
+        if (m_deepprepProcess->state() != QProcess::NotRunning) {
+            // 优先杀死进程树，避免子进程（如 docker）存活
+#if defined(Q_OS_WIN)
+            if (m_deepprepPid > 0) {
+                QProcess::execute("taskkill", {"/PID", QString::number(m_deepprepPid), "/T", "/F"});
+            }
+#elif defined(Q_OS_UNIX)
+            if (m_deepprepPid > 0) {
+                QProcess::execute("pkill", {"-P", QString::number(m_deepprepPid)});
+            }
+#endif
+            m_deepprepProcess->kill();
+            m_deepprepProcess->waitForFinished(3000);
+        }
+        m_deepprepProcess->deleteLater();
+        m_deepprepProcess = nullptr;
+        m_deepprepPid = -1;
+    }
+    stopDeepprepLogTimer();
+}
+
+void MainViewController::appendDeepprepLog(const QString& text)
+{
+    if (text.isEmpty())
+        return;
+    m_deepprepLog.append(text);
+    emit deepprepLogUpdated();
+}
+
+void MainViewController::clearDeepprepLog()
+{
+    m_deepprepLog.clear();
+    emit deepprepLogUpdated();
+}
+
+void MainViewController::startDeepprepLogTimer(const QString& logFilePath)
+{
+    m_deepprepLogFilePath = logFilePath;
+    if (!m_deepprepLogTimer) {
+        m_deepprepLogTimer = new QTimer(this);
+        m_deepprepLogTimer->setInterval(1000);
+        connect(m_deepprepLogTimer, &QTimer::timeout, this, [this]() {
+            if (m_deepprepLogFilePath.isEmpty()) return;
+            QFile f(m_deepprepLogFilePath);
+            if (!f.exists()) return;
+            if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return;
+            if (m_deepprepLogReadPos > f.size()) {
+                m_deepprepLogReadPos = 0;
+            }
+            if (!f.seek(m_deepprepLogReadPos)) return;
+            QByteArray data = f.readAll();
+            m_deepprepLogReadPos = f.pos();
+            if (!data.isEmpty()) {
+                appendDeepprepLog(QString::fromUtf8(data));
+            }
+        });
+    }
+    if (!m_deepprepLogTimer->isActive()) {
+        m_deepprepLogTimer->start();
+    }
+}
+
+void MainViewController::stopDeepprepLogTimer()
+{
+    if (m_deepprepLogTimer && m_deepprepLogTimer->isActive()) {
+        m_deepprepLogTimer->stop();
+    }
 }

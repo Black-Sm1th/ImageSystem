@@ -205,9 +205,10 @@ def run_deepprep_docker(bids_dir, output_dir,
     docker_version = ret.stdout.decode('ascii').strip() if ret.returncode == 0 else "unknown"
 
     # 3. Build Command
+    # Note: Do NOT use -it flag when running from non-interactive environments
+    # -it causes "input device is not a TTY" error on Windows
     command = get_docker_cmd() + [
         'run',
-        '-it',
         '--rm',
         '--gpus', 'all',
         '--name', container_name,
