@@ -494,7 +494,8 @@ Rectangle {
                     border.width: 1
                     Image{
                         anchors.fill: parent
-                        source: $MainViewController.currentAlffUrl
+                        fillMode: Image.PreserveAspectFit
+                        source: $MainViewController.currentRegionplotsUrl
                     }
                 }
                 Rectangle {
@@ -509,7 +510,8 @@ Rectangle {
                     border.width: 1
                     Image{
                         anchors.fill: parent
-                        source: $MainViewController.currentCovarianceUrl
+                        fillMode: Image.PreserveAspectFit
+                        source: $MainViewController.currentAlffUrl
                     }
                 }
                 Rectangle {
@@ -524,7 +526,8 @@ Rectangle {
                     border.width: 1
                     Image{
                         anchors.fill: parent
-                        source: $MainViewController.currentRegionplotsUrl
+                        fillMode: Image.PreserveAspectFit
+                        source: $MainViewController.currentCovarianceUrl
                     }
                 }
                 Rectangle {
