@@ -257,7 +257,6 @@ void BrainRegionVisualizer::ComputeLabelStatistics()
 
     regions_.clear();
     labelIndex_.clear();
-    double totalVolume = 0.0;
 
     for (const auto& entry : labelStyles_)
     {
@@ -272,77 +271,8 @@ void BrainRegionVisualizer::ComputeLabelStatistics()
         region.colorB = entry.second.B;
         region.colorA = entry.second.A;
 
-        auto countIt = counts.find(region.label);
-        if (countIt != counts.end())
-        {
-            region.voxelCount = static_cast<double>(countIt->second);
-        }
-
-        region.volume = (region.voxelCount * voxelVolume_) / 1000.0; // 转换为 cm³
-        if (region.label != 0)
-        {
-            totalVolume += region.volume;
-        }
         regions_.emplace_back(region);
         labelIndex_[region.label] = regions_.size() - 1;
-    }
-
-    if (totalVolume <= 0)
-    {
-        totalVolume = 1.0;
-    }
-
-    for (auto& region : regions_)
-    {
-        if (region.label == 0 || totalVolume <= 0.0)
-        {
-            region.volumePercent = 0.0;
-            continue;
-        }
-        region.volumePercent = (region.volume / totalVolume) * 100.0;
-    }
-
-    struct PairVolumes
-    {
-        int leftIndex{ -1 };
-        double leftVolume{ 0.0 };
-        int rightIndex{ -1 };
-        double rightVolume{ 0.0 };
-    };
-
-    std::unordered_map<std::string, PairVolumes> pairMap;
-    for (size_t i = 0; i < regions_.size(); ++i)
-    {
-        auto& region = regions_[i];
-        std::string key = region.groupKey.empty() ? region.englishName : region.groupKey;
-        auto& pair = pairMap[key];
-        if (region.hemisphere == 'L')
-        {
-            pair.leftIndex = static_cast<int>(i);
-            pair.leftVolume = region.volume;
-        }
-        else if (region.hemisphere == 'R')
-        {
-            pair.rightIndex = static_cast<int>(i);
-            pair.rightVolume = region.volume;
-        }
-    }
-
-    for (const auto& kv : pairMap)
-    {
-        auto pair = kv.second;
-        if (pair.leftIndex != -1 && pair.rightIndex != -1)
-        {
-            double denom = pair.leftVolume + pair.rightVolume;
-            if (denom > 0)
-            {
-                double asym = 200.0 * std::abs(pair.leftVolume - pair.rightVolume) / denom;
-                regions_[pair.leftIndex].asymmetryIndex = asym;
-                regions_[pair.rightIndex].asymmetryIndex = asym;
-                regions_[pair.leftIndex].partnerLabel = regions_[pair.rightIndex].label;
-                regions_[pair.rightIndex].partnerLabel = regions_[pair.leftIndex].label;
-            }
-        }
     }
 }
 

@@ -86,10 +86,10 @@ struct RegionEntry
     double baseOpacity{ 1.0 };
     bool dimmed{ false };
     vtkSmartPointer<vtkActor> actor;
-    double voxelCount{ 0.0 };
-    double volume{ 0.0 };
-    double volumePercent{ 0.0 };
-    double asymmetryIndex{ 0.0 };
+    //double voxelCount{ 0.0 };
+    //double volume{ 0.0 };
+    //double volumePercent{ 0.0 };
+    //double asymmetryIndex{ 0.0 };
     int partnerLabel{ -1 };
 };
 

@@ -61,6 +61,9 @@
     <ClCompile Include="Model\BrainSegmentationTableModel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Modules\BrainMetrics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="ViewController\MainViewController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -76,6 +79,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Modules\CommonFunc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\BrainMetrics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Modules\BrainRegionVisualizer.h">
