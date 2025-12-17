@@ -201,6 +201,9 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     QString mriDirPath = dirPath + "/sourcedata/freesurfer/sub-01/mri";
     QString mgzPath = mriDirPath + "/aparc+aseg.mgz";
     QString niiPath = mriDirPath + "/aparc+aseg.nii.gz";
+    QString origMgzPath = dirPath + "/T1.mgz";
+    QString origNiiPathGz = mriDirPath + "/T1.nii.gz";
+    QString origNiiPath = mriDirPath + "/T1.nii";
     
     // 如果fMRIPrep格式不存在，尝试DeepPrep格式
     if (!QFile::exists(mgzPath) && !QFile::exists(niiPath)) {
@@ -256,10 +259,53 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
         qDebug() << QStringLiteral("nii文件已存在，直接使用: ") << niiPath;
     }
 
+    // 检查原始orig nii是否存在，不存在则从orig mgz转换（如有）
+    QString origNiiToUse;
+    if (QFile::exists(origNiiPathGz)) {
+        origNiiToUse = origNiiPathGz;
+        qDebug() << QStringLiteral("检测到orig nii.gz: ") << origNiiPathGz;
+    } else if (QFile::exists(origNiiPath)) {
+        origNiiToUse = origNiiPath;
+        qDebug() << QStringLiteral("检测到orig nii: ") << origNiiPath;
+    } else {
+        qDebug() << QStringLiteral("原始orig nii不存在，尝试从mgz转换: ") << origNiiPath;
+
+        if (QFile::exists(origMgzPath)) {
+            QProcess process;
+            process.setProgram("Scripts/mgz2nii.exe");
+            process.setArguments({origMgzPath, origNiiPath});
+
+            qDebug() << QStringLiteral("开始转换orig mgz到nii: ") << origMgzPath << " -> " << origNiiPath;
+            process.start();
+
+            if (!process.waitForFinished(60000)) {
+                qWarning() << QStringLiteral("orig mgz2nii转换超时");
+            } else if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+                qWarning() << QStringLiteral("orig mgz2nii转换失败，退出代码: ") << process.exitCode();
+                qWarning() << QStringLiteral("orig 标准输出: ") << process.readAllStandardOutput();
+                qWarning() << QStringLiteral("orig 错误输出: ") << process.readAllStandardError();
+            } else {
+                qDebug() << QStringLiteral("orig mgz2nii转换成功: ") << origNiiPath;
+                origNiiToUse = origNiiPath;
+            }
+        } else {
+            qWarning() << QStringLiteral("orig mgz文件不存在，无法转换: ") << origMgzPath;
+        }
+    }
+
+    if (origNiiToUse.isEmpty()) {
+        // 兜底：如果转换失败但产生了gz文件也尝试
+        if (QFile::exists(origNiiPathGz)) {
+            origNiiToUse = origNiiPathGz;
+        } else if (QFile::exists(origNiiPath)) {
+            origNiiToUse = origNiiPath;
+        }
+    }
+
     m_segLoadingInProgress = true;
 
     const QString colorTablePath = QStringLiteral("Scripts/tsv/desc-aseg_dseg_with_chinese.tsv");
-    m_pendingRegion = std::make_unique<BrainRegionVisualizer>(niiPath.toStdString(), colorTablePath.toStdString());
+    m_pendingRegion = std::make_unique<BrainRegionVisualizer>(niiPath.toStdString(), colorTablePath.toStdString(), origNiiToUse.toStdString());
     m_pendingRegion->SetProgressCallback([this](int percent, const std::string& message) {
         QString text = QString::fromStdString(message);
         QMetaObject::invokeMethod(this, [this, percent, text]() {

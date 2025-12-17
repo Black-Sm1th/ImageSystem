@@ -1,6 +1,7 @@
 ﻿// BrainRegionVisualizer.cpp
 #include "BrainRegionVisualizer.h"
 #include <vtkPolyDataMapper.h> 
+#include "vtkImageFlip.h"
 
 class LabelPipeline
 {
@@ -136,8 +137,8 @@ vtkPolyData* LabelPipeline::Execute(int label)
 }
 
 // BrainRegionVisualizer 的实现
-BrainRegionVisualizer::BrainRegionVisualizer(const std::string& niftiPath, const std::string& tsvPath)
-    : niftiPath_(niftiPath), tsvPath_(tsvPath)
+BrainRegionVisualizer::BrainRegionVisualizer(const std::string& niftiPath, const std::string& tsvPath, const std::string& rawPath)
+    : niftiPath_(niftiPath), tsvPath_(tsvPath), rawNiftiPath_(rawPath)
 {
 }
 
@@ -188,6 +189,18 @@ bool BrainRegionVisualizer::LoadImage()
     {
         std::cerr << "无法读取 NIfTI 文件" << std::endl;
         return false;
+    }
+
+    if (!rawNiftiPath_.empty())
+    {
+        rawReader_ = vtkSmartPointer<vtkNIFTIImageReader>::New();
+        rawReader_->SetFileName(rawNiftiPath_.c_str());
+        rawReader_->Update();
+        rawImageData_ = rawReader_->GetOutput();
+        if (!rawImageData_)
+        {
+            std::cerr << "无法读取原始 NIfTI 文件: " << rawNiftiPath_ << std::endl;
+        }
     }
     return true;
 }
@@ -328,6 +341,7 @@ bool BrainRegionVisualizer::BuildActors()
 
 void BrainRegionVisualizer::BuildSlices()
 {
+    // 标签 LUT / 颜色映射
     colorTF_ = vtkSmartPointer<vtkColorTransferFunction>::New();
     opacityTF_ = vtkSmartPointer<vtkPiecewiseFunction>::New();
     for (const auto& entry : labelStyles_)
@@ -344,7 +358,8 @@ void BrainRegionVisualizer::BuildSlices()
     lut_->SetTableValue(0, 0, 0, 0, 0);
     for (const auto& entry : labelStyles_)
     {
-        lut_->SetTableValue(entry.first, entry.second.R, entry.second.G, entry.second.B, entry.first == 0 ? 0.0 : 1.0);
+        double alpha = (entry.first == 0) ? 0.0 : entry.second.A;
+        lut_->SetTableValue(entry.first, entry.second.R, entry.second.G, entry.second.B, alpha);
     }
 
     colorMap_ = vtkSmartPointer<vtkImageMapToColors>::New();
@@ -353,18 +368,52 @@ void BrainRegionVisualizer::BuildSlices()
     colorMap_->PassAlphaToOutputOn();
     colorMap_->Update();
 
+    vtkAlgorithmOutput* sliceInput = colorMap_->GetOutputPort();
+
+    // 如有原始图，构建灰阶底图并与标签叠加；否则保持标签单层显示
+    if (rawImageData_)
+    {
+        double range[2]{ 0.0, 255.0 };
+        rawImageData_->GetScalarRange(range);
+
+        grayLut_ = vtkSmartPointer<vtkLookupTable>::New();
+        grayLut_->SetNumberOfTableValues(256);
+        grayLut_->SetTableRange(range[0], range[1]);
+        grayLut_->Build();
+        for (int i = 0; i < 256; ++i)
+        {
+            double v = static_cast<double>(i) / 255.0;
+            grayLut_->SetTableValue(i, v, v, v, 1.0);
+        }
+
+        grayMap_ = vtkSmartPointer<vtkImageMapToColors>::New();
+        grayMap_->SetInputData(rawImageData_);
+        grayMap_->SetLookupTable(grayLut_);
+        grayMap_->PassAlphaToOutputOn();
+        grayMap_->Update();
+
+        blendImage_ = vtkSmartPointer<vtkImageBlend>::New();
+        blendImage_->AddInputConnection(grayMap_->GetOutputPort());   // 原始灰阶
+        blendImage_->SetOpacity(0, 1.0);
+        blendImage_->AddInputConnection(colorMap_->GetOutputPort());  // 标签彩色
+        blendImage_->SetOpacity(1, 0.6); // 标签透明度
+        blendImage_->Update();
+
+        sliceInput = blendImage_->GetOutputPort();
+    }
+
     axialMapper_ = vtkSmartPointer<vtkImageSliceMapper>::New();
-    axialMapper_->SetInputConnection(colorMap_->GetOutputPort());
+    axialMapper_->SetInputConnection(sliceInput);
     axialMapper_->SetOrientationToZ();
     axialMapper_->SetSliceNumber((axialMapper_->GetSliceNumberMinValue() + axialMapper_->GetSliceNumberMaxValue()) / 2);
 
     coronalMapper_ = vtkSmartPointer<vtkImageSliceMapper>::New();
-    coronalMapper_->SetInputConnection(colorMap_->GetOutputPort());
+    coronalMapper_->SetInputConnection(sliceInput);
     coronalMapper_->SetOrientationToY();
     coronalMapper_->SetSliceNumber((coronalMapper_->GetSliceNumberMinValue() + coronalMapper_->GetSliceNumberMaxValue()) / 2);
 
     sagittalMapper_ = vtkSmartPointer<vtkImageSliceMapper>::New();
-    sagittalMapper_->SetInputConnection(colorMap_->GetOutputPort());
+    sagittalMapper_->SetInputConnection(sliceInput);
     sagittalMapper_->SetOrientationToX();
     sagittalMapper_->SetSliceNumber((sagittalMapper_->GetSliceNumberMinValue() + sagittalMapper_->GetSliceNumberMaxValue()) / 2);
 
@@ -378,11 +427,61 @@ void BrainRegionVisualizer::BuildSlices()
 
 void BrainRegionVisualizer::Build3DRenderer()
 {
+
     renderer3D_ = vtkSmartPointer<vtkRenderer>::New();
     // 3D视图单独使用一个渲染窗口，因此使用全屏视口
     renderer3D_->SetViewport(0.0, 0.0, 1.0, 1.0);
     renderer3D_->SetBackground(0.1, 0.1, 0.1);
 
+    // 原始体渲染（若存在原始图像，否则使用标签图作为体渲染）
+    vtkImageData* volImage = rawImageData_;
+    if (volImage)
+    {
+
+        auto volColor = vtkSmartPointer<vtkColorTransferFunction>::New();
+        volColor->AddRGBPoint(-3024, 0.0, 0.0, 0.0);
+        volColor->AddRGBPoint(-77, 0.54902, 0.25098, 0.14902);
+        volColor->AddRGBPoint(94, 0.882353, 0.603922, 0.290196);
+        volColor->AddRGBPoint(179, 1.0, 0.937033, 0.954531);
+        volColor->AddRGBPoint(260, 0.615686, 0.0, 0.0);
+        volColor->AddRGBPoint(3071, 0.827451, 0.658824, 1.0);
+
+        auto volOpacity = vtkSmartPointer<vtkPiecewiseFunction>::New();
+        volOpacity->AddPoint(-3024, 0.0);
+        volOpacity->AddPoint(-77, 0.0);
+        volOpacity->AddPoint(94, 0.2);
+        volOpacity->AddPoint(179, 0.25);
+        volOpacity->AddPoint(260, 0.29);
+        volOpacity->AddPoint(3071, 0.31);
+
+        vtkSmartPointer<vtkPiecewiseFunction> gradientFunc =
+            vtkSmartPointer<vtkPiecewiseFunction>::New();
+        gradientFunc->AddPoint(0, 0.0);
+        gradientFunc->AddPoint(90, 0.5);
+        gradientFunc->AddPoint(100, 1.0);
+
+        volumeProperty_ = vtkSmartPointer<vtkVolumeProperty>::New();
+        volumeProperty_->SetColor(volColor);
+        volumeProperty_->SetScalarOpacity(volOpacity);
+        volumeProperty_->SetGradientOpacity(gradientFunc);
+        volumeProperty_->SetInterpolationTypeToLinear();
+        volumeProperty_->ShadeOn();
+        volumeProperty_->SetAmbient(0.4);
+        volumeProperty_->SetDiffuse(0.6);
+        volumeProperty_->SetSpecular(0.2);
+
+        volumeMapper_ = vtkSmartPointer<vtkSmartVolumeMapper>::New();
+        volumeMapper_->SetInputData(volImage);
+        volumeMapper_->SetBlendModeToComposite();
+        volumeMapper_->SetRequestedRenderModeToGPU();
+
+        volume_ = vtkSmartPointer<vtkVolume>::New();
+        volume_->SetMapper(volumeMapper_);
+        volume_->SetProperty(volumeProperty_);
+        renderer3D_->AddVolume(volume_);
+    }
+
+    double surfaceOpacity = volume_ ? 0.6 : 1.0;
     for (auto& region : regions_)
     {
         if (region.actor)

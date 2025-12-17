@@ -28,6 +28,8 @@
 #include <vtkLookupTable.h>
 #include <vtkImageMapToColors.h>
 #include <vtkImageSliceMapper.h>
+#include <vtkImageBlend.h>
+#include <vtkMatrix4x4.h>
 #include <vtkSmartVolumeMapper.h>
 #include <vtkVolumeProperty.h>
 #include <vtkVolume.h>
@@ -104,7 +106,7 @@ class BrainRegionVisualizer
 public:
     using ProgressCallback = std::function<void(int, const std::string&)>;
 
-    BrainRegionVisualizer(const std::string& niftiPath, const std::string& tsvPath);
+    BrainRegionVisualizer(const std::string& niftiPath, const std::string& tsvPath, const std::string& rawPath = "");
     ~BrainRegionVisualizer(); // 如果需要，可以添加析构函数
 
     bool Initialize();
@@ -139,9 +141,12 @@ private:
     // 其他私有成员函数和变量
     std::string niftiPath_;
     std::string tsvPath_;
+    std::string rawNiftiPath_;
 
     vtkSmartPointer<vtkNIFTIImageReader> reader_;
+    vtkSmartPointer<vtkNIFTIImageReader> rawReader_;
     vtkSmartPointer<vtkImageData> imageData_;
+    vtkSmartPointer<vtkImageData> rawImageData_;
     std::unordered_map<int, LabelColor> colorTable_;
     std::set<int> uniqueLabels_;
     std::map<int, LabelStyle> labelStyles_;
@@ -157,6 +162,9 @@ private:
     vtkSmartPointer<vtkPiecewiseFunction> opacityTF_;
     vtkSmartPointer<vtkLookupTable> lut_;
     vtkSmartPointer<vtkImageMapToColors> colorMap_;
+    vtkSmartPointer<vtkLookupTable> grayLut_;
+    vtkSmartPointer<vtkImageMapToColors> grayMap_;
+    vtkSmartPointer<vtkImageBlend> blendImage_;
     vtkSmartPointer<vtkImageSliceMapper> axialMapper_;
     vtkSmartPointer<vtkImageSliceMapper> coronalMapper_;
     vtkSmartPointer<vtkImageSliceMapper> sagittalMapper_;
