@@ -2,6 +2,7 @@
 #include "BrainRegionVisualizer.h"
 #include <vtkPolyDataMapper.h> 
 #include "vtkImageFlip.h"
+#include "vtkMatrix3x3.h"
 
 class LabelPipeline
 {
@@ -190,6 +191,7 @@ bool BrainRegionVisualizer::LoadImage()
         std::cerr << "无法读取 NIfTI 文件" << std::endl;
         return false;
     }
+	imageData_ = ReorientToRAS(imageData_);
 
     if (!rawNiftiPath_.empty())
     {
@@ -202,7 +204,63 @@ bool BrainRegionVisualizer::LoadImage()
             std::cerr << "无法读取原始 NIfTI 文件: " << rawNiftiPath_ << std::endl;
         }
     }
+	rawImageData_ = ReorientToRAS(rawImageData_);
     return true;
+}
+
+vtkSmartPointer<vtkImageData> BrainRegionVisualizer::ReorientToRAS(vtkImageData* input)
+{
+    if (!input)
+    {
+        return nullptr;
+    }
+
+    // 强制重采样到标准取向（RSP：Right → +X, Superior → +Y, Posterior → +Z），不再判断是否倾斜
+    vtkSmartPointer<vtkImageReslice> reslice = vtkSmartPointer<vtkImageReslice>::New();
+    reslice->SetInputData(input);
+    reslice->SetOutputDimensionality(3);
+
+    // RSP: X 正向右，Y 正向上（Superior），Z 正向后（Posterior）
+    // 注意：如果后续显示假定 RAS，则此处会翻转前后方向；请保持渲染侧一致的解读
+    reslice->SetResliceAxesDirectionCosines(
+        1, 0, 0,
+        0, 0, 1,
+        0, 1, 0);
+
+    // LPS 示例（放射科常见）：
+    // reslice->SetResliceAxesDirectionCosines(
+    //     -1, 0, 0,
+    //      0,-1, 0,
+    //      0, 0, 1);
+
+    // 插值方式：Cubic 质量最好，Linear 更快
+    reslice->SetInterpolationModeToCubic();  // 推荐
+    // reslice->SetInterpolationModeToLinear();
+
+    // 保持原图像的 spacing、origin、extent（尽量不改变物理覆盖范围）
+    double spacing[3];
+    input->GetSpacing(spacing);
+    reslice->SetOutputSpacing(spacing);
+
+    double origin[3];
+    input->GetOrigin(origin);
+    reslice->SetOutputOrigin(origin);
+
+    int extent[6];
+    input->GetExtent(extent);
+    reslice->SetOutputExtent(extent);
+
+    // 执行重采样
+    reslice->Update();
+
+    // 返回一个 DeepCopy 的新图像，避免后续 pipeline 共享内存问题
+    vtkSmartPointer<vtkImageData> aligned = vtkSmartPointer<vtkImageData>::New();
+    aligned->DeepCopy(reslice->GetOutput());
+
+    // 可选：调试时打印确认
+    // std::cout << "Reoriented an oblique image to RAS." << std::endl;
+
+    return aligned;
 }
 
 bool BrainRegionVisualizer::LoadColorData()

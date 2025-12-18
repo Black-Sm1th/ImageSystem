@@ -29,6 +29,7 @@
 #include <vtkImageMapToColors.h>
 #include <vtkImageSliceMapper.h>
 #include <vtkImageBlend.h>
+#include <vtkImageReslice.h>
 #include <vtkMatrix4x4.h>
 #include <vtkSmartVolumeMapper.h>
 #include <vtkVolumeProperty.h>
@@ -125,6 +126,7 @@ public:
     bool SetActorVisible(int label, bool visible);
 
 private:
+    vtkSmartPointer<vtkImageData> ReorientToRAS(vtkImageData* input);
     bool LoadImage();
     bool LoadColorData();
     void ComputeLabelStatistics();
