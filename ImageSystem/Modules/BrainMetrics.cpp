@@ -70,11 +70,19 @@ const BrainStatsRecord* BrainMetrics::FindByName(const std::string& name, char h
 {
     std::string key = NormalizeName(name) + static_cast<char>(std::toupper(static_cast<unsigned char>(hemisphere)));
     auto it = byNameHemi_.find(key);
-    if (it == byNameHemi_.end())
+    if (it != byNameHemi_.end())
     {
-        return nullptr;
+        return Resolve(it->second);
     }
-    return Resolve(it->second);
+    // 尝试基于去前缀的 baseName 匹配（如 ctx-lh- -> bankssts）
+    std::string base = BaseNameFromStruct(name, hemisphere);
+    std::string keyBase = NormalizeName(base) + static_cast<char>(std::toupper(static_cast<unsigned char>(hemisphere)));
+    auto itb = byBaseNameHemi_.find(keyBase);
+    if (itb != byBaseNameHemi_.end())
+    {
+        return Resolve(itb->second);
+    }
+    return nullptr;
 }
 
 const BrainStatsRecord* BrainMetrics::Resolve(const RecordRef& ref) const
@@ -211,6 +219,11 @@ BrainStatsRecord* BrainMetrics::AddRecord(BrainStatsRecord record)
     }
     std::string key = NormalizeName(rec.name) + rec.hemisphere;
     byNameHemi_[key] = { rec.source, idx };
+    if (!rec.baseName.empty())
+    {
+        std::string keyBase = NormalizeName(rec.baseName) + rec.hemisphere;
+        byBaseNameHemi_[keyBase] = { rec.source, idx };
+    }
     return const_cast<BrainStatsRecord*>(&container->back());
 }
 
@@ -222,19 +235,28 @@ std::string BrainMetrics::NormalizeName(const std::string& name)
 std::string BrainMetrics::BaseNameFromStruct(const std::string& name, char hemisphere)
 {
     std::string trimmed = TrimLocal(name);
-    if (hemisphere == 'L')
+    auto lower = ToLower(trimmed);
+
+    auto stripPrefix = [&](const std::string& prefix) -> bool
     {
-        if (trimmed.rfind("Left-", 0) == 0)
+        if (lower.rfind(prefix, 0) == 0 && trimmed.size() > prefix.size())
         {
-            return trimmed.substr(5);
+            trimmed = trimmed.substr(prefix.size());
+            lower = lower.substr(prefix.size());
+            return true;
         }
-    }
-    else if (hemisphere == 'R')
+        return false;
+    };
+
+    // 常见前缀：Left-/Right-，ctx-lh-/ctx-rh-/wm-lh-/wm-rh-/lh./rh./lh-/rh_
+    stripPrefix("left-") || stripPrefix("right-");
+    stripPrefix("ctx-lh-") || stripPrefix("ctx-rh-") || stripPrefix("wm-lh-") || stripPrefix("wm-rh-");
+    stripPrefix("lh.") || stripPrefix("rh.") || stripPrefix("lh-") || stripPrefix("rh-") || stripPrefix("lh_") || stripPrefix("rh_");
+
+    // 去除残留的分隔符
+    while (!trimmed.empty() && (trimmed[0] == '-' || trimmed[0] == '_' || trimmed[0] == '.'))
     {
-        if (trimmed.rfind("Right-", 0) == 0)
-        {
-            return trimmed.substr(6);
-        }
+        trimmed.erase(0, 1);
     }
     return trimmed;
 }

@@ -52,6 +52,10 @@ public:
     const BrainStatsRecord* FindBySegId(int segId) const;
     const BrainStatsRecord* FindByName(const std::string& name, char hemisphere) const;
 
+    // 工具：名称归一化 / 去前缀基名（供外部匹配使用）
+    static std::string NormalizeName(const std::string& name);
+    static std::string BaseNameFromStruct(const std::string& name, char hemisphere);
+
     // 当前实现不对 RegionEntry 做任何修改（保留接口兼容）。
     void ApplyToRegions(std::vector<RegionEntry>& regions) const;
 
@@ -70,14 +74,12 @@ private:
     BrainStatsRecord* AddRecord(BrainStatsRecord record);
     void ComputeAsymmetry();
 
-    static std::string NormalizeName(const std::string& name);
-    static std::string BaseNameFromStruct(const std::string& name, char hemisphere);
-
     std::string baseDir_;
     std::vector<BrainStatsRecord> asegRecords_;
     std::vector<BrainStatsRecord> lhAparcRecords_;
     std::vector<BrainStatsRecord> rhAparcRecords_;
     std::unordered_map<int, RecordRef> bySegId_;          // 仅 Aseg 有 SegId
     std::unordered_map<std::string, RecordRef> byNameHemi_; // key: normalize(name)+hemi
+    std::unordered_map<std::string, RecordRef> byBaseNameHemi_; // key: normalize(baseName)+hemi
 };
 

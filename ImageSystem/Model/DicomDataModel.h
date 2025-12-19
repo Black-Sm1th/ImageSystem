@@ -7,6 +7,7 @@
 #include <vtkDICOMImageReader.h>
 #include "Modules/BrainRegionVisualizer.h"
 #include "Model/BrainSegmentationTableModel.h"
+#include <string>
 
 class DicomDataModel : public QObject
 {
@@ -103,6 +104,7 @@ private:
     std::unique_ptr<BrainRegionVisualizer> m_region;
     std::unique_ptr<BrainRegionVisualizer> m_pendingRegion;
     BrainSegmentationTableModel* m_segmentationTableModel;
+    QString m_statsDir;
     int m_dims[3] = {1, 1, 1};
     int m_segDims[3] = {1, 1, 1};
     int m_axialSlice = 0;

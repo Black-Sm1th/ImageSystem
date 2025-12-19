@@ -1,9 +1,11 @@
 ﻿#include "DicomDataModel.h"
 #include <vtkImageSliceMapper.h>
+#include "Modules/BrainMetrics.h"
 #include <QFile>
 #include <QProcess>
 #include <unordered_map>
 #include <unordered_set>
+#include <algorithm>
 #include <QtConcurrent/QtConcurrent>
 
 // ========== Getter ==========
@@ -199,6 +201,7 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     
     // 首先尝试fMRIPrep格式的路径
     QString mriDirPath = dirPath + "/sourcedata/freesurfer/sub-01/mri";
+    m_statsDir = dirPath + "/sourcedata/freesurfer/sub-01/stats";
     QString mgzPath = mriDirPath + "/aparc+aseg.mgz";
     QString niiPath = mriDirPath + "/aparc+aseg.nii.gz";
     QString origMgzPath = dirPath + "/T1.mgz";
@@ -211,6 +214,7 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
         mriDirPath = dirPath + "/Recon/fsaverage/mri";
         mgzPath = mriDirPath + "/aparc+aseg.mgz";
         niiPath = mriDirPath + "/aparc+aseg.nii.gz";
+        m_statsDir = dirPath + "/Recon/fsaverage/stats";
         
         if (QFile::exists(mgzPath) || QFile::exists(niiPath)) {
             qDebug() << QStringLiteral("检测到DeepPrep格式的分割文件!");
@@ -350,59 +354,131 @@ void DicomDataModel::finalizeSegDataLoad(std::unique_ptr<BrainRegionVisualizer> 
     QVector<SegmentationRegion> regions;
     auto& regionEntries = m_region->Regions();
 
-    std::unordered_map<int, int> labelToIndex;
-    for (size_t i = 0; i < regionEntries.size(); ++i) {
-        if (regionEntries[i].label != 0) {
-            labelToIndex[regionEntries[i].label] = static_cast<int>(i);
+    // 读取 stats 计算体积/不对称（segId 优先，未命中再按名称+半球）
+    BrainMetrics metrics(m_statsDir.toStdString());
+    bool metricsOk = metrics.Load();
+    auto findRec = [&](const RegionEntry& e) -> const BrainStatsRecord*
+    {
+        if (!metricsOk) return nullptr;
+        if (e.label != 0) {
+            if (auto* r = metrics.FindBySegId(e.label)) return r;
         }
-    }
+        return metrics.FindByName(e.englishName, e.hemisphere);
+    };
 
+    double totalVolumeCm3 = 0.0;
     std::unordered_set<int> processedLabels;
+    struct PairInfo { int left = -1; int right = -1; double asym = 0.0; };
+    std::unordered_map<std::string, PairInfo> pairMap;
+    auto baseNameFromStruct = [](const RegionEntry& e) -> std::string
+    {
+        return BrainMetrics::BaseNameFromStruct(e.englishName, e.hemisphere);
+    };
 
     for (const auto& entry : regionEntries) {
-        if (entry.label == 0) {
-            continue;
-        }
-        if (processedLabels.count(entry.label) > 0) {
-            continue;
-        }
-        
-        // 创建当前脑区
+        if (entry.label == 0) continue;
+        if (processedLabels.count(entry.label)) continue;
+
+        const BrainStatsRecord* rec = findRec(entry);
+        double volumeCm3 = rec ? rec->volumeMm3 / 1000.0 : 0.0;
+        double asym = rec ? rec->asymmetryIndex : 0.0;
+        int partner = (rec && rec->partnerSegId >= 0) ? rec->partnerSegId : entry.partnerLabel;
+        if (volumeCm3 > 0) totalVolumeCm3 += volumeCm3;
+
         SegmentationRegion region;
         region.chineseName = QString::fromStdString(entry.chineseName);
         region.hemisphere = QString(QChar(entry.hemisphere));
-        //region.volume = entry.volume;
-        //region.volumePercent = entry.volumePercent;
+        region.volume = volumeCm3;
+        region.volumePercent = 0.0;
         region.label = entry.label;
         region.colorR = entry.colorR;
         region.colorG = entry.colorG;
         region.colorB = entry.colorB;
         region.colorA = entry.colorA;
-        region.partnerLabel = entry.partnerLabel;
-       //region.asymmetryIndex = entry.asymmetryIndex;
+        region.partnerLabel = partner;
+        region.asymmetryIndex = asym;
         region.visible = true;
         regions.append(region);
         processedLabels.insert(entry.label);
 
-        if (entry.partnerLabel != -1 && labelToIndex.count(entry.partnerLabel) > 0) {
-            int partnerIdx = labelToIndex[entry.partnerLabel];
-            const auto& partnerEntry = regionEntries[partnerIdx];
-            if (processedLabels.count(partnerEntry.label) == 0) {
+        // 记录左右配对信息
+        std::string baseKey = baseNameFromStruct(entry);
+        auto& p = pairMap[baseKey];
+        if (entry.hemisphere == 'L') {
+            p.left = entry.label;
+        } else if (entry.hemisphere == 'R') {
+            p.right = entry.label;
+        }
+        if (asym > 0.0) {
+            p.asym = asym;
+        }
+
+        if (partner != -1 && !processedLabels.count(partner)) {
+            auto itPartner = std::find_if(regionEntries.begin(), regionEntries.end(),
+                [partner](const RegionEntry& e) { return e.label == partner; });
+            if (itPartner != regionEntries.end()) {
+                const BrainStatsRecord* recP = findRec(*itPartner);
+                double pv = recP ? recP->volumeMm3 / 1000.0 : 0.0;
+                double asymP = recP ? recP->asymmetryIndex : asym;
+                if (pv > 0) totalVolumeCm3 += pv;
+
                 SegmentationRegion partnerRegion;
-                partnerRegion.chineseName = QString::fromStdString(partnerEntry.chineseName);
-                partnerRegion.hemisphere = QString(QChar(partnerEntry.hemisphere));
-               // partnerRegion.volume = partnerEntry.volume;
-                //partnerRegion.volumePercent = partnerEntry.volumePercent;
-                partnerRegion.label = partnerEntry.label;
-                partnerRegion.colorR = partnerEntry.colorR;
-                partnerRegion.colorG = partnerEntry.colorG;
-                partnerRegion.colorB = partnerEntry.colorB;
-                partnerRegion.colorA = partnerEntry.colorA;
-                partnerRegion.partnerLabel = partnerEntry.partnerLabel;
-              //  partnerRegion.asymmetryIndex = partnerEntry.asymmetryIndex;
+                partnerRegion.chineseName = QString::fromStdString(itPartner->chineseName);
+                partnerRegion.hemisphere = QString(QChar(itPartner->hemisphere));
+                partnerRegion.volume = pv;
+                partnerRegion.volumePercent = 0.0;
+                partnerRegion.label = partner;
+                partnerRegion.colorR = itPartner->colorR;
+                partnerRegion.colorG = itPartner->colorG;
+                partnerRegion.colorB = itPartner->colorB;
+                partnerRegion.colorA = itPartner->colorA;
+                partnerRegion.partnerLabel = entry.label;
+                partnerRegion.asymmetryIndex = asymP;
                 partnerRegion.visible = true;
                 regions.append(partnerRegion);
-                processedLabels.insert(partnerEntry.label);
+                processedLabels.insert(partner);
+
+                // 配对信息
+                std::string b2 = baseNameFromStruct(*itPartner);
+                auto& pp = pairMap[b2];
+                if (itPartner->hemisphere == 'L') {
+                    pp.left = partner;
+                } else if (itPartner->hemisphere == 'R') {
+                    pp.right = partner;
+                }
+                if (asymP > 0.0) {
+                    pp.asym = asymP;
+                }
+            }
+        }
+    }
+
+    if (totalVolumeCm3 > 0.0) {
+        for (auto& r : regions) {
+            r.volumePercent = (r.volume / totalVolumeCm3) * 100.0;
+        }
+    }
+
+    // 补齐 partnerLabel 与 asymmetryIndex（基于左右配对）
+    for (auto& r : regions) {
+        std::string baseKey;
+        auto itEntry = std::find_if(regionEntries.begin(), regionEntries.end(),
+            [&r](const RegionEntry& e) { return e.label == r.label; });
+        if (itEntry != regionEntries.end()) {
+            baseKey = baseNameFromStruct(*itEntry);
+        } else {
+            baseKey = BrainMetrics::NormalizeName(r.chineseName.toStdString());
+        }
+        auto itPair = pairMap.find(baseKey);
+        if (itPair != pairMap.end()) {
+            const auto& p = itPair->second;
+            if (r.hemisphere.startsWith("L", Qt::CaseInsensitive) && p.right != -1) {
+                r.partnerLabel = p.right;
+            } else if (r.hemisphere.startsWith("R", Qt::CaseInsensitive) && p.left != -1) {
+                r.partnerLabel = p.left;
+            }
+            if (r.asymmetryIndex <= 0.0 && p.asym > 0.0) {
+                r.asymmetryIndex = p.asym;
             }
         }
     }
