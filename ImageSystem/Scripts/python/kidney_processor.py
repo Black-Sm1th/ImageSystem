@@ -94,19 +94,19 @@ def CCLS(T2_signal, skin_signal, micro_signal, SEI_signal, ADER_signal, dispersi
                 current_node = add_node('无')
                 add_edge(current_node, current_node, label='0')
                 # 保存为图片
-                dot.render('CCLS_decision_tree', format='png', view=True)
+                dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                 return 1
             elif micro_signal == "1":
                 current_node = add_node('有')
                 add_edge(current_node, current_node, label='1')
                 # 保存为图片
-                dot.render('CCLS_decision_tree', format='png', view=True)
+                dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                 return 3      
         elif skin_signal == "1":
             current_node = add_node('中度强化')
             add_edge(current_node, current_node, label='1')
             # 保存为图片
-            dot.render('CCLS_decision_tree', format='png', view=True)
+            dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
             return 3
         elif skin_signal == "2":
             current_node = add_node('明显强化')
@@ -118,13 +118,13 @@ def CCLS(T2_signal, skin_signal, micro_signal, SEI_signal, ADER_signal, dispersi
                     current_node = add_node('无')
                     add_edge(current_node, current_node, label='0')
                     # 保存为图片
-                    dot.render('CCLS_decision_tree', format='png', view=True)
+                    dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                     return 4
                 elif dispersion_signal == "1":
                     current_node = add_node('有')
                     add_edge(current_node, current_node, label='1')
                     # 保存为图片
-                    dot.render('CCLS_decision_tree', format='png', view=True)
+                    dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                     return 3
             elif ADER_signal == "1":
                 current_node = add_node('有')
@@ -133,13 +133,13 @@ def CCLS(T2_signal, skin_signal, micro_signal, SEI_signal, ADER_signal, dispersi
                     current_node = add_node('无')
                     add_edge(current_node, current_node, label='0')
                     # 保存为图片
-                    dot.render('CCLS_decision_tree', format='png', view=True)
+                    dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                     return 3
                 elif dispersion_signal == "1":
                     current_node = add_node('有')
                     add_edge(current_node, current_node, label='1')
                     # 保存为图片
-                    dot.render('CCLS_decision_tree', format='png', view=True)
+                    dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                     return 2
     elif T2_signal == "1":
         current_node = add_node('中信号')
@@ -154,19 +154,19 @@ def CCLS(T2_signal, skin_signal, micro_signal, SEI_signal, ADER_signal, dispersi
                     current_node = add_node('无')
                     add_edge(current_node, current_node, label='0')
                     # 保存为图片
-                    dot.render('CCLS_decision_tree', format='png', view=True)
+                    dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                     return 2
                 elif dispersion_signal == "1":
                     current_node = add_node('有')
                     add_edge(current_node, current_node, label='1')
                     # 保存为图片
-                    dot.render('CCLS_decision_tree', format='png', view=True)
+                    dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                     return 1
             elif micro_signal == "1":
                 current_node = add_node('有')
                 add_edge(current_node, current_node, label='1')
                 # 保存为图片
-                dot.render('CCLS_decision_tree', format='png', view=True)
+                dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                 return 3
         elif skin_signal == "1":
             current_node = add_node('中度强化')
@@ -178,19 +178,19 @@ def CCLS(T2_signal, skin_signal, micro_signal, SEI_signal, ADER_signal, dispersi
                     current_node = add_node('无')
                     add_edge(current_node, current_node, label='0')
                     # 保存为图片
-                    dot.render('CCLS_decision_tree', format='png', view=True)
+                    dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                     return 3
                 elif SEI_signal == "1":
                     current_node = add_node('有')
                     add_edge(current_node, current_node, label='1')
                     # 保存为图片
-                    dot.render('CCLS_decision_tree', format='png', view=True)
+                    dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                     return 2
             elif micro_signal == "1":
                 current_node = add_node('有')
                 add_edge(current_node, current_node, label='1')
                 # 保存为图片
-                dot.render('CCLS_decision_tree', format='png', view=True)
+                dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                 return 3
         elif skin_signal == "2":
             current_node = add_node('明显强化')
@@ -202,19 +202,19 @@ def CCLS(T2_signal, skin_signal, micro_signal, SEI_signal, ADER_signal, dispersi
                     current_node = add_node('无')
                     add_edge(current_node, current_node, label='0')
                     # 保存为图片
-                    dot.render('CCLS_decision_tree', format='png', view=True)
+                    dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                     return 4
                 elif SEI_signal == "1":
                     current_node = add_node('有')
                     add_edge(current_node, current_node, label='1')
                     # 保存为图片
-                    dot.render('CCLS_decision_tree', format='png', view=True)
+                    dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                     return 3
             elif micro_signal == "1":
                 current_node = add_node('有')
                 add_edge(current_node, current_node, label='1')
                 # 保存为图片
-                dot.render('CCLS_decision_tree', format='png', view=True)
+                dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                 return 5
     elif T2_signal == "2":
         current_node = add_node('高信号')
@@ -223,7 +223,7 @@ def CCLS(T2_signal, skin_signal, micro_signal, SEI_signal, ADER_signal, dispersi
             current_node = add_node('轻度强化')
             add_edge(current_node, current_node, label='0')
             # 保存为图片
-            dot.render('CCLS_decision_tree', format='png', view=True)
+            dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
             return 3
         elif skin_signal == "1":
             current_node = add_node('中度强化')
@@ -235,19 +235,19 @@ def CCLS(T2_signal, skin_signal, micro_signal, SEI_signal, ADER_signal, dispersi
                     current_node = add_node('无')
                     add_edge(current_node, current_node, label='0')
                     # 保存为图片
-                    dot.render('CCLS_decision_tree', format='png', view=True)
+                    dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                     return 3
                 elif SEI_signal == "1":
                     current_node = add_node('有')
                     add_edge(current_node, current_node, label='1')
                     # 保存为图片
-                    dot.render('CCLS_decision_tree', format='png', view=True)
+                    dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                     return 2
             elif micro_signal == "1":
                 current_node = add_node('有')
                 add_edge(current_node, current_node, label='1')
                 # 保存为图片
-                dot.render('CCLS_decision_tree', format='png', view=True)
+                dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                 return 3
         elif skin_signal == "2":
             current_node = add_node('明显强化')
@@ -259,19 +259,19 @@ def CCLS(T2_signal, skin_signal, micro_signal, SEI_signal, ADER_signal, dispersi
                     current_node = add_node('无')
                     add_edge(current_node, current_node, label='0')
                     # 保存为图片
-                    dot.render('CCLS_decision_tree', format='png', view=True)
+                    dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                     return 4
                 elif SEI_signal == "1":
                     current_node = add_node('有')
                     add_edge(current_node, current_node, label='1')
                     # 保存为图片
-                    dot.render('CCLS_decision_tree', format='png', view=True)
+                    dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                     return 3
             elif micro_signal == "1":
                 current_node = add_node('有')
                 add_edge(current_node, current_node, label='1')
                 # 保存为图片
-                dot.render('CCLS_decision_tree', format='png', view=True)
+                dot.render('CCLS_decision_tree', directory='AppData/kidney_data', format='png', view=True)
                 return 5
     return 0
 

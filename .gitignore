@@ -6,8 +6,6 @@
 /.vs
 /ImageSystem/build
 /ImageSystem/x64
-ImageSystem/CCLS_decision_tree.png
-ImageSystem/CCLS_decision_tree
 ImageSystem/Scripts/*.exe
-ImageSystem/Scripts/model/DBN_model.h5
+ImageSystem/Scripts/model
 ImageSystem/AppData

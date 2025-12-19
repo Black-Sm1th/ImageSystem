@@ -109,7 +109,6 @@ def main():
         labels=labels,
         standardize="zscore_sample",
         standardize_confounds=True,
-        memory="nilearn_cache",
         verbose=0
     )
     confounds_df = pd.read_csv(args.confounds, sep='\t')
