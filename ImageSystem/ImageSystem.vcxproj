@@ -73,6 +73,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(PROJECT_LIB)\VTK-9.4.2\install-release\include\vtk-9.4;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(PROJECT_LIB)\VTK-9.4.2\install-release\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -137,6 +138,7 @@
     <QtMoc Include="Model\DicomDataModel.h" />
     <QtMoc Include="Model\BrainRegionTableModel.h" />
     <QtMoc Include="Model\BrainSegmentationTableModel.h" />
+    <ClInclude Include="Modules\Version.h" />
     <ClInclude Include="Module\CommonFunc.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
