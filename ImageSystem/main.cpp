@@ -8,7 +8,7 @@
 #include "Modules/CommonFunc.h"
 #include "ViewController/MainViewController.h"
 #include "Model/DicomDataModel.h"
-
+#include "Modules/Version.h"
 VTK_MODULE_INIT(vtkRenderingVolumeOpenGL2);
 
 int main(int argc, char* argv[])
@@ -33,6 +33,11 @@ int main(int argc, char* argv[])
     qmlRegisterType<SagittalVtkItem>("com.vtk.dicom", 1, 0, "SagittalView");
     qmlRegisterType<CoronalVtkItem>("com.vtk.dicom", 1, 0, "CoronalView");
     qmlRegisterType<VolumeVtkItem>("com.vtk.dicom", 1, 0, "VolumeView");
+
+    QCoreApplication::setOrganizationName("AETHERMIND");
+    QCoreApplication::setOrganizationDomain("aethermind.com");
+    QCoreApplication::setApplicationName("ImageSystem");
+    QCoreApplication::setApplicationVersion(VER_VERSION_STR);
 
     QQmlApplicationEngine engine;
 
