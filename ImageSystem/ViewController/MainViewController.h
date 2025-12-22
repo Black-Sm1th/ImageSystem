@@ -46,6 +46,10 @@ public:
     void OnMouseWheelBackward() override;
     void OnLeftButtonDown() override;
     void OnLeftButtonUp() override;
+    void OnRightButtonDown() override;
+    void OnRightButtonUp() override;
+    void OnMiddleButtonDown() override;
+    void OnMiddleButtonUp() override;
     void OnMouseMove() override;
 
 protected:
@@ -58,6 +62,8 @@ private:
     DicomDataModel* m_dataModel;
     SliceOrientation m_orientation;
     bool m_isDragging;
+    bool m_isScaling;
+    bool m_isPanning;
     int m_lastX;
     int m_lastY;
 };

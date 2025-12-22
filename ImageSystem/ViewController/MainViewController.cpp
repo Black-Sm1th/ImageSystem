@@ -22,6 +22,8 @@ vtkStandardNewMacro(VolumeViewData);
 SliceInteractorStyle::SliceInteractorStyle()
     : m_orientation(SliceOrientation::Axial),
       m_isDragging(false),
+      m_isScaling(false),
+      m_isPanning(false),
       m_lastX(0),
       m_lastY(0)
 {
@@ -63,10 +65,37 @@ void SliceInteractorStyle::OnLeftButtonUp()
     m_isDragging = false;
 }
 
+void SliceInteractorStyle::OnRightButtonDown()
+{
+    m_isScaling = true;
+    int* pos = this->GetInteractor()->GetEventPosition();
+    m_lastX = pos[0];
+    m_lastY = pos[1];
+}
+
+void SliceInteractorStyle::OnRightButtonUp()
+{
+    m_isScaling = false;
+}
+
+void SliceInteractorStyle::OnMiddleButtonDown()
+{
+    m_isPanning = true;
+    int* pos = this->GetInteractor()->GetEventPosition();
+    m_lastX = pos[0];
+    m_lastY = pos[1];
+}
+
+void SliceInteractorStyle::OnMiddleButtonUp()
+{
+    m_isPanning = false;
+}
+
 void SliceInteractorStyle::OnMouseMove()
 {
+    int* pos = this->GetInteractor()->GetEventPosition();
+    
     if (m_isDragging && !m_dataModel->isSegDataMode()) {
-        int* pos = this->GetInteractor()->GetEventPosition();
         int dx = pos[0] - m_lastX;
         int dy = pos[1] - m_lastY;
 
@@ -82,6 +111,99 @@ void SliceInteractorStyle::OnMouseMove()
         m_dataModel->setWindowWidth(newWidth);
         m_dataModel->setWindowLevel(newLevel);
 
+        m_lastX = pos[0];
+        m_lastY = pos[1];
+    }
+    else if (m_isScaling) {
+        int dy = pos[1] - m_lastY;
+        
+        // 获取当前渲染器和相机
+        vtkRenderWindowInteractor* interactor = this->GetInteractor();
+        if (interactor && interactor->GetRenderWindow()) {
+            vtkRendererCollection* renderers = interactor->GetRenderWindow()->GetRenderers();
+            if (renderers->GetNumberOfItems() > 0) {
+                vtkRenderer* renderer = renderers->GetFirstRenderer();
+                vtkCamera* camera = renderer->GetActiveCamera();
+                
+                // 根据鼠标垂直移动调整缩放
+                double currentScale = camera->GetParallelScale();
+                double scaleFactor = 1.0 + (dy * 0.01);  // 缩放灵敏度
+                double newScale = currentScale * scaleFactor;
+                
+                // 限制缩放范围
+                if (newScale > 1.0 && newScale < 10000.0) {
+                    camera->SetParallelScale(newScale);
+                    interactor->Render();
+                }
+            }
+        }
+        
+        m_lastX = pos[0];
+        m_lastY = pos[1];
+    }
+    else if (m_isPanning) {
+        int dx = pos[0] - m_lastX;
+        int dy = pos[1] - m_lastY;
+        
+        // 获取当前渲染器和相机
+        vtkRenderWindowInteractor* interactor = this->GetInteractor();
+        if (interactor && interactor->GetRenderWindow()) {
+            vtkRendererCollection* renderers = interactor->GetRenderWindow()->GetRenderers();
+            if (renderers->GetNumberOfItems() > 0) {
+                vtkRenderer* renderer = renderers->GetFirstRenderer();
+                vtkCamera* camera = renderer->GetActiveCamera();
+                
+                // 获取相机的平行投影缩放和窗口大小
+                double scale = camera->GetParallelScale();
+                int* size = renderer->GetSize();
+                
+                // 计算平移量（根据视图空间转换到世界空间）
+                double fx = -dx * scale * 2.0 / size[1];
+                double fy = -dy * scale * 2.0 / size[1];
+                
+                // 获取相机的方向向量
+                double* position = camera->GetPosition();
+                double* focalPoint = camera->GetFocalPoint();
+                double* viewUp = camera->GetViewUp();
+                
+                // 计算相机的右向量（叉乘）
+                double viewPlaneNormal[3];
+                viewPlaneNormal[0] = position[0] - focalPoint[0];
+                viewPlaneNormal[1] = position[1] - focalPoint[1];
+                viewPlaneNormal[2] = position[2] - focalPoint[2];
+                
+                // 归一化视平面法向量
+                double norm = sqrt(viewPlaneNormal[0] * viewPlaneNormal[0] +
+                                 viewPlaneNormal[1] * viewPlaneNormal[1] +
+                                 viewPlaneNormal[2] * viewPlaneNormal[2]);
+                if (norm > 0) {
+                    viewPlaneNormal[0] /= norm;
+                    viewPlaneNormal[1] /= norm;
+                    viewPlaneNormal[2] /= norm;
+                }
+                
+                // 计算右向量（ViewUp × ViewPlaneNormal）
+                double rightVector[3];
+                rightVector[0] = viewUp[1] * viewPlaneNormal[2] - viewUp[2] * viewPlaneNormal[1];
+                rightVector[1] = viewUp[2] * viewPlaneNormal[0] - viewUp[0] * viewPlaneNormal[2];
+                rightVector[2] = viewUp[0] * viewPlaneNormal[1] - viewUp[1] * viewPlaneNormal[0];
+                
+                // 计算新的相机位置和焦点
+                double newPosition[3];
+                double newFocalPoint[3];
+                
+                for (int i = 0; i < 3; i++) {
+                    newPosition[i] = position[i] + rightVector[i] * fx + viewUp[i] * fy;
+                    newFocalPoint[i] = focalPoint[i] + rightVector[i] * fx + viewUp[i] * fy;
+                }
+                
+                camera->SetPosition(newPosition);
+                camera->SetFocalPoint(newFocalPoint);
+                
+                interactor->Render();
+            }
+        }
+        
         m_lastX = pos[0];
         m_lastY = pos[1];
     }
@@ -1057,14 +1179,15 @@ void MainViewController::startAnalysisBrainAge(const QString& path, bool preproc
     setpredictedBrainAge(0.0);
     setbrainAgeProcessing(true);
 
-    const QString exePath = QStringLiteral("Scripts/run_brain_age.exe");
+    const QString exePath = QStringLiteral("Scripts/brain_age.exe");
     const QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
-    const QString outputPath = QStringLiteral("AppData/outputs/Prediction_%1.csv").arg(timestamp);
-
+    const QString outputPath = QStringLiteral("AppData/brain_age/Prediction_%1.csv").arg(timestamp);
+    const QString modelPath = QStringLiteral("Scripts/model/DBN_model.h5");
     QStringList arguments;
 
     arguments << "--input" << inputPath
         << "--output" << outputPath
+        << "--model" << modelPath
         << "--docker-image" << "deepbrain";
     if (preprocess) {
         arguments << "--preprocess";
