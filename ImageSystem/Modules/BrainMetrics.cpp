@@ -1,5 +1,4 @@
 ﻿#include "BrainMetrics.h"
-#include "BrainRegionVisualizer.h"
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -38,76 +37,35 @@ BrainMetrics::BrainMetrics(std::string baseDir)
 
 bool BrainMetrics::Load()
 {
-    asegRecords_.clear();
-    lhAparcRecords_.clear();
-    rhAparcRecords_.clear();
-    bySegId_.clear();
-    byNameHemi_.clear();
+    asegRows_.clear();
+    aparcRows_.clear();
+    asegBySegId_.clear();
+    aparcByName_.clear();
 
     std::filesystem::path base(baseDir_);
     bool okAseg = LoadAseg(base / "aseg.stats");
     bool okLh = LoadAparc(base / "lh.aparc.stats", 'L');
     bool okRh = LoadAparc(base / "rh.aparc.stats", 'R');
-    if (okAseg && okLh && okRh)
+    if (!(okAseg && okLh && okRh))
     {
-        ComputeAsymmetry();
-        return true;
+        return false;
     }
-    return false;
+    ComputeAsegAsymmetry();
+    return true;
 }
 
-const BrainStatsRecord* BrainMetrics::FindBySegId(int segId) const
+const AsegStatsRow* BrainMetrics::FindAsegBySegId(int segId) const
 {
-    auto it = bySegId_.find(segId);
-    if (it == bySegId_.end())
-    {
-        return nullptr;
-    }
-    return Resolve(it->second);
+    auto it = asegBySegId_.find(segId);
+    if (it == asegBySegId_.end()) return nullptr;
+    return &asegRows_[it->second];
 }
 
-const BrainStatsRecord* BrainMetrics::FindByName(const std::string& name, char hemisphere) const
+const AparcStatsRow* BrainMetrics::FindAparcByName(const std::string& name) const
 {
-    std::string key = NormalizeName(name) + static_cast<char>(std::toupper(static_cast<unsigned char>(hemisphere)));
-    auto it = byNameHemi_.find(key);
-    if (it != byNameHemi_.end())
-    {
-        return Resolve(it->second);
-    }
-    // 尝试基于去前缀的 baseName 匹配（如 ctx-lh- -> bankssts）
-    std::string base = BaseNameFromStruct(name, hemisphere);
-    std::string keyBase = NormalizeName(base) + static_cast<char>(std::toupper(static_cast<unsigned char>(hemisphere)));
-    auto itb = byBaseNameHemi_.find(keyBase);
-    if (itb != byBaseNameHemi_.end())
-    {
-        return Resolve(itb->second);
-    }
-    return nullptr;
-}
-
-const BrainStatsRecord* BrainMetrics::Resolve(const RecordRef& ref) const
-{
-    switch (ref.source)
-    {
-    case BrainStatsRecord::Source::Aseg:
-        return (ref.index < asegRecords_.size()) ? &asegRecords_[ref.index] : nullptr;
-    case BrainStatsRecord::Source::LH_Aparc:
-        return (ref.index < lhAparcRecords_.size()) ? &lhAparcRecords_[ref.index] : nullptr;
-    case BrainStatsRecord::Source::RH_Aparc:
-        return (ref.index < rhAparcRecords_.size()) ? &rhAparcRecords_[ref.index] : nullptr;
-    default:
-        return nullptr;
-    }
-}
-
-BrainStatsRecord* BrainMetrics::Resolve(const RecordRef& ref)
-{
-    return const_cast<BrainStatsRecord*>(static_cast<const BrainMetrics*>(this)->Resolve(ref));
-}
-
-void BrainMetrics::ApplyToRegions(std::vector<RegionEntry>& regions) const
-{
-    // 按需求不再修改 RegionEntry
+    auto it = aparcByName_.find(NormalizeName(name));
+    if (it == aparcByName_.end()) return nullptr;
+    return &aparcRows_[it->second];
 }
 
 bool BrainMetrics::LoadAseg(const std::filesystem::path& filePath)
@@ -126,8 +84,7 @@ bool BrainMetrics::LoadAseg(const std::filesystem::path& filePath)
             continue;
         }
         std::istringstream iss(line);
-        BrainStatsRecord rec;
-        rec.source = BrainStatsRecord::Source::Aseg;
+        AsegStatsRow rec;
         rec.hemisphere = 'N';
         int index = 0;
         iss >> index;
@@ -154,7 +111,13 @@ bool BrainMetrics::LoadAseg(const std::filesystem::path& filePath)
         {
             rec.baseName = rec.name;
         }
-        AddRecord(rec);
+
+        const size_t idx = asegRows_.size();
+        asegRows_.push_back(std::move(rec));
+        if (asegRows_.back().segId >= 0)
+        {
+            asegBySegId_[asegRows_.back().segId] = idx;
+        }
     }
     return true;
 }
@@ -175,56 +138,68 @@ bool BrainMetrics::LoadAparc(const std::filesystem::path& filePath, char hemisph
             continue;
         }
         std::istringstream iss(line);
-        BrainStatsRecord rec;
-        rec.source = (hemisphere == 'L') ? BrainStatsRecord::Source::LH_Aparc : BrainStatsRecord::Source::RH_Aparc;
+        AparcStatsRow rec;
         rec.hemisphere = hemisphere;
-        iss >> rec.name;
-        iss >> rec.nVoxels;      // NumVert
-        iss >> rec.surfaceArea;  // SurfArea
-        iss >> rec.volumeMm3;    // GrayVol
-        iss >> rec.meanThickness;
-        iss >> rec.thicknessStd;
+        std::string rawName;
+        iss >> rawName;
+        iss >> rec.numVert;      // NumVert
+        iss >> rec.surfArea;     // SurfArea
+        iss >> rec.grayVolMm3;   // GrayVol
+        iss >> rec.thickAvg;
+        iss >> rec.thickStd;
         // 曲率与折叠指标
         iss >> rec.meanCurv;
         iss >> rec.gausCurv;
         iss >> rec.foldInd;
         iss >> rec.curvInd;
-        rec.baseName = rec.name;
-        AddRecord(rec);
+        rec.baseName = rawName;
+        // 按要求：lh 加 ctx-lh- 前缀，rh 加 ctx-rh- 前缀，便于与 tsv / RegionEntry 统一
+        if (hemisphere == 'L')
+        {
+            rec.name = "ctx-lh-" + rawName;
+        }
+        else if (hemisphere == 'R')
+        {
+            rec.name = "ctx-rh-" + rawName;
+        }
+        else
+        {
+            rec.name = rawName;
+        }
+
+        const size_t idx = aparcRows_.size();
+        aparcRows_.push_back(std::move(rec));
+        aparcByName_[NormalizeName(aparcRows_.back().name)] = idx;
     }
     return true;
 }
 
-BrainStatsRecord* BrainMetrics::AddRecord(BrainStatsRecord record)
+void BrainMetrics::ComputeAsegAsymmetry()
 {
-    std::vector<BrainStatsRecord>* container = nullptr;
-    switch (record.source)
+    struct Pair { int li = -1; int ri = -1; };
+    std::unordered_map<std::string, Pair> pairs;
+    for (int i = 0; i < static_cast<int>(asegRows_.size()); ++i)
     {
-    case BrainStatsRecord::Source::Aseg: container = &asegRecords_; break;
-    case BrainStatsRecord::Source::LH_Aparc: container = &lhAparcRecords_; break;
-    case BrainStatsRecord::Source::RH_Aparc: container = &rhAparcRecords_; break;
+        const auto& r = asegRows_[i];
+        if (r.hemisphere != 'L' && r.hemisphere != 'R') continue;
+        auto& p = pairs[NormalizeName(r.baseName)];
+        if (r.hemisphere == 'L') p.li = i;
+        else p.ri = i;
     }
-    if (!container)
+    for (const auto& kv : pairs)
     {
-        return nullptr;
+        const auto& p = kv.second;
+        if (p.li < 0 || p.ri < 0) continue;
+        auto& L = asegRows_[p.li];
+        auto& R = asegRows_[p.ri];
+        double denom = L.volumeMm3 + R.volumeMm3;
+        if (denom <= 0) continue;
+        double asym = 200.0 * std::abs(L.volumeMm3 - R.volumeMm3) / denom;
+        L.asymmetryIndex = asym;
+        R.asymmetryIndex = asym;
+        L.partnerSegId = R.segId;
+        R.partnerSegId = L.segId;
     }
-
-    const size_t idx = container->size();
-    container->push_back(std::move(record));
-    const auto& rec = container->back();
-
-    if (rec.segId >= 0)
-    {
-        bySegId_[rec.segId] = { rec.source, idx };
-    }
-    std::string key = NormalizeName(rec.name) + rec.hemisphere;
-    byNameHemi_[key] = { rec.source, idx };
-    if (!rec.baseName.empty())
-    {
-        std::string keyBase = NormalizeName(rec.baseName) + rec.hemisphere;
-        byBaseNameHemi_[keyBase] = { rec.source, idx };
-    }
-    return const_cast<BrainStatsRecord*>(&container->back());
 }
 
 std::string BrainMetrics::NormalizeName(const std::string& name)
@@ -259,70 +234,5 @@ std::string BrainMetrics::BaseNameFromStruct(const std::string& name, char hemis
         trimmed.erase(0, 1);
     }
     return trimmed;
-}
-
-void BrainMetrics::ComputeAsymmetry()
-{
-    // 汇总左右记录
-    struct Pair
-    {
-        RecordRef left{ BrainStatsRecord::Source::Aseg, static_cast<size_t>(-1) };
-        RecordRef right{ BrainStatsRecord::Source::Aseg, static_cast<size_t>(-1) };
-        bool hasLeft{ false };
-        bool hasRight{ false };
-    };
-    std::unordered_map<std::string, Pair> pairs;
-
-    auto collect = [&](const std::vector<BrainStatsRecord>& vec, BrainStatsRecord::Source src)
-    {
-        for (size_t i = 0; i < vec.size(); ++i)
-        {
-            const auto& rec = vec[i];
-            if (rec.hemisphere != 'L' && rec.hemisphere != 'R')
-            {
-                continue;
-            }
-            auto& p = pairs[rec.baseName];
-            if (rec.hemisphere == 'L')
-            {
-                p.left = { src, i };
-                p.hasLeft = true;
-            }
-            else
-            {
-                p.right = { src, i };
-                p.hasRight = true;
-            }
-        }
-    };
-
-    collect(asegRecords_, BrainStatsRecord::Source::Aseg);
-    collect(lhAparcRecords_, BrainStatsRecord::Source::LH_Aparc);
-    collect(rhAparcRecords_, BrainStatsRecord::Source::RH_Aparc);
-
-    for (const auto& kv : pairs)
-    {
-        const auto& p = kv.second;
-        if (!p.hasLeft || !p.hasRight)
-        {
-            continue;
-        }
-        auto* left = Resolve(p.left);
-        auto* right = Resolve(p.right);
-        if (!left || !right)
-        {
-            continue;
-        }
-        double denom = left->volumeMm3 + right->volumeMm3;
-        if (denom <= 0.0)
-        {
-            continue;
-        }
-        double asym = 200.0 * std::abs(left->volumeMm3 - right->volumeMm3) / denom;
-        left->asymmetryIndex = asym;
-        right->asymmetryIndex = asym;
-        left->partnerSegId = right->segId;
-        right->partnerSegId = left->segId;
-    }
 }
 

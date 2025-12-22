@@ -3,42 +3,46 @@
 #include <vector>
 #include <unordered_map>
 #include <filesystem>
-#include <optional>
 
-struct RegionEntry;
-
-struct BrainStatsRecord
+// ===== 输出数据结构 =====
+// 1) aseg.stats：每行一个 SegId（包含皮下/脑室等）
+struct AsegStatsRow
 {
-    enum class Source
-    {
-        Aseg,
-        LH_Aparc,
-        RH_Aparc
-    };
-
-    Source source{ Source::Aseg };
     int segId{ -1 };
-    std::string name;        // 原始结构名（例如 Left-Thalamus 或 bankssts）
-    std::string baseName;    // 去除左右前缀后的名称，用于配对
+    std::string name;        // 例如 Left-Thalamus / Right-Putamen
+    std::string baseName;    // 去除左右前缀后的名称，用于配对（例如 Thalamus）
     char hemisphere{ 'N' };  // 'L' / 'R' / 'N'
+
     double nVoxels{ 0.0 };
     double volumeMm3{ 0.0 };
-    double surfaceArea{ 0.0 };   // aparc 专用
-    double meanThickness{ 0.0 }; // aparc 专用
-    double thicknessStd{ 0.0 };  // aparc 专用
-    double normMean{ 0.0 };      // aseg intensity mean
-    double normStd{ 0.0 };       // aseg intensity std
-    double normMin{ 0.0 };       // aseg intensity min
-    double normMax{ 0.0 };       // aseg intensity max
-    double normRange{ 0.0 };     // aseg intensity range
 
-    double meanCurv{ 0.0 };      // aparc MeanCurv
-    double gausCurv{ 0.0 };      // aparc GausCurv
-    double foldInd{ 0.0 };       // aparc FoldInd
-    double curvInd{ 0.0 };       // aparc CurvInd
+    double normMean{ 0.0 };
+    double normStd{ 0.0 };
+    double normMin{ 0.0 };
+    double normMax{ 0.0 };
+    double normRange{ 0.0 };
 
-    double asymmetryIndex{ 0.0 }; // 200 * |L-R| / (L+R)，仅对左右成对计算
+    // 200 * |L-R| / (L+R)，仅对左右成对计算
+    double asymmetryIndex{ 0.0 };
     int partnerSegId{ -1 };
+};
+
+// 2) lh.aparc.stats + rh.aparc.stats 合并：每行一个皮层区（bankssts 等）
+struct AparcStatsRow
+{
+    std::string name;        // 按要求：lh 加 ctx-lh- 前缀，rh 加 ctx-rh- 前缀
+    std::string baseName;    // 原始结构名（例如 bankssts）
+    char hemisphere{ 'L' };  // 'L' / 'R'
+
+    double numVert{ 0.0 };
+    double surfArea{ 0.0 };
+    double grayVolMm3{ 0.0 };
+    double thickAvg{ 0.0 };
+    double thickStd{ 0.0 };
+    double meanCurv{ 0.0 };
+    double gausCurv{ 0.0 };
+    double foldInd{ 0.0 };
+    double curvInd{ 0.0 };
 };
 
 class BrainMetrics
@@ -49,37 +53,28 @@ public:
     // 读取 baseDir 下的 aseg.stats / lh.aparc.stats / rh.aparc.stats
     bool Load();
 
-    const BrainStatsRecord* FindBySegId(int segId) const;
-    const BrainStatsRecord* FindByName(const std::string& name, char hemisphere) const;
+    // 读取结果
+    const std::vector<AsegStatsRow>& Aseg() const { return asegRows_; }
+    const std::vector<AparcStatsRow>& Aparc() const { return aparcRows_; }
 
-    // 工具：名称归一化 / 去前缀基名（供外部匹配使用）
+    // 查找（可选）
+    const AsegStatsRow* FindAsegBySegId(int segId) const;
+    const AparcStatsRow* FindAparcByName(const std::string& name) const; // name 带 ctx- 前缀
+
+    // 工具：名称归一化 / 去前缀基名（外部匹配用）
     static std::string NormalizeName(const std::string& name);
     static std::string BaseNameFromStruct(const std::string& name, char hemisphere);
 
-    // 当前实现不对 RegionEntry 做任何修改（保留接口兼容）。
-    void ApplyToRegions(std::vector<RegionEntry>& regions) const;
-
 private:
-    struct RecordRef
-    {
-        BrainStatsRecord::Source source;
-        size_t index;
-    };
-
-    const BrainStatsRecord* Resolve(const RecordRef& ref) const;
-    BrainStatsRecord* Resolve(const RecordRef& ref);
-
     bool LoadAseg(const std::filesystem::path& filePath);
     bool LoadAparc(const std::filesystem::path& filePath, char hemisphere);
-    BrainStatsRecord* AddRecord(BrainStatsRecord record);
-    void ComputeAsymmetry();
+    void ComputeAsegAsymmetry();
 
     std::string baseDir_;
-    std::vector<BrainStatsRecord> asegRecords_;
-    std::vector<BrainStatsRecord> lhAparcRecords_;
-    std::vector<BrainStatsRecord> rhAparcRecords_;
-    std::unordered_map<int, RecordRef> bySegId_;          // 仅 Aseg 有 SegId
-    std::unordered_map<std::string, RecordRef> byNameHemi_; // key: normalize(name)+hemi
-    std::unordered_map<std::string, RecordRef> byBaseNameHemi_; // key: normalize(baseName)+hemi
+    std::vector<AsegStatsRow> asegRows_;
+    std::vector<AparcStatsRow> aparcRows_; // lh+rh 合并
+
+    std::unordered_map<int, size_t> asegBySegId_;
+    std::unordered_map<std::string, size_t> aparcByName_; // normalize(name)
 };
 

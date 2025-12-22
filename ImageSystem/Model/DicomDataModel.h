@@ -6,8 +6,10 @@
 #include <vtkImageData.h>
 #include <vtkDICOMImageReader.h>
 #include "Modules/BrainRegionVisualizer.h"
+#include "Modules/BrainMetrics.h"
 #include "Model/BrainSegmentationTableModel.h"
 #include <string>
+#include <memory>
 
 class DicomDataModel : public QObject
 {
@@ -19,6 +21,9 @@ class DicomDataModel : public QObject
         Q_PROPERTY(int maxAxialSlice READ maxAxialSlice NOTIFY dataLoaded)
         Q_PROPERTY(int maxSagittalSlice READ maxSagittalSlice NOTIFY dataLoaded)
         Q_PROPERTY(int maxCoronalSlice READ maxCoronalSlice NOTIFY dataLoaded)
+        Q_PROPERTY(int dimX READ dimX NOTIFY dataLoaded)
+        Q_PROPERTY(int dimY READ dimY NOTIFY dataLoaded)
+        Q_PROPERTY(int dimZ READ dimZ NOTIFY dataLoaded)
         // SegData独立的切片属性
         Q_PROPERTY(int segAxialSlice READ segAxialSlice WRITE setSegAxialSlice NOTIFY segAxialSliceChanged)
         Q_PROPERTY(int segSagittalSlice READ segSagittalSlice WRITE setSegSagittalSlice NOTIFY segSagittalSliceChanged)
@@ -40,6 +45,9 @@ public:
     int maxAxialSlice() const;
     int maxSagittalSlice() const;
     int maxCoronalSlice() const;
+    int dimX() const;
+    int dimY() const;
+    int dimZ() const;
     
     // SegData的切片
     int segAxialSlice() const;
@@ -104,7 +112,6 @@ private:
     std::unique_ptr<BrainRegionVisualizer> m_region;
     std::unique_ptr<BrainRegionVisualizer> m_pendingRegion;
     BrainSegmentationTableModel* m_segmentationTableModel;
-    QString m_statsDir;
     int m_dims[3] = {1, 1, 1};
     int m_segDims[3] = {1, 1, 1};
     int m_axialSlice = 0;
@@ -118,5 +125,8 @@ private:
     double m_windowLevel = 0;
     QString m_dicomInfo;
     bool m_segLoadingInProgress = false;
+    QString m_statsDir;
+    std::shared_ptr<BrainMetrics> m_brainMetrics;
+    int m_metricsLoadSerial = 0;
 };
 

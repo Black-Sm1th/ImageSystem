@@ -166,6 +166,11 @@ bool BrainRegionVisualizer::Initialize()
     ReportProgress(35, "统计脑区数据...");
     ComputeLabelStatistics();
     ReportProgress(40, "构建脑区表面...");
+    cout << "找到" + regions_.size() <<"个" << endl;
+    for (auto item: regions_)
+    {
+        cout << item.englishName << endl;
+    }
     pipeline_ = std::make_unique<LabelPipeline>(imageData_);
     if (!BuildActors())
     {
@@ -320,7 +325,7 @@ void BrainRegionVisualizer::ComputeLabelStatistics()
 
     double spacing[3]{ 1.0, 1.0, 1.0 };
     imageData_->GetSpacing(spacing);
-    voxelVolume_ = spacing[0] * spacing[1] * spacing[2];
+    voxelVolume_ = spacing[0] * spacing[1] * spacing[2]; // mm^3
     if (voxelVolume_ <= 0)
     {
         voxelVolume_ = 1.0;
@@ -328,6 +333,7 @@ void BrainRegionVisualizer::ComputeLabelStatistics()
 
     regions_.clear();
     labelIndex_.clear();
+    double totalVolume = 0.0;
 
     for (const auto& entry : labelStyles_)
     {
@@ -342,8 +348,77 @@ void BrainRegionVisualizer::ComputeLabelStatistics()
         region.colorB = entry.second.B;
         region.colorA = entry.second.A;
 
+        auto countIt = counts.find(region.label);
+        if (countIt != counts.end())
+        {
+            region.voxelCount = static_cast<double>(countIt->second);
+            region.volume = region.voxelCount * voxelVolume_; // mm^3
+            if (region.label != 0)
+            {
+                totalVolume += region.volume;
+            }
+        }
+
         regions_.emplace_back(region);
         labelIndex_[region.label] = regions_.size() - 1;
+    }
+
+    if (totalVolume <= 0)
+    {
+        totalVolume = 1.0;
+    }
+
+    for (auto& region : regions_)
+    {
+        if (region.label == 0 || totalVolume <= 0.0)
+        {
+            region.volumePercent = 0.0;
+            continue;
+        }
+        region.volumePercent = (region.volume / totalVolume) * 100.0;
+    }
+
+    struct PairVolumes
+    {
+        int leftIndex{ -1 };
+        double leftVolume{ 0.0 };
+        int rightIndex{ -1 };
+        double rightVolume{ 0.0 };
+    };
+
+    std::unordered_map<std::string, PairVolumes> pairMap;
+    for (size_t i = 0; i < regions_.size(); ++i)
+    {
+        auto& region = regions_[i];
+        std::string key = region.groupKey.empty() ? region.englishName : region.groupKey;
+        auto& pair = pairMap[key];
+        if (region.hemisphere == 'L')
+        {
+            pair.leftIndex = static_cast<int>(i);
+            pair.leftVolume = region.volume;
+        }
+        else if (region.hemisphere == 'R')
+        {
+            pair.rightIndex = static_cast<int>(i);
+            pair.rightVolume = region.volume;
+        }
+    }
+
+    for (const auto& kv : pairMap)
+    {
+        auto pair = kv.second;
+        if (pair.leftIndex != -1 && pair.rightIndex != -1)
+        {
+            double denom = pair.leftVolume + pair.rightVolume;
+            if (denom > 0)
+            {
+                double asym = 200.0 * std::abs(pair.leftVolume - pair.rightVolume) / denom;
+                regions_[pair.leftIndex].asymmetryIndex = asym;
+                regions_[pair.rightIndex].asymmetryIndex = asym;
+                regions_[pair.leftIndex].partnerLabel = regions_[pair.rightIndex].label;
+                regions_[pair.rightIndex].partnerLabel = regions_[pair.leftIndex].label;
+            }
+        }
     }
 }
 
