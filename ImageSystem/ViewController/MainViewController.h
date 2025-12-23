@@ -25,6 +25,8 @@
 #include <QTimer.h>
 #include <QPointer.h>
 #include <QFile.h>
+#include <vtkAxisActor2D.h>
+#include <vtkProperty2D.h>
 
 // 枚举类型：切片方向
 enum class SliceOrientation {
@@ -41,6 +43,8 @@ public:
     vtkTypeMacro(SliceInteractorStyle, vtkInteractorStyleImage);
 
     void SetOrientation(SliceOrientation orientation);
+	void setAxisActor(vtkSmartPointer<vtkAxisActor2D> axisActor);
+	void rescaleAxisActor();
 
     void OnMouseWheelForward() override;
     void OnMouseWheelBackward() override;
@@ -66,6 +70,7 @@ private:
     bool m_isPanning;
     int m_lastX;
     int m_lastY;
+	vtkSmartPointer<vtkAxisActor2D> m_axisActor;
 };
 
 
@@ -81,6 +86,7 @@ public:
     vtkSmartPointer<vtkImageSlice> imageSlice;
     vtkSmartPointer<vtkTextMapper> wwwlTextMapper;
     vtkSmartPointer<vtkActor2D> wwwlTextActor;
+	vtkSmartPointer<vtkAxisActor2D> axisActor;
 
 protected:
     SliceViewData() {}
@@ -116,10 +122,14 @@ private:
     int getCurrentSlice() const;
     int getSegCurrentSlice() const;
 
+	
+
     void updateWWWLText(SliceViewData* data);
     DicomDataModel* m_dataModel;
     SliceOrientation m_orientation;
     const char* m_viewName;
+	vtkSmartPointer<vtkAxisActor2D> m_axisActor;
+
 };
 
 // 轴向视图（Axial - XY平面）
