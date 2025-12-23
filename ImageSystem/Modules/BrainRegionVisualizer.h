@@ -119,6 +119,17 @@ public:
     vtkSmartPointer<vtkImageSlice> GetSagittalSlice() const { return sagittalSlice_; }
     vtkSmartPointer<vtkTextActor> GetLabelTextActor() const { return labelText_; }
 
+    // 导出的三张“融合后中间层”PNG路径（若未生成则为空字符串）
+    const std::string& GetAxialMidPngPath() const { return axialMidPngPath_; }
+    const std::string& GetCoronalMidPngPath() const { return coronalMidPngPath_; }
+    const std::string& GetSagittalMidPngPath() const { return sagittalMidPngPath_; }
+
+    // 动态生成三张“融合后中间层”像素切片 PNG。
+    // - outputDir 为空：写入系统临时目录下的 ImageSystem/slice_previews/<timestamp>/
+    // - outputDir 非空：写入到该目录（目录不存在会尝试创建）
+    // 返回 true 表示三张都成功写出（路径会写入 Get*PngPath）
+    bool GenerateMidSlicePNGs(const std::string& outputDir = "");
+
     std::vector<RegionEntry>& Regions() { return regions_; }
     std::unordered_map<vtkActor*, size_t>& ActorIndex() { return actorIndex_; }
 
@@ -133,6 +144,7 @@ private:
     bool BuildActors();
     void BuildSlices();
     void Build3DRenderer();
+    bool ExportMidSlicePNGs(vtkImageData* sliceInputData, const std::string& outputDir);
 
     std::unordered_map<int, LabelColor> LoadColorTable(const std::string& filename);
     std::map<int, LabelStyle> BuildLabelStyles(const std::set<int>& labels,
@@ -173,6 +185,10 @@ private:
     vtkSmartPointer<vtkImageSlice> axialSlice_;
     vtkSmartPointer<vtkImageSlice> coronalSlice_;
     vtkSmartPointer<vtkImageSlice> sagittalSlice_;
+
+    std::string axialMidPngPath_;
+    std::string coronalMidPngPath_;
+    std::string sagittalMidPngPath_;
 
     vtkSmartPointer<vtkSmartVolumeMapper> volumeMapper_;
     vtkSmartPointer<vtkVolumeProperty> volumeProperty_;
