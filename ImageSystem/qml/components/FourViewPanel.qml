@@ -105,10 +105,10 @@ Item {
                 }
                 Connections {
                     target: axialView
-                    function onCrossXChanged() { requestPaint() }
-                    function onCrossYChanged() { requestPaint() }
-                    onWidthChanged: requestPaint()
-                    onHeightChanged: requestPaint()
+                    function onCrossXChanged() { canvasAxial.requestPaint() }
+                    function onCrossYChanged() { canvasAxial.requestPaint() }
+                    function onWidthChanged() { canvasAxial.requestPaint() }
+                    function onHeightChanged() { canvasAxial.requestPaint() }
                 }
             }
         }
@@ -177,10 +177,10 @@ Item {
                 }
                 Connections {
                     target: sagittalView
-                    function onCrossXChanged() { requestPaint() }
-                    function onCrossYChanged() { requestPaint() }
-                    onWidthChanged: requestPaint()
-                    onHeightChanged: requestPaint()
+                    function onCrossXChanged() { canvasSag.requestPaint() }
+                    function onCrossYChanged() { canvasSag.requestPaint() }
+                    function onWidthChanged() { canvasSag.requestPaint() }
+                    function onHeightChanged() { canvasSag.requestPaint() }
                 }
             }
         }
@@ -249,10 +249,10 @@ Item {
                 }
                 Connections {
                     target: coronalView
-                    function onCrossXChanged() { requestPaint() }
-                    function onCrossYChanged() { requestPaint() }
-                    onWidthChanged: requestPaint()
-                    onHeightChanged: requestPaint()
+                    function onCrossXChanged() { canvasCor.requestPaint() }
+                    function onCrossYChanged() { canvasCor.requestPaint() }
+                    function onWidthChanged() { canvasCor.requestPaint() }
+                    function onHeightChanged() { canvasCor.requestPaint() }
                 }
             }
         }
