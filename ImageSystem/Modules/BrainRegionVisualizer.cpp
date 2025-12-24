@@ -4,6 +4,10 @@
 #include "vtkImageFlip.h"
 #include "vtkMatrix3x3.h"
 #include <vtkPNGWriter.h>
+#include <vtkWindowToImageFilter.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderer.h>
+#include <vtkCamera.h>
 #include <vtkExtractVOI.h>
 #include <vtkImagePermute.h>
 #include <vtkImageFlip.h>
@@ -565,6 +569,7 @@ void BrainRegionVisualizer::BuildSlices()
 
     //test
     //GenerateMidSlicePNGs("C:/Users/boyu guan/Desktop");
+    //GenerateSegmentation3DPng("C:/Users/boyu guan/Desktop");
 }
 
 bool BrainRegionVisualizer::GenerateMidSlicePNGs(const std::string& outputDir)
@@ -596,6 +601,11 @@ bool BrainRegionVisualizer::GenerateMidSlicePNGs(const std::string& outputDir)
     exportMap->Update();
 
     return ExportMidSlicePNGs(exportMap->GetOutput(), outputDir);
+}
+
+bool BrainRegionVisualizer::GenerateSegmentation3DPng(const std::string& outputDir)
+{
+    return ExportSegmentation3DPng(outputDir);
 }
 
 bool BrainRegionVisualizer::ExportMidSlicePNGs(vtkImageData* sliceInputData, const std::string& outputDir)
@@ -718,6 +728,113 @@ bool BrainRegionVisualizer::ExportMidSlicePNGs(vtkImageData* sliceInputData, con
     if (okSag) sagittalMidPngPath_ = sagFile.string();
 
     return okAx && okCor && okSag;
+}
+
+bool BrainRegionVisualizer::ExportSegmentation3DPng(const std::string& outputDir)
+{
+    seg3dPngPath_.clear();
+
+    // 仅分割：使用 surface actor（regions_）导出；不包含 raw volume
+    bool hasAnyActor = false;
+    for (const auto& r : regions_)
+    {
+        if (r.actor)
+        {
+            hasAnyActor = true;
+            break;
+        }
+    }
+    if (!hasAnyActor)
+    {
+        return false;
+    }
+
+    std::filesystem::path outDir;
+    try
+    {
+        if (!outputDir.empty())
+        {
+            outDir = std::filesystem::path(outputDir);
+        }
+        else
+        {
+            const auto ts = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count();
+            outDir = std::filesystem::temp_directory_path() / "ImageSystem" / "slice_previews" / std::to_string(ts);
+        }
+        std::filesystem::create_directories(outDir);
+    }
+    catch (...)
+    {
+        return false;
+    }
+
+    const std::filesystem::path outFile = outDir / "seg3d_superior.png";
+
+    // 离屏渲染窗口，背景透明
+    auto renderer = vtkSmartPointer<vtkRenderer>::New();
+    renderer->SetBackground(0.0, 0.0, 0.0);
+#if VTK_MAJOR_VERSION >= 8
+    renderer->SetBackgroundAlpha(0.0);
+#endif
+
+    for (const auto& region : regions_)
+    {
+        if (region.actor)
+        {
+            renderer->AddActor(region.actor);
+        }
+    }
+
+    auto window = vtkSmartPointer<vtkRenderWindow>::New();
+    window->OffScreenRenderingOn();
+    window->SetSize(1024, 1024);
+    window->SetMultiSamples(0);
+    window->SetAlphaBitPlanes(1);
+    window->AddRenderer(renderer);
+
+    // 设置相机：从上往下（Superior -> Inferior）
+    renderer->ResetCamera();
+    double bounds[6];
+    renderer->ComputeVisiblePropBounds(bounds);
+    const double cx = 0.5 * (bounds[0] + bounds[1]);
+    const double cy = 0.5 * (bounds[2] + bounds[3]);
+    const double cz = 0.5 * (bounds[4] + bounds[5]);
+    const double dx = (bounds[1] - bounds[0]);
+    const double dy = (bounds[3] - bounds[2]);
+    const double dz = (bounds[5] - bounds[4]);
+    const double maxDim = std::max(dx, std::max(dy, dz));
+    const double dist = (maxDim <= 0.0) ? 500.0 : (2.0 * maxDim);
+
+    vtkCamera* cam = renderer->GetActiveCamera();
+    if (cam)
+    {
+        cam->SetFocalPoint(cx, cy, cz);
+        // 我们当前采用 RSP：Y=Superior，所以相机放在 +Y，朝向中心
+        cam->SetPosition(cx, cy + dist, cz);
+        cam->SetViewUp(0, 0, -1);
+    }
+    renderer->ResetCameraClippingRange();
+
+    window->Render();
+
+    auto w2i = vtkSmartPointer<vtkWindowToImageFilter>::New();
+    w2i->SetInput(window);
+    w2i->SetInputBufferTypeToRGBA();
+    w2i->ReadFrontBufferOff();
+    w2i->Update();
+
+    auto writer = vtkSmartPointer<vtkPNGWriter>::New();
+    writer->SetFileName(outFile.string().c_str());
+    writer->SetInputConnection(w2i->GetOutputPort());
+    writer->Write();
+
+    if (std::filesystem::exists(outFile))
+    {
+        seg3dPngPath_ = outFile.string();
+        return true;
+    }
+    return false;
 }
 
 void BrainRegionVisualizer::Build3DRenderer()
