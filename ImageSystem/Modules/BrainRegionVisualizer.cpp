@@ -564,22 +564,38 @@ void BrainRegionVisualizer::BuildSlices()
     sagittalSlice_->SetMapper(sagittalMapper_);
 
     //test
-    GenerateMidSlicePNGs("C:/Users/boyu guan/Desktop");
+    //GenerateMidSlicePNGs("C:/Users/boyu guan/Desktop");
 }
 
 bool BrainRegionVisualizer::GenerateMidSlicePNGs(const std::string& outputDir)
 {
-    vtkImageData* sliceInputData = nullptr;
-    if (rawImageData_ && blendImage_)
+    // 按需求：只导出“分割后的彩色结果”，不叠加原始图。
+    // 为了保证背景透明：label=0 的 alpha=0，其余 label alpha=1.0（完全不透明）。
+    if (!imageData_)
     {
-        sliceInputData = blendImage_->GetOutput();
-    }
-    else if (colorMap_)
-    {
-        sliceInputData = colorMap_->GetOutput();
+        return false;
     }
 
-    return ExportMidSlicePNGs(sliceInputData, outputDir);
+    int maxLabel = labelStyles_.empty() ? 0 : labelStyles_.rbegin()->first;
+    auto exportLut = vtkSmartPointer<vtkLookupTable>::New();
+    exportLut->SetRange(0, maxLabel);
+    exportLut->SetNumberOfTableValues(maxLabel + 1);
+    exportLut->Build();
+    // 背景：透明
+    exportLut->SetTableValue(0, 0.0, 0.0, 0.0, 0.0);
+    for (const auto& entry : labelStyles_)
+    {
+        if (entry.first <= 0) continue;
+        exportLut->SetTableValue(entry.first, entry.second.R, entry.second.G, entry.second.B, 1.0);
+    }
+
+    auto exportMap = vtkSmartPointer<vtkImageMapToColors>::New();
+    exportMap->SetInputData(imageData_);
+    exportMap->SetLookupTable(exportLut);
+    exportMap->PassAlphaToOutputOn();
+    exportMap->Update();
+
+    return ExportMidSlicePNGs(exportMap->GetOutput(), outputDir);
 }
 
 bool BrainRegionVisualizer::ExportMidSlicePNGs(vtkImageData* sliceInputData, const std::string& outputDir)
