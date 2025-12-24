@@ -36,6 +36,73 @@ void SliceInteractorStyle::SetOrientation(SliceOrientation orientation)
     m_orientation = orientation;
 }
 
+void SliceInteractorStyle::setAxisActor(vtkSmartPointer<vtkAxisActor2D> axisActor)
+{
+	m_axisActor = axisActor;
+}
+
+void SliceInteractorStyle::rescaleAxisActor()
+{
+    if (!m_axisActor) {
+        return;
+    }
+
+    vtkRenderWindowInteractor* interactor = this->GetInteractor();
+    if (!interactor || !interactor->GetRenderWindow()) {
+        return;
+    }
+
+    vtkRenderer* renderer = this->GetCurrentRenderer();
+    if (!renderer) {
+        vtkRendererCollection* renderers = interactor->GetRenderWindow()->GetRenderers();
+        renderer = renderers ? renderers->GetFirstRenderer() : nullptr;
+    }
+    if (!renderer) {
+        return;
+    }
+
+    vtkCamera* camera = renderer->GetActiveCamera();
+    if (!camera) {
+        return;
+    }
+
+    int* size = renderer->GetSize();
+    if (!size || size[0] <= 0 || size[1] <= 0) {
+        return;
+    }
+
+    const double parallelScale = camera->GetParallelScale();
+    if (parallelScale <= 0.0) {
+        return;
+    }
+
+    // 平行投影下：可见世界高度 = 2 * parallelScale（单位与数据一致，这里按 mm 使用）
+    const double mmPerPixel = (2.0 * parallelScale) / static_cast<double>(size[1]);
+
+    // ===== 固定长度标尺（不随缩放“跳变”）=====
+    // 固定物理长度：你可以把这里改成 20/50/100 mm
+    const double lengthMm = 50.0;
+    const double lengthPx = lengthMm / mmPerPixel;
+
+    // 放在图像最左侧：竖直标尺（垂直居中）
+    // margin 越小越贴边；设为 1-2 可以避免被边界裁剪
+    const int margin = 2;
+    const int x0 = margin;
+    const int y0Raw = static_cast<int>(std::round((static_cast<double>(size[1]) - lengthPx) * 0.5));
+    const int y0 = std::max(0, y0Raw);
+
+    m_axisActor->GetPoint1Coordinate()->SetValue(x0, y0);
+    m_axisActor->GetPoint2Coordinate()->SetValue(x0, y0 + lengthPx);
+    m_axisActor->SetRange(0.0, lengthMm);
+
+    // 去掉文字（不显示标题/刻度数字）
+    m_axisActor->TitleVisibilityOff();
+    m_axisActor->LabelVisibilityOff();
+    m_axisActor->TickVisibilityOn();
+    //m_axisActor->MinorTicksOff();
+    m_axisActor->Modified();
+}
+
 void SliceInteractorStyle::OnMouseWheelForward()
 {
     int currentSlice = getCurrentSlice();
@@ -134,6 +201,7 @@ void SliceInteractorStyle::OnMouseMove()
                 // 限制缩放范围
                 if (newScale > 1.0 && newScale < 10000.0) {
                     camera->SetParallelScale(newScale);
+                    rescaleAxisActor();
                     interactor->Render();
                 }
             }
@@ -200,7 +268,7 @@ void SliceInteractorStyle::OnMouseMove()
                 
                 camera->SetPosition(newPosition);
                 camera->SetFocalPoint(newFocalPoint);
-                
+                rescaleAxisActor();
                 interactor->Render();
             }
         }
@@ -362,6 +430,22 @@ void SliceVtkItemBase::onSegDataLoaded()
             data->renderer->AddViewProp(data->imageSlice);
             data->renderer->SetBackground(0, 0, 0);
 
+            // ===== 标尺（Scale Bar）=====
+            if (!data->axisActor) {
+                data->axisActor = vtkSmartPointer<vtkAxisActor2D>::New();
+                data->axisActor->GetPoint1Coordinate()->SetCoordinateSystemToDisplay();
+                data->axisActor->GetPoint2Coordinate()->SetCoordinateSystemToDisplay();
+                data->axisActor->SetNumberOfLabels(5);
+                data->axisActor->AdjustLabelsOff();
+                data->axisActor->GetTitleTextProperty()->SetBold(1);
+                data->axisActor->GetTitleTextProperty()->SetItalic(0);
+                data->axisActor->GetTitleTextProperty()->SetShadow(1);
+                data->axisActor->GetTitleTextProperty()->SetFontFamilyToArial();
+                data->axisActor->GetTitleTextProperty()->SetFontSize(14);
+                data->axisActor->GetProperty()->SetColor(1, 1, 1);
+            }
+            data->renderer->AddActor2D(data->axisActor);
+
             // 添加标题文本标签
             vtkSmartPointer<vtkTextMapper> textMapper = vtkSmartPointer<vtkTextMapper>::New();
             textMapper->SetInput(m_viewName);
@@ -378,11 +462,13 @@ void SliceVtkItemBase::onSegDataLoaded()
             // 设置交互样式
             vtkSmartPointer<SliceInteractorStyle> style = vtkSmartPointer<SliceInteractorStyle>::New();
             style->SetOrientation(m_orientation);
+            style->setAxisActor(data->axisActor);
             rw->GetInteractor()->SetInteractorStyle(style);
 
             // 设置相机方向
             setupCamera(data->renderer);
             applyParallelScale(data->imageSlice, data->renderer);
+            style->rescaleAxisActor();
         }
     });
     scheduleRender();
@@ -461,9 +547,22 @@ void SliceVtkItemBase::setupView(vtkRenderWindow* renderWindow, SliceViewData* d
     data->imageSlice->GetProperty()->SetColorWindow(m_dataModel->windowWidth());
     data->imageSlice->GetProperty()->SetColorLevel(m_dataModel->windowLevel());
 
+	data->axisActor = vtkSmartPointer<vtkAxisActor2D>::New();
+    data->axisActor->GetPoint1Coordinate()->SetCoordinateSystemToDisplay();
+    data->axisActor->GetPoint2Coordinate()->SetCoordinateSystemToDisplay();
+    data->axisActor->SetNumberOfLabels(5);
+    data->axisActor->AdjustLabelsOff();
+    data->axisActor->GetTitleTextProperty()->SetBold(1);
+    data->axisActor->GetTitleTextProperty()->SetItalic(0);
+    data->axisActor->GetTitleTextProperty()->SetShadow(1);
+    data->axisActor->GetTitleTextProperty()->SetFontFamilyToArial();
+    data->axisActor->GetTitleTextProperty()->SetFontSize(14);
+    data->axisActor->GetProperty()->SetColor(1, 1, 1);
+
     // 创建渲染器
     data->renderer = vtkSmartPointer<vtkRenderer>::New();
     data->renderer->AddViewProp(data->imageSlice);
+	data->renderer->AddActor2D(data->axisActor);
     data->renderer->SetBackground(0, 0, 0);
 
     // 添加标题文本标签
@@ -495,11 +594,13 @@ void SliceVtkItemBase::setupView(vtkRenderWindow* renderWindow, SliceViewData* d
     // 设置交互样式
     vtkSmartPointer<SliceInteractorStyle> style = vtkSmartPointer<SliceInteractorStyle>::New();
     style->SetOrientation(m_orientation);
+    style->setAxisActor(data->axisActor);
     renderWindow->GetInteractor()->SetInteractorStyle(style);
 
     // 设置相机方向并锁定并行缩放（保持视口尺寸稳定）
     setupCamera(data->renderer);
     applyParallelScale(data->imageSlice, data->renderer);
+    style->rescaleAxisActor();
 }
 
 void SliceVtkItemBase::setMapperOrientation(vtkImageSliceMapper* mapper)
@@ -608,6 +709,7 @@ int SliceVtkItemBase::getSegCurrentSlice() const
     return 0;
 }
 
+
 void SliceVtkItemBase::updateWWWLText(SliceViewData* data)
 {
     if (data->wwwlTextMapper) {
@@ -683,6 +785,7 @@ void VolumeVtkItem::onSegDataLoaded()
         data->renderer = GET_SINGLETON(DicomDataModel)->getSeg3DRenderer();
         data->renderer->SetBackground(0, 0, 0);
         rw->AddRenderer(data->renderer);
+        
 
         // 设置3D交互样式
         vtkSmartPointer<vtkInteractorStyleTrackballCamera> style =

@@ -3,6 +3,16 @@
 #include <vtkPolyDataMapper.h> 
 #include "vtkImageFlip.h"
 #include "vtkMatrix3x3.h"
+#include <vtkPNGWriter.h>
+#include <vtkWindowToImageFilter.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderer.h>
+#include <vtkCamera.h>
+#include <vtkExtractVOI.h>
+#include <vtkImagePermute.h>
+#include <vtkImageFlip.h>
+#include <filesystem>
+#include <chrono>
 
 class LabelPipeline
 {
@@ -556,6 +566,275 @@ void BrainRegionVisualizer::BuildSlices()
     coronalSlice_->SetMapper(coronalMapper_);
     sagittalSlice_ = vtkSmartPointer<vtkImageSlice>::New();
     sagittalSlice_->SetMapper(sagittalMapper_);
+
+    //test
+    //GenerateMidSlicePNGs("C:/Users/boyu guan/Desktop");
+    //GenerateSegmentation3DPng("C:/Users/boyu guan/Desktop");
+}
+
+bool BrainRegionVisualizer::GenerateMidSlicePNGs(const std::string& outputDir)
+{
+    // 按需求：只导出“分割后的彩色结果”，不叠加原始图。
+    // 为了保证背景透明：label=0 的 alpha=0，其余 label alpha=1.0（完全不透明）。
+    if (!imageData_)
+    {
+        return false;
+    }
+
+    int maxLabel = labelStyles_.empty() ? 0 : labelStyles_.rbegin()->first;
+    auto exportLut = vtkSmartPointer<vtkLookupTable>::New();
+    exportLut->SetRange(0, maxLabel);
+    exportLut->SetNumberOfTableValues(maxLabel + 1);
+    exportLut->Build();
+    // 背景：透明
+    exportLut->SetTableValue(0, 0.0, 0.0, 0.0, 0.0);
+    for (const auto& entry : labelStyles_)
+    {
+        if (entry.first <= 0) continue;
+        exportLut->SetTableValue(entry.first, entry.second.R, entry.second.G, entry.second.B, 1.0);
+    }
+
+    auto exportMap = vtkSmartPointer<vtkImageMapToColors>::New();
+    exportMap->SetInputData(imageData_);
+    exportMap->SetLookupTable(exportLut);
+    exportMap->PassAlphaToOutputOn();
+    exportMap->Update();
+
+    return ExportMidSlicePNGs(exportMap->GetOutput(), outputDir);
+}
+
+bool BrainRegionVisualizer::GenerateSegmentation3DPng(const std::string& outputDir)
+{
+    return ExportSegmentation3DPng(outputDir);
+}
+
+bool BrainRegionVisualizer::ExportMidSlicePNGs(vtkImageData* sliceInputData, const std::string& outputDir)
+{
+    axialMidPngPath_.clear();
+    coronalMidPngPath_.clear();
+    sagittalMidPngPath_.clear();
+
+    if (!sliceInputData)
+    {
+        return false;
+    }
+
+    int extent[6];
+    sliceInputData->GetExtent(extent);
+    const int dimX = extent[1] - extent[0] + 1;
+    const int dimY = extent[3] - extent[2] + 1;
+    const int dimZ = extent[5] - extent[4] + 1;
+    if (dimX <= 1 || dimY <= 1 || dimZ <= 1)
+    {
+        return false;
+    }
+
+    const int midX = (extent[0] + extent[1]) / 2;
+    const int midY = (extent[2] + extent[3]) / 2;
+    const int midZ = (extent[4] + extent[5]) / 2;
+
+    std::filesystem::path outDir;
+    try
+    {
+        if (!outputDir.empty())
+        {
+            outDir = std::filesystem::path(outputDir);
+        }
+        else
+        {
+            const auto ts = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count();
+            outDir = std::filesystem::temp_directory_path() / "ImageSystem" / "slice_previews" / std::to_string(ts);
+        }
+        std::filesystem::create_directories(outDir);
+    }
+    catch (...)
+    {
+        return false;
+    }
+
+    auto write2D = [&](const std::filesystem::path& outFile, vtkAlgorithmOutput* port) -> bool
+    {
+        auto writer = vtkSmartPointer<vtkPNGWriter>::New();
+        writer->SetFileName(outFile.string().c_str());
+        writer->SetInputConnection(port);
+        writer->Write();
+        return std::filesystem::exists(outFile);
+    };
+
+    // 1) Axial: 取 Z=midZ，输出 X-Y
+    auto axialVOI = vtkSmartPointer<vtkExtractVOI>::New();
+    axialVOI->SetInputData(sliceInputData);
+    axialVOI->SetVOI(extent[0], extent[1], extent[2], extent[3], midZ, midZ);
+    axialVOI->Update();
+
+    // 把单层挪到 Z（保持为 dimX x dimY x 1），PNGWriter 会写成 2D
+    auto axialPerm = vtkSmartPointer<vtkImagePermute>::New();
+    axialPerm->SetInputConnection(axialVOI->GetOutputPort());
+    axialPerm->SetFilteredAxes(0, 1, 2);
+    axialPerm->Update();
+
+    // PNG 坐标系与视图显示常见差异：导出的像素图往往需要做一次垂直翻转
+    auto axialFlip = vtkSmartPointer<vtkImageFlip>::New();
+    axialFlip->SetInputConnection(axialPerm->GetOutputPort());
+    axialFlip->SetFilteredAxis(1); // flip Y
+    axialFlip->FlipAboutOriginOff();
+    axialFlip->Update();
+
+    // 2) Coronal: 取 Y=midY（原始输出会是 dimX x 1 x dimZ），需要把 Z 换到 Y 才能变成 2D
+    auto corVOI = vtkSmartPointer<vtkExtractVOI>::New();
+    corVOI->SetInputData(sliceInputData);
+    corVOI->SetVOI(extent[0], extent[1], midY, midY, extent[4], extent[5]);
+    corVOI->Update();
+
+    auto corPerm = vtkSmartPointer<vtkImagePermute>::New();
+    corPerm->SetInputConnection(corVOI->GetOutputPort());
+    corPerm->SetFilteredAxes(0, 2, 1); // X, Z, Y
+    corPerm->Update();
+
+    auto corFlip = vtkSmartPointer<vtkImageFlip>::New();
+    corFlip->SetInputConnection(corPerm->GetOutputPort());
+    corFlip->SetFilteredAxis(1); // flip Y
+    corFlip->FlipAboutOriginOff();
+    corFlip->Update();
+
+    // 3) Sagittal: 取 X=midX（原始输出会是 1 x dimY x dimZ），需要把 Y/Z 放到 X/Y
+    auto sagVOI = vtkSmartPointer<vtkExtractVOI>::New();
+    sagVOI->SetInputData(sliceInputData);
+    sagVOI->SetVOI(midX, midX, extent[2], extent[3], extent[4], extent[5]);
+    sagVOI->Update();
+
+    auto sagPerm = vtkSmartPointer<vtkImagePermute>::New();
+    sagPerm->SetInputConnection(sagVOI->GetOutputPort());
+    sagPerm->SetFilteredAxes(1, 2, 0); // Y, Z, X
+    sagPerm->Update();
+
+    auto sagFlip = vtkSmartPointer<vtkImageFlip>::New();
+    sagFlip->SetInputConnection(sagPerm->GetOutputPort());
+    sagFlip->SetFilteredAxis(1); // flip Y
+    sagFlip->FlipAboutOriginOff();
+    sagFlip->Update();
+
+    const std::filesystem::path axialFile = outDir / "axial_mid.png";
+    const std::filesystem::path corFile = outDir / "coronal_mid.png";
+    const std::filesystem::path sagFile = outDir / "sagittal_mid.png";
+
+    const bool okAx = write2D(axialFile, axialFlip->GetOutputPort());
+    const bool okCor = write2D(corFile, corFlip->GetOutputPort());
+    const bool okSag = write2D(sagFile, sagFlip->GetOutputPort());
+
+    if (okAx) axialMidPngPath_ = axialFile.string();
+    if (okCor) coronalMidPngPath_ = corFile.string();
+    if (okSag) sagittalMidPngPath_ = sagFile.string();
+
+    return okAx && okCor && okSag;
+}
+
+bool BrainRegionVisualizer::ExportSegmentation3DPng(const std::string& outputDir)
+{
+    seg3dPngPath_.clear();
+
+    // 仅分割：使用 surface actor（regions_）导出；不包含 raw volume
+    bool hasAnyActor = false;
+    for (const auto& r : regions_)
+    {
+        if (r.actor)
+        {
+            hasAnyActor = true;
+            break;
+        }
+    }
+    if (!hasAnyActor)
+    {
+        return false;
+    }
+
+    std::filesystem::path outDir;
+    try
+    {
+        if (!outputDir.empty())
+        {
+            outDir = std::filesystem::path(outputDir);
+        }
+        else
+        {
+            const auto ts = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count();
+            outDir = std::filesystem::temp_directory_path() / "ImageSystem" / "slice_previews" / std::to_string(ts);
+        }
+        std::filesystem::create_directories(outDir);
+    }
+    catch (...)
+    {
+        return false;
+    }
+
+    const std::filesystem::path outFile = outDir / "seg3d_superior.png";
+
+    // 离屏渲染窗口，背景透明
+    auto renderer = vtkSmartPointer<vtkRenderer>::New();
+    renderer->SetBackground(0.0, 0.0, 0.0);
+#if VTK_MAJOR_VERSION >= 8
+    renderer->SetBackgroundAlpha(0.0);
+#endif
+
+    for (const auto& region : regions_)
+    {
+        if (region.actor)
+        {
+            renderer->AddActor(region.actor);
+        }
+    }
+
+    auto window = vtkSmartPointer<vtkRenderWindow>::New();
+    window->OffScreenRenderingOn();
+    window->SetSize(1024, 1024);
+    window->SetMultiSamples(0);
+    window->SetAlphaBitPlanes(1);
+    window->AddRenderer(renderer);
+
+    // 设置相机：从上往下（Superior -> Inferior）
+    renderer->ResetCamera();
+    double bounds[6];
+    renderer->ComputeVisiblePropBounds(bounds);
+    const double cx = 0.5 * (bounds[0] + bounds[1]);
+    const double cy = 0.5 * (bounds[2] + bounds[3]);
+    const double cz = 0.5 * (bounds[4] + bounds[5]);
+    const double dx = (bounds[1] - bounds[0]);
+    const double dy = (bounds[3] - bounds[2]);
+    const double dz = (bounds[5] - bounds[4]);
+    const double maxDim = std::max(dx, std::max(dy, dz));
+    const double dist = (maxDim <= 0.0) ? 500.0 : (2.0 * maxDim);
+
+    vtkCamera* cam = renderer->GetActiveCamera();
+    if (cam)
+    {
+        cam->SetFocalPoint(cx, cy, cz);
+        // 我们当前采用 RSP：Y=Superior，所以相机放在 +Y，朝向中心
+        cam->SetPosition(cx, cy + dist, cz);
+        cam->SetViewUp(0, 0, -1);
+    }
+    renderer->ResetCameraClippingRange();
+
+    window->Render();
+
+    auto w2i = vtkSmartPointer<vtkWindowToImageFilter>::New();
+    w2i->SetInput(window);
+    w2i->SetInputBufferTypeToRGBA();
+    w2i->ReadFrontBufferOff();
+    w2i->Update();
+
+    auto writer = vtkSmartPointer<vtkPNGWriter>::New();
+    writer->SetFileName(outFile.string().c_str());
+    writer->SetInputConnection(w2i->GetOutputPort());
+    writer->Write();
+
+    if (std::filesystem::exists(outFile))
+    {
+        seg3dPngPath_ = outFile.string();
+        return true;
+    }
+    return false;
 }
 
 void BrainRegionVisualizer::Build3DRenderer()
