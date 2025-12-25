@@ -1721,7 +1721,7 @@ void MainViewController::generatePdfReport(const QString& savePath)
     QImage title2(":/image/pdf-title2.png");
 
     // 绘制title1图片
-    QRect targetRectTitle2(0, 190, title2.width(), title2.height());
+    QRect targetRectTitle2(0, 190, title2.width() / 2, title2.height() / 2);
     painter.drawImage(targetRectTitle2, title2);
 
     QImage logo4(":/image/pdf-logo4.png");
@@ -1858,6 +1858,86 @@ void MainViewController::generatePdfReport(const QString& savePath)
     int page3NumberY = targetRect.height() - 20;
     painter.drawText(page3NumberX, page3NumberY, page3Number);
 
+    // 第四页
+    writer.newPage();
+    painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
+    painter.setPen(QColor("#C9CDD4"));
+    QString pageTopName = QStringLiteral("脑测量分析报告");
+    QFontMetrics pageTopNameFm = painter.fontMetrics();
+    int pageTopNameWidth = pageTopNameFm.horizontalAdvance(pageTopName);
+    int pageTopNameX = (targetRect.width() - pageTopNameWidth) / 2;
+    int pageTopNameY = 50;
+    painter.drawText(pageTopNameX, pageTopNameY, pageTopName);
+
+    QImage title3(":/image/pdf-title3.png");
+    // 绘制title3图片
+    QRect targetRectTitle3(0, 80, title3.width() / 2, title3.height() / 2);
+    painter.drawImage(targetRectTitle3, title3);
+
+    // 生成四张切片图片到临时文件夹
+    QString tempDir = QDir::tempPath() + "/brain_seg_images";
+    QDir().mkpath(tempDir);
+    
+    QString axialPath, coronalPath, sagittalPath, seg3dPath;
+    GET_SINGLETON(DicomDataModel)->generateSegDataPNGs(tempDir, axialPath, coronalPath, sagittalPath, seg3dPath);
+    
+    // 在title3下方并列显示四张图片
+    int imageStartY = 80 + title3.height() / 2; // 紧贴title3
+    int imageSpacing = 10; // 图片间距
+    int availableWidth = targetRect.width() - 40; // 左右各留20px边距
+    int imageWidth = (availableWidth - 3 * imageSpacing) / 4; // 四张图片均分宽度
+    
+    // 加载并绘制四张图片
+    QStringList imagePaths = { seg3dPath, axialPath, sagittalPath, coronalPath };
+    QStringList imageLabels = { "", "Axial View", "Sagittal View", "Coronal View" };
+    int currentImageX = 20; // 起始X坐标（左边距）
+    
+    for (int i = 0; i < imagePaths.size(); ++i) {
+        const QString& imgPath = imagePaths[i];
+        if (QFile::exists(imgPath)) {
+            QImage segImage(imgPath);
+            if (!segImage.isNull()) {
+                // 保持宽高比缩放
+                int imageHeight = imageWidth * segImage.height() / segImage.width();
+                // 3D图需要20px间隙，其他切面视图不需要
+                int actualImageY = (i == 0) ? imageStartY + 20 : imageStartY;
+                QRect imageRect(currentImageX, actualImageY, imageWidth, imageHeight);
+                painter.drawImage(imageRect, segImage);
+                
+                // 为后三张图片添加标识文字
+                if (i > 0) { // 跳过第一张（3D视图）
+                    painter.setFont(QFont("Alibaba PuHuiTi 3.0", 10, QFont::Normal));
+                    
+                    QFontMetrics labelFm = painter.fontMetrics();
+                    int labelWidth = labelFm.horizontalAdvance(imageLabels[i]);
+                    int labelHeight = labelFm.height();
+                    int labelAscent = labelFm.ascent();
+                    
+                    // 背景框尺寸和位置
+                    int padding = 6; // 文字周围的内边距
+                    int boxWidth = labelWidth + padding * 2;
+                    int boxHeight = labelHeight + padding * 2;
+                    int boxX = currentImageX + (imageWidth - boxWidth) / 2; // 框居中
+                    int boxY = actualImageY + imageHeight; // 紧贴图片底部
+                    
+                    // 绘制圆角背景框
+                    QPainterPath labelBoxPath;
+                    labelBoxPath.addRoundedRect(boxX, boxY, boxWidth, boxHeight, 8, 8);
+                    painter.setPen(Qt::NoPen);
+                    painter.setBrush(QColor("#F7F8FA"));
+                    painter.drawPath(labelBoxPath);
+                    
+                    // 绘制文字（垂直居中在框中）
+                    int labelX = boxX + padding;
+                    int labelY = boxY + padding + labelAscent; // 使用ascent确保文字基线正确
+                    painter.setPen(QColor("#1D2129"));
+                    painter.drawText(labelX, labelY, imageLabels[i]);
+                }
+                
+                currentImageX += imageWidth + imageSpacing;
+            }
+        }
+    }
     //// 设置字体 - 使用更大的字体
     //QFont titleFont("Microsoft YaHei", 24, QFont::Bold);
     //QFont headerFont("Microsoft YaHei", 16, QFont::Bold);

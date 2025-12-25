@@ -88,6 +88,7 @@ public:
     
     Q_INVOKABLE void setSegDataMode(bool enabled);
 
+    void generateSegDataPNGs(const QString& path, QString& axialMidPngPath, QString& coronalMidPngPath, QString& sagittalMidPngPath, QString& seg3dPngPath);
 signals:
     void axialSliceChanged(int slice);
     void sagittalSliceChanged(int slice);
