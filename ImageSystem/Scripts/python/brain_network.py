@@ -169,6 +169,24 @@ def main():
     coords = plotting.find_parcellation_cut_coords(labels_img=atlas_img)
     view = plotting.view_connectome(correlation_matrix, coords, edge_threshold="95%", colorbar=False)
     view.save_as_html(os.path.join(args.output, "viewConnectome.html"))
+
+    # 2b. viewConnectome.png（HTML 的“截图/静态版”）
+    # 说明：不依赖浏览器渲染 HTML，而是用同一数据生成静态 PNG，便于报告/导出。
+    print("生成 viewConnectome.png（静态截图）...")
+    try:
+        png_path = os.path.join(args.output, "viewConnectome.png")
+        display = plotting.plot_connectome(
+            correlation_matrix,
+            coords,
+            edge_threshold="95%",
+            colorbar=False,
+            display_mode="ortho"
+        )
+        # 透明背景
+        display.savefig(png_path, dpi=300, transparent=True)
+        display.close()
+    except Exception as e:
+        print("生成 viewConnectome.png 失败：", str(e))
     
 
     # 3. alff.png
