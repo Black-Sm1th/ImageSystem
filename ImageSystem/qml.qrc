@@ -22,10 +22,11 @@
         <file>image/pdf-title1.png</file>
         <file>image/pdf-background.png</file>
         <file>image/pdf-content.png</file>
-        <file>image/pdf-title2.png</file>
         <file>image/pdf-logo4.png</file>
         <file>image/pdf-logo5.png</file>
         <file>image/pdf-human.png</file>
         <file>image/pdf-result.png</file>
+        <file>image/pdf-title2.png</file>
+        <file>image/pdf-title3.png</file>
     </qresource>
 </RCC>

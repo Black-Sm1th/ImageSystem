@@ -134,6 +134,16 @@ void DicomDataModel::setSegDataMode(bool enabled)
     }
 }
 
+void DicomDataModel::generateSegDataPNGs(const QString& path, QString& axialMidPngPath, QString& coronalMidPngPath, QString& sagittalMidPngPath, QString& seg3dPngPath)
+{
+    m_region->GenerateMidSlicePNGs(path.toStdString());
+    m_region->GenerateSegmentation3DPng(path.toStdString());
+    axialMidPngPath = QString::fromStdString(m_region->GetAxialMidPngPath());
+    coronalMidPngPath = QString::fromStdString(m_region->GetCoronalMidPngPath());
+    sagittalMidPngPath = QString::fromStdString(m_region->GetSagittalMidPngPath());
+    seg3dPngPath = QString::fromStdString(m_region->GetSeg3DPngPath());
+}
+
 DicomDataModel::DicomDataModel(QObject* parent)
     : QObject(parent) {
     m_segmentationTableModel = new BrainSegmentationTableModel(this);
