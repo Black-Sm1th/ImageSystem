@@ -10,7 +10,6 @@
 #include <vtkCamera.h>
 #include <vtkExtractVOI.h>
 #include <vtkImagePermute.h>
-#include <vtkImageFlip.h>
 #include <filesystem>
 #include <chrono>
 

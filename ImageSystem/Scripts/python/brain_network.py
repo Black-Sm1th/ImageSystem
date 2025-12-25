@@ -116,25 +116,30 @@ def main():
     time_series = masker.fit_transform(args.bold, confounds=confounds)
     print(f"时间序列形状: {time_series.shape}")
 
-    # 1. covariance.png
+    # 1. covariance.png（背景透明 + 黑色文字）
     print("生成 covariance.png...")
     correlation_matrix = ConnectivityMeasure(kind="correlation").fit_transform([time_series])[0]
     np.fill_diagonal(correlation_matrix, 1)
-    fig = plt.figure(facecolor='black')
+    fig = plt.figure(facecolor='none')
     ax = fig.add_subplot(111)
-    ax.set_facecolor('black')
+    ax.set_facecolor('none')
     plotting.plot_matrix(correlation_matrix, title="Covariance", vmax=1, vmin=-1, colorbar=True, axes=ax)
-    # 设置白色文字和刻度
-    ax.tick_params(colors='white')
-    ax.xaxis.label.set_color('white')
-    ax.yaxis.label.set_color('white')
-    ax.title.set_color('white')
+    # 设置黑色文字和刻度
+    ax.tick_params(colors='black')
+    ax.xaxis.label.set_color('black')
+    ax.yaxis.label.set_color('black')
+    ax.title.set_color('black')
+    for spine in ax.spines.values():
+        spine.set_color('black')
     # 设置colorbar的文字颜色
     if hasattr(ax, 'images') and len(ax.images) > 0:
         cbar = ax.images[0].colorbar
         if cbar:
-            cbar.ax.tick_params(colors='white')
-    plt.savefig(os.path.join(args.output, "covariance.png"), dpi=300, bbox_inches='tight', facecolor='black')
+            cbar.ax.tick_params(colors='black')
+            cbar.ax.set_facecolor('none')
+            if hasattr(cbar, "outline") and cbar.outline:
+                cbar.outline.set_edgecolor('black')
+    plt.savefig(os.path.join(args.output, "covariance.png"), dpi=300, bbox_inches='tight', transparent=True)
     plt.close()
 
     # 2. viewConnectome.html
@@ -142,6 +147,7 @@ def main():
     coords = plotting.find_parcellation_cut_coords(labels_img=atlas_img)
     view = plotting.view_connectome(correlation_matrix, coords, edge_threshold="95%", colorbar=False)
     view.save_as_html(os.path.join(args.output, "viewConnectome.html"))
+    
 
     # 3. alff.png
     print("生成 alff.png...")
@@ -154,6 +160,7 @@ def main():
     alff2 = [cal_alff(time_series[:,i], 0.027, 0.08) for i in range(116)]
     alff3 = [cal_alff(time_series[:,i], 0.01, 0.08) for i in range(116)]
 
+    # 3. alff.png（保持原来黑底）
     fig = plt.figure(figsize=(12,6), facecolor='black')
     ax = fig.add_subplot(111)
     ax.set_facecolor('black')
@@ -173,7 +180,29 @@ def main():
     plt.savefig(os.path.join(args.output, "alff.png"), dpi=300, bbox_inches='tight', facecolor='black')
     plt.close()
 
-    # 4. 116张时间序列图
+    # 3b. alff_transparent.png（额外生成：透明背景 + 黑色坐标轴/刻度/文字）
+    print("额外生成 alff_transparent.png...")
+    fig = plt.figure(figsize=(12,6), facecolor='none')
+    ax = fig.add_subplot(111)
+    ax.set_facecolor('none')
+    # 线条颜色按要求：浅蓝 / 浅绿 / 黄
+    ax.plot(alff1, label='0.01-0.027 Hz', color='#7EC8FF')
+    ax.plot(alff2, label='0.027-0.08 Hz', color='#90EE90')
+    ax.plot(alff3, label='0.01-0.08 Hz', color='#FFD966')
+    legend = ax.legend(facecolor='none', edgecolor='black', framealpha=0.0)
+    for text in legend.get_texts():
+        text.set_color('black')
+    ax.set_title("ALFF", color='black')
+    ax.set_xlabel("Region index", color='black')
+    ax.set_ylabel("ALFF", color='black')
+    ax.tick_params(colors='black')
+    ax.grid(True, alpha=0.2, color='black')
+    for spine in ax.spines.values():
+        spine.set_color('black')
+    plt.savefig(os.path.join(args.output, "alff_transparent.png"), dpi=300, bbox_inches='tight', transparent=True)
+    plt.close()
+
+    # 4. 116张时间序列图（保持原来黑底）
     print("正在生成116张脑区时间序列图...")
     image_paths = []
     for idx, (i, label_info) in enumerate(zip(range(116), AAL116_LABELS), 1):
@@ -193,6 +222,24 @@ def main():
         plt.savefig(path, dpi=150, bbox_inches='tight', facecolor='black')
         plt.close()
         image_paths.append(path)
+
+        # 仅额外生成一张：001_Precentral_L_transparent.png
+        if idx == 1 and label_info["en"] == "Precentral_L":
+            fig2 = plt.figure(figsize=(10, 3), facecolor='none')
+            ax2 = fig2.add_subplot(111)
+            ax2.set_facecolor('none')
+            ax2.plot(ts, color='#7EC8FF', linewidth=1)  # 浅蓝
+            ax2.set_title(label_info['zh'], fontsize=12, color='black')
+            ax2.set_xlabel('Time', color='black')
+            ax2.set_ylabel('BOLD signal', color='black')
+            ax2.tick_params(colors='black')
+            ax2.grid(True, alpha=0.2, color='black')
+            for spine in ax2.spines.values():
+                spine.set_color('black')
+            path2 = os.path.join(plot_dir, f"{idx:03d}_{label_info['en']}_transparent.png")
+            plt.savefig(path2, dpi=150, bbox_inches='tight', transparent=True)
+            plt.close(fig2)
+
         if idx % 20 == 0 or idx == 116:
             print(f"   已完成 {idx}/116 张")
 

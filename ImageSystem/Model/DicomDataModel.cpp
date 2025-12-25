@@ -216,7 +216,7 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     m_statsDir = dirPath + "/sourcedata/freesurfer/sub-01/stats";
     QString mgzPath = mriDirPath + "/aparc+aseg.mgz";
     QString niiPath = mriDirPath + "/aparc+aseg.nii.gz";
-    QString origMgzPath = dirPath + "/T1.mgz";
+    QString origMgzPath = mriDirPath + "/T1.mgz";
     QString origNiiPathGz = mriDirPath + "/T1.nii.gz";
     QString origNiiPath = mriDirPath + "/T1.nii";
     
