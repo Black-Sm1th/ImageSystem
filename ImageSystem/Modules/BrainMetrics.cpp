@@ -39,8 +39,6 @@ bool BrainMetrics::Load()
 {
     asegRows_.clear();
     aparcRows_.clear();
-    asegBySegId_.clear();
-    aparcByName_.clear();
 
     std::filesystem::path base(baseDir_);
     bool okAseg = LoadAseg(base / "aseg.stats");
@@ -52,20 +50,6 @@ bool BrainMetrics::Load()
     }
     ComputeAsegAsymmetry();
     return true;
-}
-
-const AsegStatsRow* BrainMetrics::FindAsegBySegId(int segId) const
-{
-    auto it = asegBySegId_.find(segId);
-    if (it == asegBySegId_.end()) return nullptr;
-    return &asegRows_[it->second];
-}
-
-const AparcStatsRow* BrainMetrics::FindAparcByName(const std::string& name) const
-{
-    auto it = aparcByName_.find(NormalizeName(name));
-    if (it == aparcByName_.end()) return nullptr;
-    return &aparcRows_[it->second];
 }
 
 bool BrainMetrics::LoadAseg(const std::filesystem::path& filePath)
@@ -114,10 +98,7 @@ bool BrainMetrics::LoadAseg(const std::filesystem::path& filePath)
 
         const size_t idx = asegRows_.size();
         asegRows_.push_back(std::move(rec));
-        if (asegRows_.back().segId >= 0)
-        {
-            asegBySegId_[asegRows_.back().segId] = idx;
-        }
+        (void)idx;
     }
     return true;
 }
@@ -169,7 +150,7 @@ bool BrainMetrics::LoadAparc(const std::filesystem::path& filePath, char hemisph
 
         const size_t idx = aparcRows_.size();
         aparcRows_.push_back(std::move(rec));
-        aparcByName_[NormalizeName(aparcRows_.back().name)] = idx;
+        (void)idx;
     }
     return true;
 }
@@ -182,7 +163,7 @@ void BrainMetrics::ComputeAsegAsymmetry()
     {
         const auto& r = asegRows_[i];
         if (r.hemisphere != 'L' && r.hemisphere != 'R') continue;
-        auto& p = pairs[NormalizeName(r.baseName)];
+        auto& p = pairs[ToLower(TrimLocal(r.baseName))];
         if (r.hemisphere == 'L') p.li = i;
         else p.ri = i;
     }
@@ -200,39 +181,5 @@ void BrainMetrics::ComputeAsegAsymmetry()
         L.partnerSegId = R.segId;
         R.partnerSegId = L.segId;
     }
-}
-
-std::string BrainMetrics::NormalizeName(const std::string& name)
-{
-    return ToLower(TrimLocal(name));
-}
-
-std::string BrainMetrics::BaseNameFromStruct(const std::string& name, char hemisphere)
-{
-    std::string trimmed = TrimLocal(name);
-    auto lower = ToLower(trimmed);
-
-    auto stripPrefix = [&](const std::string& prefix) -> bool
-    {
-        if (lower.rfind(prefix, 0) == 0 && trimmed.size() > prefix.size())
-        {
-            trimmed = trimmed.substr(prefix.size());
-            lower = lower.substr(prefix.size());
-            return true;
-        }
-        return false;
-    };
-
-    // 常见前缀：Left-/Right-，ctx-lh-/ctx-rh-/wm-lh-/wm-rh-/lh./rh./lh-/rh_
-    stripPrefix("left-") || stripPrefix("right-");
-    stripPrefix("ctx-lh-") || stripPrefix("ctx-rh-") || stripPrefix("wm-lh-") || stripPrefix("wm-rh-");
-    stripPrefix("lh.") || stripPrefix("rh.") || stripPrefix("lh-") || stripPrefix("rh-") || stripPrefix("lh_") || stripPrefix("rh_");
-
-    // 去除残留的分隔符
-    while (!trimmed.empty() && (trimmed[0] == '-' || trimmed[0] == '_' || trimmed[0] == '.'))
-    {
-        trimmed.erase(0, 1);
-    }
-    return trimmed;
 }
 

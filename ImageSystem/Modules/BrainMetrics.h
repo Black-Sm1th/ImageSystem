@@ -57,14 +57,6 @@ public:
     const std::vector<AsegStatsRow>& Aseg() const { return asegRows_; }
     const std::vector<AparcStatsRow>& Aparc() const { return aparcRows_; }
 
-    // 查找（可选）
-    const AsegStatsRow* FindAsegBySegId(int segId) const;
-    const AparcStatsRow* FindAparcByName(const std::string& name) const; // name 带 ctx- 前缀
-
-    // 工具：名称归一化 / 去前缀基名（外部匹配用）
-    static std::string NormalizeName(const std::string& name);
-    static std::string BaseNameFromStruct(const std::string& name, char hemisphere);
-
 private:
     bool LoadAseg(const std::filesystem::path& filePath);
     bool LoadAparc(const std::filesystem::path& filePath, char hemisphere);
@@ -73,8 +65,5 @@ private:
     std::string baseDir_;
     std::vector<AsegStatsRow> asegRows_;
     std::vector<AparcStatsRow> aparcRows_; // lh+rh 合并
-
-    std::unordered_map<int, size_t> asegBySegId_;
-    std::unordered_map<std::string, size_t> aparcByName_; // normalize(name)
 };
 
