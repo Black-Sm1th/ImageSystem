@@ -116,8 +116,8 @@ def main():
     time_series = masker.fit_transform(args.bold, confounds=confounds)
     print(f"时间序列形状: {time_series.shape}")
 
-    # 1. covariance.png（背景透明 + 黑色文字）
-    print("生成 covariance.png...")
+    # 1. covariance_transparent.png（背景透明 + 黑色文字）
+    print("生成 covariance_transparent.png...")
     correlation_matrix = ConnectivityMeasure(kind="correlation").fit_transform([time_series])[0]
     np.fill_diagonal(correlation_matrix, 1)
     fig = plt.figure(facecolor='none')
@@ -139,7 +139,29 @@ def main():
             cbar.ax.set_facecolor('none')
             if hasattr(cbar, "outline") and cbar.outline:
                 cbar.outline.set_edgecolor('black')
-    plt.savefig(os.path.join(args.output, "covariance.png"), dpi=300, bbox_inches='tight', transparent=True)
+    plt.savefig(os.path.join(args.output, "covariance_transparent.png"), dpi=300, bbox_inches='tight', transparent=True)
+    plt.close()
+
+    # 1b. covariance.png（黑底 + 白字）
+    print("生成 covariance.png（黑底）...")
+    fig = plt.figure(facecolor='black')
+    ax = fig.add_subplot(111)
+    ax.set_facecolor('black')
+    plotting.plot_matrix(correlation_matrix, title="Covariance", vmax=1, vmin=-1, colorbar=True, axes=ax)
+    ax.tick_params(colors='white')
+    ax.xaxis.label.set_color('white')
+    ax.yaxis.label.set_color('white')
+    ax.title.set_color('white')
+    for spine in ax.spines.values():
+        spine.set_color('white')
+    if hasattr(ax, 'images') and len(ax.images) > 0:
+        cbar = ax.images[0].colorbar
+        if cbar:
+            cbar.ax.tick_params(colors='white')
+            cbar.ax.set_facecolor('black')
+            if hasattr(cbar, "outline") and cbar.outline:
+                cbar.outline.set_edgecolor('white')
+    plt.savefig(os.path.join(args.output, "covariance.png"), dpi=300, bbox_inches='tight', facecolor='black')
     plt.close()
 
     # 2. viewConnectome.html
