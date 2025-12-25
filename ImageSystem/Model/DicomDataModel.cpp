@@ -136,6 +136,9 @@ void DicomDataModel::setSegDataMode(bool enabled)
 
 void DicomDataModel::generateSegDataPNGs(const QString& path, QString& axialMidPngPath, QString& coronalMidPngPath, QString& sagittalMidPngPath, QString& seg3dPngPath)
 {
+    if (!m_region) {
+        return;
+    }
     m_region->GenerateMidSlicePNGs(path.toStdString());
     m_region->GenerateSegmentation3DPng(path.toStdString());
     axialMidPngPath = QString::fromStdString(m_region->GetAxialMidPngPath());

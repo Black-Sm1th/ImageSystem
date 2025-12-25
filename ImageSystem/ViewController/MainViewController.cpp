@@ -1043,7 +1043,7 @@ void MainViewController::importBrainData(const QString& url)
                 filters << "*.png" << "*.jpg" << "*.jpeg" << "*.bmp" << "*.gif";
                 QStringList imageFiles = regionPlotsDir.entryList(filters, QDir::Files);
                 
-                if (imageFiles.count() == 116) {
+                if (imageFiles.count() == 117) {
                     // ========== 符合逻辑一：已有完整的处理结果 ==========
                     qDebug() << QStringLiteral("检测到完整的脑网络分析结果!!!");
                     
@@ -1635,15 +1635,15 @@ void MainViewController::generatePdfReport(const QString& savePath)
     painter.setPen(QColor("#454545"));
     drawCatalogItem(260, QStringLiteral("1、脑测量数据总览"), QStringLiteral("4"));
     drawCatalogItem(310, QStringLiteral("2、脑测量详细数据"), QStringLiteral("4"));
-    drawCatalogItem(360, QStringLiteral("3、脑网络分析总览"), QStringLiteral("7"));
-    drawCatalogItem(410, QStringLiteral("4、脑网络分析结果"), QStringLiteral("7"));
-    drawCatalogItem(460, QStringLiteral("5、脑网络区域详细数据"), QStringLiteral("7"));
-    drawCatalogItem(510, QStringLiteral("6、脑龄预测AI分析结果"), QStringLiteral("8"));
+    drawCatalogItem(360, QStringLiteral("3、脑网络分析总览"), QStringLiteral("8"));
+    drawCatalogItem(410, QStringLiteral("4、脑网络分析结果"), QStringLiteral("9"));
+    drawCatalogItem(460, QStringLiteral("5、脑网络区域详细数据"), QStringLiteral("9"));
+    drawCatalogItem(510, QStringLiteral("6、脑龄预测AI分析结果"), QStringLiteral("13"));
 
     // 第二页页码（居中，距底部40px）
     painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
     painter.setPen(QColor("#C9CDD4"));
-    QString page2Number = QStringLiteral("2/8");
+    QString page2Number = QStringLiteral("2/13");
     QFontMetrics page2Fm = painter.fontMetrics();
     int page2NumberWidth = page2Fm.horizontalAdvance(page2Number);
     int page2NumberX = (targetRect.width() - page2NumberWidth) / 2;
@@ -1742,7 +1742,7 @@ void MainViewController::generatePdfReport(const QString& savePath)
     // 绘制两位数数字（居中在logo4的X方向中心，Y=340）
     painter.setFont(QFont("Alibaba PuHuiTi 3.0", 24, QFont::Bold));
     painter.setPen(QColor("#FFFFFF"));
-    QString ageNumber = QStringLiteral("4"); // 示例两位数
+    QString ageNumber = QString::number(qRound(getpredictedBrainAge())); // 示例两位数
     QFontMetrics ageNumberFm = painter.fontMetrics();
     int ageNumberWidth = ageNumberFm.horizontalAdvance(ageNumber);
     int ageNumberX = logo4CenterX - ageNumberWidth / 2; // 数字居中
@@ -1751,7 +1751,7 @@ void MainViewController::generatePdfReport(const QString& savePath)
     // 绘制delta值
     painter.setFont(QFont("Alibaba PuHuiTi 3.0", 10, QFont::Bold));
     painter.setPen(QColor("#FFFFFF"));
-    QString deltaAgeNumber = QStringLiteral("+1"); // 示例两位数
+    QString deltaAgeNumber = QStringLiteral("+x"); // 示例两位数
     QFontMetrics deltaAgeNumberFm = painter.fontMetrics();
     int deltaAgeNumberWidth = deltaAgeNumberFm.horizontalAdvance(deltaAgeNumber);
     int deltaAgeNumberX = logo4CenterX - deltaAgeNumberWidth / 2; // 数字居中
@@ -1784,9 +1784,9 @@ void MainViewController::generatePdfReport(const QString& savePath)
     
     QVector<TextSegment> segments = {
         {QStringLiteral("根据系统监测，脑龄预测年龄为"), normalFont, normalColor},
-        {QStringLiteral("15岁"), highlightFont, highlightColor},
+        {QString::number(qRound(getpredictedBrainAge())) + QStringLiteral("岁"), highlightFont, highlightColor},
         {QStringLiteral("，较实际年龄长"), normalFont, normalColor},
-        {QStringLiteral("6年"), highlightFont, highlightColor}, 
+        {QStringLiteral("x年"), highlightFont, highlightColor}, 
         {QStringLiteral("。"), normalFont, normalColor},
     };
     
@@ -1851,7 +1851,7 @@ void MainViewController::generatePdfReport(const QString& savePath)
     // 第三页页码（居中，距底部40px）
     painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
     painter.setPen(QColor("#C9CDD4"));
-    QString page3Number = QStringLiteral("3/8");
+    QString page3Number = QStringLiteral("3/13");
     QFontMetrics page3Fm = painter.fontMetrics();
     int page3NumberWidth = page3Fm.horizontalAdvance(page3Number);
     int page3NumberX = (targetRect.width() - page3NumberWidth) / 2;
@@ -1938,271 +1938,711 @@ void MainViewController::generatePdfReport(const QString& savePath)
             }
         }
     }
-    //// 设置字体 - 使用更大的字体
-    //QFont titleFont("Microsoft YaHei", 24, QFont::Bold);
-    //QFont headerFont("Microsoft YaHei", 16, QFont::Bold);
-    //QFont normalFont("Microsoft YaHei", 13);
-    //QFont smallFont("Microsoft YaHei", 11);
-    //
-    //int pageWidth = writer.width();
-    //int pageHeight = writer.height();
-    //int y = 300;  // 增加顶部留白
-    //
-    //// ========== 第1页：标题和脑网络统计 ==========
-    //painter.setFont(titleFont);
-    //int titleHeight = painter.fontMetrics().height();
-    //painter.drawText(QRect(0, y, pageWidth, titleHeight + 50), Qt::AlignCenter, QStringLiteral("脑功能分析报告"));
-    //y += titleHeight + 120;  // 标题高度 + 额外间距
-    //
-    //painter.setFont(normalFont);
-    //int dateHeight = painter.fontMetrics().height();
-    //QString dateTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
-    //painter.drawText(QRect(0, y, pageWidth, dateHeight + 40), Qt::AlignCenter, QStringLiteral("生成时间: ") + dateTime);
-    //y += dateHeight + 100;  // 日期高度 + 额外间距
-    //
-    //// 脑网络统计信息
-    //painter.setFont(headerFont);
-    //int headerHeight = painter.fontMetrics().height();
-    //painter.drawText(50, y, QStringLiteral("一、脑网络分析结果"));
-    //y += headerHeight + 80;  // 标题字体高度 + 额外间距
-    //
-    //painter.setFont(normalFont);
-    //QStringList networkStats;
-    //networkStats << QStringLiteral("全局效率: %1").arg(getglobalEfficiency(), 0, 'f', 4);
-    //networkStats << QStringLiteral("平均局部效率: %1").arg(getaverageLocalEfficiency(), 0, 'f', 4);
-    //networkStats << QStringLiteral("平均聚类系数: %1").arg(getaverageClusteringCoefficient(), 0, 'f', 4);
-    //networkStats << QStringLiteral("富俱乐部连接: %1").arg(getrichClubConnections(), 0, 'f', 4);
-    //networkStats << QStringLiteral("桥接连接: %1").arg(getbridgeConnections(), 0, 'f', 4);
-    //networkStats << QStringLiteral("局部连接: %1").arg(getlocalConnections(), 0, 'f', 4);
-    //
-    //int lineHeight = painter.fontMetrics().height();  // 获取字体实际高度
-    //for (const QString& stat : networkStats) {
-    //    painter.drawText(100, y, stat);
-    //    y += lineHeight + 60;  // 字体高度 + 额外间距
-    //}
-    //
-    //y += 150;  // 增加段落间距
-    //
-    //// ========== 脑网络表格 ==========
-    //painter.setFont(headerFont);
-    //int header2Height = painter.fontMetrics().height();
-    //painter.drawText(50, y, QStringLiteral("二、脑网络区域详细数据"));
-    //y += header2Height + 80;  // 标题字体高度 + 额外间距
-    //
-    //// 表格列宽 - 使用百分比分配，确保均衡
-    //int availableWidth = pageWidth - 100;  // 留出左右边距
-    //int colWidths[6];
-    //// 序号8%, 中文名28%, Mricro28%, 度12%, 聚类12%, 局部效率12%
-    //colWidths[0] = (int)(availableWidth * 0.08);  // 序号
-    //colWidths[1] = (int)(availableWidth * 0.28);  // 中文名称
-    //colWidths[2] = (int)(availableWidth * 0.28);  // Mricro命名
-    //colWidths[3] = (int)(availableWidth * 0.12);  // 度
-    //colWidths[4] = (int)(availableWidth * 0.12);  // 聚类
-    //colWidths[5] = (int)(availableWidth * 0.12);  // 局部效率
-    //
-    //int totalWidth = 0;
-    //for (int w : colWidths) totalWidth += w;
-    //
-    //// 表头
-    //QStringList headers = {QStringLiteral("序号"), QStringLiteral("中文名称"), 
-    //                       QStringLiteral("Mricro命名"), QStringLiteral("度"), 
-    //                       QStringLiteral("聚类"), QStringLiteral("局部效率")};
-    //
-    //painter.setFont(smallFont);
-    //painter.setPen(Qt::black);
-    //
-    //// 绘制表头 - 居中对齐
-    //int startX = (pageWidth - totalWidth) / 2;
-    //if (startX < 50) startX = 50;  // 至少保留50的左边距
-    //int x = startX;
-    //// 根据字体高度动态计算行高
-    //int cellFontHeight = painter.fontMetrics().height();
-    //int rowHeight = cellFontHeight * 3;  // 字体高度的3倍，确保足够空间
-    //
-    //for (int i = 0; i < headers.size(); i++) {
-    //    painter.drawRect(x, y, colWidths[i], rowHeight);
-    //    painter.drawText(QRect(x + 10, y, colWidths[i] - 20, rowHeight), 
-    //                    Qt::AlignCenter | Qt::AlignVCenter, headers[i]);
-    //    x += colWidths[i];
-    //}
-    //y += rowHeight;
-    //
-    //// 绘制数据行
-    //int rowCount = m_brainRegionTableModel->rowCount();
-    //int maxRowsPerPage = (pageHeight - y - 100) / rowHeight;
-    //int currentRow = 0;
-    //
-    //for (int row = 0; row < rowCount; row++) {
-    //    if (currentRow >= maxRowsPerPage) {
-    //        // 换页
-    //        writer.newPage();
-    //        y = 300;  // 统一顶部留白
-    //        currentRow = 0;
-    //        
-    //        // 重新绘制表头
-    //        x = startX;
-    //        for (int i = 0; i < headers.size(); i++) {
-    //            painter.drawRect(x, y, colWidths[i], rowHeight);
-    //            painter.drawText(QRect(x + 10, y, colWidths[i] - 20, rowHeight), 
-    //                            Qt::AlignCenter | Qt::AlignVCenter, headers[i]);
-    //            x += colWidths[i];
-    //        }
-    //        y += rowHeight;
-    //    }
-    //    
-    //    x = startX;
-    //    QModelIndex idx = m_brainRegionTableModel->index(row, 0);
-    //    
-    //    // 序号
-    //    painter.drawRect(x, y, colWidths[0], rowHeight);
-    //    painter.drawText(QRect(x + 10, y, colWidths[0] - 20, rowHeight), 
-    //                    Qt::AlignCenter | Qt::AlignVCenter, QString::number(row + 1));
-    //    x += colWidths[0];
-    //    
-    //        // 中文名称
-    //        QString chName = m_brainRegionTableModel->data(idx, BrainRegionTableModel::ChineseNameRole).toString();
-    //        painter.drawRect(x, y, colWidths[1], rowHeight);
-    //        QRect chNameRect(x + 10, y, colWidths[1] - 20, rowHeight);
-    //        painter.drawText(chNameRect, Qt::AlignLeft | Qt::AlignVCenter, chName);
-    //        x += colWidths[1];
-    //        
-    //        // Mricro命名
-    //        QString enName = m_brainRegionTableModel->data(idx, BrainRegionTableModel::EnglishNameRole).toString();
-    //        painter.drawRect(x, y, colWidths[2], rowHeight);
-    //        QRect enNameRect(x + 10, y, colWidths[2] - 20, rowHeight);
-    //        painter.drawText(enNameRect, Qt::AlignLeft | Qt::AlignVCenter, enName);
-    //        x += colWidths[2];
-    //    
-    //        // 度
-    //        QString degree = m_brainRegionTableModel->data(idx, BrainRegionTableModel::DegreeRole).toString();
-    //        painter.drawRect(x, y, colWidths[3], rowHeight);
-    //        painter.drawText(QRect(x + 10, y, colWidths[3] - 20, rowHeight), 
-    //                        Qt::AlignCenter | Qt::AlignVCenter, degree);
-    //        x += colWidths[3];
-    //        
-    //        // 聚类
-    //        QString clustering = m_brainRegionTableModel->data(idx, BrainRegionTableModel::ClusteringRole).toString();
-    //        painter.drawRect(x, y, colWidths[4], rowHeight);
-    //        painter.drawText(QRect(x + 10, y, colWidths[4] - 20, rowHeight), 
-    //                        Qt::AlignCenter | Qt::AlignVCenter, clustering);
-    //        x += colWidths[4];
-    //        
-    //        // 局部效率
-    //        QString localEff = m_brainRegionTableModel->data(idx, BrainRegionTableModel::LocalEfficiencyRole).toString();
-    //        painter.drawRect(x, y, colWidths[5], rowHeight);
-    //        painter.drawText(QRect(x + 10, y, colWidths[5] - 20, rowHeight), 
-    //                        Qt::AlignCenter | Qt::AlignVCenter, localEff);
-    //    
-    //    y += rowHeight;
-    //    currentRow++;
-    //}
-    //
-    //// ========== 新页：脑区分割表格 =========
-    //writer.newPage();
-    //y = 300;  // 统一顶部留白
-    //
-    //painter.setFont(headerFont);
-    //int header3Height = painter.fontMetrics().height();
-    //painter.drawText(50, y, QStringLiteral("三、脑区分割详细数据"));
-    //y += header3Height + 80;  // 标题字体高度 + 额外间距
-    //
-    //// 脑分割表格列宽 - 使用百分比分配，确保均衡deepde
-    //int segAvailableWidth = pageWidth - 100;  // 留出左右边距
-    //int segColWidths[5];
-    //// 中文名35%, 位置15%, 容积17%, 全脑占比17%, 不对称16%
-    //segColWidths[0] = (int)(segAvailableWidth * 0.35);  // 中文名称
-    //segColWidths[1] = (int)(segAvailableWidth * 0.15);  // 位置
-    //segColWidths[2] = (int)(segAvailableWidth * 0.17);  // 容积(cm³)
-    //segColWidths[3] = (int)(segAvailableWidth * 0.17);  // 全脑占比
-    //segColWidths[4] = (int)(segAvailableWidth * 0.16);  // 不对称指数
-    //
-    //int segTotalWidth = 0;
-    //for (int w : segColWidths) segTotalWidth += w;
-    //
-    //QStringList segHeaders = {QStringLiteral("中文名称"), QStringLiteral("位置"), 
-    //                          QStringLiteral("容积(cm³)"), QStringLiteral("全脑占比"), 
-    //                          QStringLiteral("不对称指数")};
-    //
-    //painter.setFont(smallFont);
-    //
-    //// 绘制表头 - 居中对齐
-    //startX = (pageWidth - segTotalWidth) / 2;
-    //if (startX < 50) startX = 50;  // 至少保留50的左边距
-    //x = startX;
-    //
-    //for (int i = 0; i < segHeaders.size(); i++) {
-    //    painter.drawRect(x, y, segColWidths[i], rowHeight);
-    //    painter.drawText(QRect(x + 10, y, segColWidths[i] - 20, rowHeight), 
-    //                    Qt::AlignCenter | Qt::AlignVCenter, segHeaders[i]);
-    //    x += segColWidths[i];
-    //}
-    //y += rowHeight;
-    //
-    //// 绘制脑分割数据
-    //if (m_brainSegmentationTableModel) {
-    //    int segRowCount = m_brainSegmentationTableModel->rowCount();
-    //    maxRowsPerPage = (pageHeight - y - 100) / rowHeight;
-    //    currentRow = 0;
-    //    
-    //    for (int row = 0; row < segRowCount; row++) {
-    //        if (currentRow >= maxRowsPerPage) {
-    //            // 换页
-    //            writer.newPage();
-    //            y = 300;  // 统一顶部留白
-    //            currentRow = 0;
-    //            
-    //            // 重新绘制表头
-    //            x = startX;
-    //            for (int i = 0; i < segHeaders.size(); i++) {
-    //                painter.drawRect(x, y, segColWidths[i], rowHeight);
-    //                painter.drawText(QRect(x + 10, y, segColWidths[i] - 20, rowHeight), 
-    //                                Qt::AlignCenter | Qt::AlignVCenter, segHeaders[i]);
-    //                x += segColWidths[i];
-    //            }
-    //            y += rowHeight;
-    //        }
-    //        
-    //        x = startX;
-    //        QModelIndex idx = m_brainSegmentationTableModel->index(row, 0);
-    //        
-    //        // 中文名称
-    //        QString chName = m_brainSegmentationTableModel->data(idx, BrainSegmentationTableModel::ChineseNameRole).toString();
-    //        painter.drawRect(x, y, segColWidths[0], rowHeight);
-    //        QRect chNameRect(x + 10, y, segColWidths[0] - 20, rowHeight);
-    //        painter.drawText(chNameRect, Qt::AlignLeft | Qt::AlignVCenter, chName);
-    //        x += segColWidths[0];
-    //        
-    //        // 位置
-    //        QString hemisphere = m_brainSegmentationTableModel->data(idx, BrainSegmentationTableModel::HemisphereRole).toString();
-    //        painter.drawRect(x, y, segColWidths[1], rowHeight);
-    //        painter.drawText(QRect(x + 10, y, segColWidths[1] - 20, rowHeight), 
-    //                        Qt::AlignCenter | Qt::AlignVCenter, hemisphere);
-    //        x += segColWidths[1];
-    //        
-    //        // 容积
-    //        QString volume = m_brainSegmentationTableModel->data(idx, BrainSegmentationTableModel::VolumeRole).toString();
-    //        painter.drawRect(x, y, segColWidths[2], rowHeight);
-    //        painter.drawText(QRect(x + 10, y, segColWidths[2] - 20, rowHeight), 
-    //                        Qt::AlignCenter | Qt::AlignVCenter, volume);
-    //        x += segColWidths[2];
-    //        
-    //        // 全脑占比
-    //        QString volumePercent = m_brainSegmentationTableModel->data(idx, BrainSegmentationTableModel::VolumePercentRole).toString();
-    //        painter.drawRect(x, y, segColWidths[3], rowHeight);
-    //        painter.drawText(QRect(x + 10, y, segColWidths[3] - 20, rowHeight), 
-    //                        Qt::AlignCenter | Qt::AlignVCenter, volumePercent);
-    //        x += segColWidths[3];
-    //        
-    //        // 不对称指数
-    //        QString asymmetry = m_brainSegmentationTableModel->data(idx, BrainSegmentationTableModel::AsymmetryIndexRole).toString();
-    //        painter.drawRect(x, y, segColWidths[4], rowHeight);
-    //        painter.drawText(QRect(x + 10, y, segColWidths[4] - 20, rowHeight), 
-    //                        Qt::AlignCenter | Qt::AlignVCenter, asymmetry);
-    //        
-    //        y += rowHeight;
-    //        currentRow++;
-    //    }
-    //}
+
+    QImage title4(":/image/pdf-title4.png");
+    // 绘制title4图片
+    QRect targetRectTitle4(0, imageStartY + 220, title4.width() / 2, title4.height() / 2);
+    painter.drawImage(targetRectTitle4, title4);
+
+    // ========== 脑分割表格 ==========
+    int tableStartY = imageStartY + 220 + title4.height() / 2 + 10; // title4下方10px
+    
+    // 表格列宽设置
+    int tableAvailableWidth = targetRect.width() - 64; // 左右各留40px边距
+    int segColWidths[5];
+    // 中文名35%, 位置15%, 容积17%, 全脑占比17%, 不对称16%
+    segColWidths[0] = (int)(tableAvailableWidth * 0.35);  // 中文名称
+    segColWidths[1] = (int)(tableAvailableWidth * 0.15);  // 位置
+    segColWidths[2] = (int)(tableAvailableWidth * 0.17);  // 容积(cm³)
+    segColWidths[3] = (int)(tableAvailableWidth * 0.17);  // 全脑占比
+    segColWidths[4] = (int)(tableAvailableWidth * 0.16);  // 不对称指数
+    
+    int segTotalWidth = 0;
+    for (int w : segColWidths) segTotalWidth += w;
+    
+    QStringList segHeaders = {QStringLiteral("中文名称"), QStringLiteral("位置"), 
+                              QStringLiteral("容积(cm³)"), QStringLiteral("全脑占比"), 
+                              QStringLiteral("不对称指数")};
+    
+    // 设置表格字体和行高
+    painter.setFont(QFont("Alibaba PuHuiTi 3.0", 10, QFont::Medium));
+    QFontMetrics tableFm = painter.fontMetrics();
+    int rowHeight = tableFm.height() * 2.5 - 10; // 行高为字体高度的2.5倍减10px
+    
+    // 绘制表头
+    int tableStartX = (targetRect.width() - segTotalWidth) / 2;
+    if (tableStartX < 32) tableStartX = 32; // 至少保留40的左边距
+    int tableX = tableStartX;
+    int tableY = tableStartY;
+    
+    // 表头背景和文字
+    painter.setPen(QPen(QColor("#5B5B5B"), 1));
+    for (int i = 0; i < segHeaders.size(); i++) {
+        painter.setBrush(QColor("#F7F8FA"));
+        painter.drawRect(tableX, tableY, segColWidths[i], rowHeight);
+        painter.setPen(QColor("#000000"));
+        painter.drawText(QRect(tableX + 5, tableY, segColWidths[i] - 10, rowHeight), 
+                        Qt::AlignCenter | Qt::AlignVCenter, segHeaders[i]);
+        painter.setPen(QPen(QColor("#5B5B5B"), 1));
+        tableX += segColWidths[i];
+    }
+    tableY += rowHeight;
+    
+    // 页码计数器（第四页开始）
+    int currentPageNumber = 4;
+    
+    // 绘制脑分割数据
+    if (m_brainSegmentationTableModel) {
+        int segRowCount = m_brainSegmentationTableModel->rowCount();
+        // 计算当前页面可以容纳的最大行数（底部留50px用于页码）
+        int maxRowsPerPage = (targetRect.height() - tableY - 50) / rowHeight;
+        int currentRow = 0;
+        
+        for (int row = 0; row < segRowCount; row++) {
+            if (currentRow >= maxRowsPerPage) {
+                // 绘制当前页页码（底部居中）
+                painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
+                painter.setPen(QColor("#C9CDD4"));
+                QString pageNumber = QString("%1/13").arg(currentPageNumber);
+                QFontMetrics pageNumberFm = painter.fontMetrics();
+                int pageNumberWidth = pageNumberFm.horizontalAdvance(pageNumber);
+                int pageNumberX = (targetRect.width() - pageNumberWidth) / 2;
+                int pageNumberY = targetRect.height() - 20;
+                painter.drawText(pageNumberX, pageNumberY, pageNumber);
+                
+                // 换页
+                writer.newPage();
+                currentPageNumber++; // 页码递增
+                
+                // 绘制页面顶部标题
+                painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
+                painter.setPen(QColor("#C9CDD4"));
+                QString pageTopName = QStringLiteral("脑测量分析报告");
+                QFontMetrics pageTopNameFm = painter.fontMetrics();
+                int pageTopNameWidth = pageTopNameFm.horizontalAdvance(pageTopName);
+                int pageTopNameX = (targetRect.width() - pageTopNameWidth) / 2;
+                painter.drawText(pageTopNameX, 50, pageTopName);
+                
+                // 绘制title4图片（在标题下方）
+                QRect targetRectTitle4NewPage(0, 80, title4.width() / 2, title4.height() / 2);
+                painter.drawImage(targetRectTitle4NewPage, title4);
+                
+                tableY = 80 + title4.height() / 2 + 10; // title4下方10px
+                currentRow = 0;
+                
+                // 重新绘制表头
+                painter.setFont(QFont("Alibaba PuHuiTi 3.0", 10, QFont::Medium));
+                tableX = tableStartX;
+                painter.setPen(QPen(QColor("#5B5B5B"), 1));
+                for (int i = 0; i < segHeaders.size(); i++) {
+                    painter.setBrush(QColor("#F7F8FA"));
+                    painter.drawRect(tableX, tableY, segColWidths[i], rowHeight);
+                    painter.setPen(QColor("#000000"));
+                    painter.drawText(QRect(tableX + 5, tableY, segColWidths[i] - 10, rowHeight), 
+                                    Qt::AlignCenter | Qt::AlignVCenter, segHeaders[i]);
+                    painter.setPen(QPen(QColor("#5B5B5B"), 1));
+                    tableX += segColWidths[i];
+                }
+                tableY += rowHeight;
+                
+                // 换页后重新计算可容纳的最大行数（新页面从title4下方开始）
+                maxRowsPerPage = (targetRect.height() - tableY - 50) / rowHeight;
+            }
+            
+            tableX = tableStartX;
+            QModelIndex idx = m_brainSegmentationTableModel->index(row, 0);
+            
+            // 数据行背景（交替颜色）
+            painter.setBrush(row % 2 == 0 ? QColor("#FFFFFF") : QColor("#F7F8FA"));
+            painter.setPen(QPen(QColor("#5B5B5B"), 1));
+            painter.setFont(QFont("Alibaba PuHuiTi 3.0", 10, QFont::Normal));
+            
+            // 中文名称
+            QString chName = m_brainSegmentationTableModel->data(idx, BrainSegmentationTableModel::ChineseNameRole).toString();
+            painter.drawRect(tableX, tableY, segColWidths[0], rowHeight);
+            painter.setPen(QColor("#1D2129"));
+            painter.drawText(QRect(tableX + 5, tableY, segColWidths[0] - 10, rowHeight), 
+                            Qt::AlignCenter | Qt::AlignVCenter, chName);
+            painter.setPen(QPen(QColor("#5B5B5B"), 1));
+            tableX += segColWidths[0];
+            
+            // 位置
+            QString hemisphere = m_brainSegmentationTableModel->data(idx, BrainSegmentationTableModel::HemisphereRole).toString();
+            painter.drawRect(tableX, tableY, segColWidths[1], rowHeight);
+            painter.setPen(QColor("#1D2129"));
+            painter.drawText(QRect(tableX + 5, tableY, segColWidths[1] - 10, rowHeight), 
+                            Qt::AlignCenter | Qt::AlignVCenter, hemisphere);
+            painter.setPen(QPen(QColor("#5B5B5B"), 1));
+            tableX += segColWidths[1];
+            
+            // 容积
+            QString volume = m_brainSegmentationTableModel->data(idx, BrainSegmentationTableModel::VolumeRole).toString();
+            painter.drawRect(tableX, tableY, segColWidths[2], rowHeight);
+            painter.setPen(QColor("#1D2129"));
+            painter.drawText(QRect(tableX + 5, tableY, segColWidths[2] - 10, rowHeight), 
+                            Qt::AlignCenter | Qt::AlignVCenter, volume);
+            painter.setPen(QPen(QColor("#5B5B5B"), 1));
+            tableX += segColWidths[2];
+            
+            // 全脑占比
+            QString volumePercent = m_brainSegmentationTableModel->data(idx, BrainSegmentationTableModel::VolumePercentRole).toString();
+            painter.drawRect(tableX, tableY, segColWidths[3], rowHeight);
+            painter.setPen(QColor("#1D2129"));
+            painter.drawText(QRect(tableX + 5, tableY, segColWidths[3] - 10, rowHeight), 
+                            Qt::AlignCenter | Qt::AlignVCenter, volumePercent);
+            painter.setPen(QPen(QColor("#5B5B5B"), 1));
+            tableX += segColWidths[3];
+            
+            // 不对称指数
+            QString asymmetry = m_brainSegmentationTableModel->data(idx, BrainSegmentationTableModel::AsymmetryIndexRole).toString();
+            painter.drawRect(tableX, tableY, segColWidths[4], rowHeight);
+            painter.setPen(QColor("#1D2129"));
+            painter.drawText(QRect(tableX + 5, tableY, segColWidths[4] - 10, rowHeight), 
+                            Qt::AlignCenter | Qt::AlignVCenter, asymmetry);
+            
+            tableY += rowHeight;
+            currentRow++;
+        }
+    }
+    
+    // ========== 绘制title5图片 ==========
+    QImage title5(":/image/pdf-title5.png");
+    int title5Spacing = 20; // title5与表格的间距
+    int title5Height = title5.height() / 2;
+    
+    // 判断当前页是否有足够空间显示title5（需要title5高度 + 上下间距 + 页码空间）
+    int requiredSpace = title5Spacing + title5Height + 50; // 50px留给页码
+    if (tableY + requiredSpace > targetRect.height()) {
+        // 空间不足，绘制当前页页码并换页
+        painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
+        painter.setPen(QColor("#C9CDD4"));
+        QString pageNumber = QString("%1/13").arg(currentPageNumber);
+        QFontMetrics pageNumberFm = painter.fontMetrics();
+        int pageNumberWidth = pageNumberFm.horizontalAdvance(pageNumber);
+        int pageNumberX = (targetRect.width() - pageNumberWidth) / 2;
+        int pageNumberY = targetRect.height() - 20;
+        painter.drawText(pageNumberX, pageNumberY, pageNumber);
+        
+        // 换页
+        writer.newPage();
+        currentPageNumber++;
+        
+        // 绘制页面顶部标题
+        painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
+        painter.setPen(QColor("#C9CDD4"));
+        QString pageTopName = QStringLiteral("脑测量分析报告");
+        QFontMetrics pageTopNameFm = painter.fontMetrics();
+        int pageTopNameWidth = pageTopNameFm.horizontalAdvance(pageTopName);
+        int pageTopNameX = (targetRect.width() - pageTopNameWidth) / 2;
+        painter.drawText(pageTopNameX, 50, pageTopName);
+        
+        tableY = 80; // 从页面顶部开始
+    } else {
+        tableY += title5Spacing; // 添加间距
+    }
+    
+    // 绘制title5图片（居左）
+    QRect targetRectTitle5(0, tableY, title5.width() / 2, title5Height);
+    painter.drawImage(targetRectTitle5, title5);
+    tableY += title5Height;
+    
+    // ========== 绘制四张图片（两行两列）==========
+    // 尝试从currentAlffUrl等属性推导输出目录，如果没有则使用默认路径
+    QString outputDir;
+    if (!getcurrentAlffUrl().isEmpty()) {
+        // 从alff.png的路径推导出输出目录
+        QString alffUrl = getcurrentAlffUrl();
+        // 去掉 file:/// 前缀
+        if (alffUrl.startsWith("file:///")) {
+            alffUrl = alffUrl.mid(8); // 移除 "file:///"
+        }
+        outputDir = QFileInfo(alffUrl).absolutePath();
+    } else {
+        // 使用默认路径（可能需要根据实际情况调整）
+        outputDir = "E:/output";
+    }
+    
+    // 构建图片路径
+    QStringList imageNetPaths;
+    imageNetPaths << outputDir + "/region_plots/001_Precentral_L_transparent.png"  // 左上
+               << outputDir + "/alff_transparent.png"                                        // 右上
+               << outputDir + "/covariance_transparent.png"                                  // 左下
+               << outputDir + "/viewConnectome.png";                                                             // 右下（空）
+    
+    // 两行两列布局参数
+    int imagesSpacing = 20; // 图片间距
+    int imagesStartY = tableY + 20; // title5下方20px
+    int imageMargin = 32; // 左右边距
+    int availableWidthForImages = targetRect.width() - 2 * imageMargin;
+    int singleImageWidth = (availableWidthForImages - imagesSpacing) / 2 - 20; // 两列，中间一个间距，减小20px
+    int singleImageHeight = 180; // 每张图片的高度（从200减小到180）
+    int rowSpacing = 20; // 行间距
+    
+    // 绘制四张图片（两行两列）- 不进行换页判断
+    for (int row = 0; row < 2; row++) {
+        for (int col = 0; col < 2; col++) {
+            int index = row * 2 + col;
+            if (index >= imageNetPaths.size()) break;
+            
+            QString imgPath = imageNetPaths[index];
+            if (imgPath.isEmpty()) continue; // 跳过空位置
+            
+            // 计算图片位置
+            int imgX = imageMargin + col * (singleImageWidth + imagesSpacing);
+            int imgY = imagesStartY + row * (singleImageHeight + rowSpacing);
+            
+            // 后面两张图片（索引2和3）添加背景矩形
+            if (index == 2) {
+                painter.setPen(Qt::NoPen);
+                painter.setBrush(QColor("#F7F8FA"));
+                painter.drawRect(imgX, imgY, singleImageWidth, singleImageHeight);
+            }
+            
+            // 加载并绘制图片
+            if (QFile::exists(imgPath)) {
+                QImage image(imgPath);
+                if (!image.isNull()) {
+                    // 计算保持宽高比的目标尺寸
+                    QSize imageSize = image.size();
+                    QSize targetSize(singleImageWidth, singleImageHeight);
+                    imageSize.scale(targetSize, Qt::KeepAspectRatio);
+                    
+                    // 计算居中位置
+                    int drawX = imgX + (singleImageWidth - imageSize.width()) / 2;
+                    int drawY = imgY + (singleImageHeight - imageSize.height()) / 2;
+                    
+                    // 直接绘制原图到目标矩形，让QPainter进行高质量缩放
+                    QRect targetRect(drawX, drawY, imageSize.width(), imageSize.height());
+                    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+                    painter.setRenderHint(QPainter::Antialiasing, true);
+                    painter.drawImage(targetRect, image);
+                } else {
+                    // 图片加载失败，绘制占位框
+                    painter.setPen(QPen(QColor("#C9CDD4"), 1, Qt::DashLine));
+                    painter.setBrush(Qt::NoBrush);
+                    painter.drawRect(imgX, imgY, singleImageWidth, singleImageHeight);
+                    
+                    // 绘制提示文字
+                    painter.setPen(QColor("#86909C"));
+                    painter.setFont(QFont("Alibaba PuHuiTi 3.0", 10, QFont::Normal));
+                    painter.drawText(QRect(imgX, imgY, singleImageWidth, singleImageHeight),
+                                   Qt::AlignCenter, QStringLiteral("图片加载失败"));
+                }
+            } else {
+                // 图片不存在，绘制占位框
+                painter.setPen(QPen(QColor("#C9CDD4"), 1, Qt::DashLine));
+                painter.setBrush(Qt::NoBrush);
+                painter.drawRect(imgX, imgY, singleImageWidth, singleImageHeight);
+                
+                // 绘制提示文字
+                painter.setPen(QColor("#86909C"));
+                painter.setFont(QFont("Alibaba PuHuiTi 3.0", 10, QFont::Normal));
+                painter.drawText(QRect(imgX, imgY, singleImageWidth, singleImageHeight),
+                               Qt::AlignCenter, QStringLiteral("图片不存在"));
+            }
+        }
+    }
+    
+    // 绘制当前页的页码
+    painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
+    painter.setPen(QColor("#C9CDD4"));
+    QString finalPageNumber = QString("%1/13").arg(currentPageNumber);
+    QFontMetrics finalPageNumberFm = painter.fontMetrics();
+    int finalPageNumberWidth = finalPageNumberFm.horizontalAdvance(finalPageNumber);
+    int finalPageNumberX = (targetRect.width() - finalPageNumberWidth) / 2;
+    int finalPageNumberY = targetRect.height() - 20;
+    painter.drawText(finalPageNumberX, finalPageNumberY, finalPageNumber);
+
+    writer.newPage();
+    currentPageNumber++;
+
+    painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
+    painter.setPen(QColor("#C9CDD4"));
+    QString pageTopName2 = QStringLiteral("脑测量分析报告");
+    QFontMetrics pageTopNameFm2 = painter.fontMetrics();
+    int pageTopNameWidth2 = pageTopNameFm2.horizontalAdvance(pageTopName2);
+    int pageTopNameX2 = (targetRect.width() - pageTopNameWidth2) / 2;
+    painter.drawText(pageTopNameX2, 50, pageTopName2);
+    
+    // ========== 绘制title6图片 ==========
+    QImage title6(":/image/pdf-title6.png");
+    int title6Y = 80;
+    QRect targetRectTitle6(0, title6Y, title6.width() / 2, title6.height() / 2);
+    painter.drawImage(targetRectTitle6, title6);
+    
+    // ========== 显示脑网络指标表格 ==========
+    int indicatorsStartY = title6Y + title6.height() / 2 + 20; // title6下方20px
+    int indicatorMargin = 32; // 左右边距
+    
+    // 定义六个指标
+    QStringList indicatorLabels = {
+        QStringLiteral("全局效率"),
+        QStringLiteral("平均局部效率"),
+        QStringLiteral("平均聚类系数"),
+        QStringLiteral("富俱乐部连接"),
+        QStringLiteral("桥接连接"),
+        QStringLiteral("局部连接")
+    };
+    
+    QStringList indicatorValues = {
+        QString::number(getglobalEfficiency(), 'f', 4),
+        QString::number(getaverageLocalEfficiency(), 'f', 4),
+        QString::number(getaverageClusteringCoefficient(), 'f', 4),
+        QString::number(getrichClubConnections(), 'f', 4),
+        QString::number(getbridgeConnections(), 'f', 4),
+        QString::number(getlocalConnections(), 'f', 4)
+    };
+    
+    // 计算表格列宽
+    int indicatorTableWidth = targetRect.width() - 2 * indicatorMargin;
+    int indicatorColWidth = indicatorTableWidth / 6; // 6列均分
+    
+    // 设置表格字体和行高
+    painter.setFont(QFont("Alibaba PuHuiTi 3.0", 10, QFont::Medium));
+    QFontMetrics indicatorFm = painter.fontMetrics();
+    int indicatorRowHeight = indicatorFm.height() * 2.5 - 10;
+    
+    int indicatorTableX = indicatorMargin;
+    int indicatorTableY = indicatorsStartY;
+    
+    // 绘制表头
+    painter.setPen(QPen(QColor("#5B5B5B"), 1));
+    for (int i = 0; i < indicatorLabels.size(); i++) {
+        painter.setBrush(QColor("#F7F8FA"));
+        painter.drawRect(indicatorTableX, indicatorTableY, indicatorColWidth, indicatorRowHeight);
+        painter.setPen(QColor("#000000"));
+        painter.drawText(QRect(indicatorTableX + 5, indicatorTableY, indicatorColWidth - 10, indicatorRowHeight),
+                        Qt::AlignCenter | Qt::AlignVCenter, indicatorLabels[i]);
+        painter.setPen(QPen(QColor("#5B5B5B"), 1));
+        indicatorTableX += indicatorColWidth;
+    }
+    indicatorTableY += indicatorRowHeight;
+    
+    // 绘制数据行
+    indicatorTableX = indicatorMargin;
+    painter.setPen(QPen(QColor("#5B5B5B"), 1));
+    painter.setFont(QFont("Alibaba PuHuiTi 3.0", 10, QFont::Normal));
+    for (int i = 0; i < indicatorValues.size(); i++) {
+        painter.setBrush(QColor("#FFFFFF"));
+        painter.drawRect(indicatorTableX, indicatorTableY, indicatorColWidth, indicatorRowHeight);
+        painter.setPen(QColor("#1D2129"));
+        painter.drawText(QRect(indicatorTableX + 5, indicatorTableY, indicatorColWidth - 10, indicatorRowHeight),
+                        Qt::AlignCenter | Qt::AlignVCenter, indicatorValues[i]);
+        painter.setPen(QPen(QColor("#5B5B5B"), 1));
+        indicatorTableX += indicatorColWidth;
+    }
+    
+    // ========== 绘制title7图片 ==========
+    QImage title7(":/image/pdf-title7.png");
+    int title7Spacing = 20;
+    int title7Height = title7.height() / 2;
+    int title7Y = indicatorTableY + indicatorRowHeight + title7Spacing; // 指标表格下方20px
+    
+    // 判断是否需要换页显示title7
+    int requiredSpaceForTitle7 = title7Height + 100; // title7高度 + 表格表头最小高度
+    if (title7Y + requiredSpaceForTitle7 > targetRect.height() - 50) {
+        // 空间不足，绘制当前页页码并换页
+        painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
+        painter.setPen(QColor("#C9CDD4"));
+        QString pageNumber = QString("%1/13").arg(currentPageNumber);
+        QFontMetrics pageNumberFm = painter.fontMetrics();
+        int pageNumberWidth = pageNumberFm.horizontalAdvance(pageNumber);
+        int pageNumberX = (targetRect.width() - pageNumberWidth) / 2;
+        int pageNumberY = targetRect.height() - 20;
+        painter.drawText(pageNumberX, pageNumberY, pageNumber);
+        
+        // 换页
+        writer.newPage();
+        currentPageNumber++;
+        
+        // 绘制新页面顶部标题
+        painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
+        painter.setPen(QColor("#C9CDD4"));
+        QString newPageTopName = QStringLiteral("脑测量分析报告");
+        QFontMetrics newPageTopNameFm = painter.fontMetrics();
+        int newPageTopNameWidth = newPageTopNameFm.horizontalAdvance(newPageTopName);
+        int newPageTopNameX = (targetRect.width() - newPageTopNameWidth) / 2;
+        painter.drawText(newPageTopNameX, 50, newPageTopName);
+        
+        title7Y = 80; // 从新页面顶部开始
+    }
+    
+    // 绘制title7图片
+    QRect targetRectTitle7(0, title7Y, title7.width() / 2, title7Height);
+    painter.drawImage(targetRectTitle7, title7);
+    
+    // ========== 绘制脑网络列表表格 ==========
+    int networkTableStartY = title7Y + title7Height + 20; // title7下方20px
+    
+    // 表格列宽设置 - 6列：序号、中文名称、英文名称、度、聚类系数、局部效率
+    int networkTableWidth = targetRect.width() - 64; // 左右各留32px边距
+    int networkColWidths[6];
+    networkColWidths[0] = (int)(networkTableWidth * 0.08);  // 序号
+    networkColWidths[1] = (int)(networkTableWidth * 0.28);  // 中文名称
+    networkColWidths[2] = (int)(networkTableWidth * 0.28);  // 英文名称
+    networkColWidths[3] = (int)(networkTableWidth * 0.12);  // 度
+    networkColWidths[4] = (int)(networkTableWidth * 0.12);  // 聚类系数
+    networkColWidths[5] = (int)(networkTableWidth * 0.12);  // 局部效率
+    
+    int networkTotalWidth = 0;
+    for (int w : networkColWidths) networkTotalWidth += w;
+    
+    QStringList networkHeaders = {
+        QStringLiteral("序号"),
+        QStringLiteral("中文名称"),
+        QStringLiteral("英文名称"),
+        QStringLiteral("度"),
+        QStringLiteral("聚类系数"),
+        QStringLiteral("局部效率")
+    };
+    
+    // 设置表格字体和行高
+    painter.setFont(QFont("Alibaba PuHuiTi 3.0", 10, QFont::Medium));
+    QFontMetrics networkTableFm = painter.fontMetrics();
+    int networkRowHeight = networkTableFm.height() * 2.5 - 10;
+    
+    // 绘制表头
+    int networkTableStartX = (targetRect.width() - networkTotalWidth) / 2;
+    if (networkTableStartX < 32) networkTableStartX = 32;
+    int networkTableX = networkTableStartX;
+    int networkTableY = networkTableStartY;
+    
+    painter.setPen(QPen(QColor("#5B5B5B"), 1));
+    for (int i = 0; i < networkHeaders.size(); i++) {
+        painter.setBrush(QColor("#F7F8FA"));
+        painter.drawRect(networkTableX, networkTableY, networkColWidths[i], networkRowHeight);
+        painter.setPen(QColor("#000000"));
+        painter.drawText(QRect(networkTableX + 5, networkTableY, networkColWidths[i] - 10, networkRowHeight),
+                        Qt::AlignCenter | Qt::AlignVCenter, networkHeaders[i]);
+        painter.setPen(QPen(QColor("#5B5B5B"), 1));
+        networkTableX += networkColWidths[i];
+    }
+    networkTableY += networkRowHeight;
+    
+    // 绘制脑网络数据
+    if (m_brainRegionTableModel) {
+        int networkRowCount = m_brainRegionTableModel->rowCount();
+        int maxNetworkRowsPerPage = (targetRect.height() - networkTableY - 50) / networkRowHeight;
+        int currentNetworkRow = 0;
+
+        painter.setFont(QFont("Alibaba PuHuiTi 3.0", 10, QFont::Normal));
+
+        for (int row = 0; row < networkRowCount; row++) {
+            if (currentNetworkRow >= maxNetworkRowsPerPage) {
+                // 绘制当前页页码
+                painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
+                painter.setPen(QColor("#C9CDD4"));
+                QString pageNumber = QString("%1/13").arg(currentPageNumber);
+                QFontMetrics pageNumberFm = painter.fontMetrics();
+                int pageNumberWidth = pageNumberFm.horizontalAdvance(pageNumber);
+                int pageNumberX = (targetRect.width() - pageNumberWidth) / 2;
+                int pageNumberY = targetRect.height() - 20;
+                painter.drawText(pageNumberX, pageNumberY, pageNumber);
+
+                // 换页
+                writer.newPage();
+                currentPageNumber++;
+
+                // 绘制页面顶部标题
+                painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
+                painter.setPen(QColor("#C9CDD4"));
+                QString pageTopName = QStringLiteral("脑测量分析报告");
+                QFontMetrics pageTopNameFm = painter.fontMetrics();
+                int pageTopNameWidth = pageTopNameFm.horizontalAdvance(pageTopName);
+                int pageTopNameX = (targetRect.width() - pageTopNameWidth) / 2;
+                painter.drawText(pageTopNameX, 50, pageTopName);
+
+                // 绘制title7图片
+                QRect targetRectTitle7NewPage(0, 80, title7.width() / 2, title7Height);
+                painter.drawImage(targetRectTitle7NewPage, title7);
+
+                networkTableY = 80 + title7Height + 20;
+                currentNetworkRow = 0;
+
+                // 重新绘制表头
+                painter.setFont(QFont("Alibaba PuHuiTi 3.0", 10, QFont::Medium));
+                networkTableX = networkTableStartX;
+                painter.setPen(QPen(QColor("#5B5B5B"), 1));
+                for (int i = 0; i < networkHeaders.size(); i++) {
+                    painter.setBrush(QColor("#F7F8FA"));
+                    painter.drawRect(networkTableX, networkTableY, networkColWidths[i], networkRowHeight);
+                    painter.setPen(QColor("#000000"));
+                    painter.drawText(QRect(networkTableX + 5, networkTableY, networkColWidths[i] - 10, networkRowHeight),
+                        Qt::AlignCenter | Qt::AlignVCenter, networkHeaders[i]);
+                    painter.setPen(QPen(QColor("#5B5B5B"), 1));
+                    networkTableX += networkColWidths[i];
+                }
+                networkTableY += networkRowHeight;
+
+                // 换页后重新计算最大行数
+                maxNetworkRowsPerPage = (targetRect.height() - networkTableY - 50) / networkRowHeight;
+                painter.setFont(QFont("Alibaba PuHuiTi 3.0", 10, QFont::Normal));
+            }
+
+            networkTableX = networkTableStartX;
+            QModelIndex idx = m_brainRegionTableModel->index(row, 0);
+
+            // 数据行背景（交替颜色）
+            painter.setBrush(row % 2 == 0 ? QColor("#FFFFFF") : QColor("#F7F8FA"));
+            painter.setPen(QPen(QColor("#5B5B5B"), 1));
+
+            // 序号
+            painter.drawRect(networkTableX, networkTableY, networkColWidths[0], networkRowHeight);
+            painter.setPen(QColor("#1D2129"));
+            painter.drawText(QRect(networkTableX + 5, networkTableY, networkColWidths[0] - 10, networkRowHeight),
+                Qt::AlignCenter | Qt::AlignVCenter, QString::number(row + 1));
+            painter.setPen(QPen(QColor("#5B5B5B"), 1));
+            networkTableX += networkColWidths[0];
+
+            // 中文名称
+            QString chName = m_brainRegionTableModel->data(idx, BrainRegionTableModel::ChineseNameRole).toString();
+            painter.drawRect(networkTableX, networkTableY, networkColWidths[1], networkRowHeight);
+            painter.setPen(QColor("#1D2129"));
+            painter.drawText(QRect(networkTableX + 5, networkTableY, networkColWidths[1] - 10, networkRowHeight),
+                Qt::AlignCenter | Qt::AlignVCenter, chName);
+            painter.setPen(QPen(QColor("#5B5B5B"), 1));
+            networkTableX += networkColWidths[1];
+
+            // 英文名称
+            QString enName = m_brainRegionTableModel->data(idx, BrainRegionTableModel::EnglishNameRole).toString();
+            painter.drawRect(networkTableX, networkTableY, networkColWidths[2], networkRowHeight);
+            painter.setPen(QColor("#1D2129"));
+            painter.drawText(QRect(networkTableX + 5, networkTableY, networkColWidths[2] - 10, networkRowHeight),
+                Qt::AlignCenter | Qt::AlignVCenter, enName);
+            painter.setPen(QPen(QColor("#5B5B5B"), 1));
+            networkTableX += networkColWidths[2];
+
+            // 度
+            QString degree = m_brainRegionTableModel->data(idx, BrainRegionTableModel::DegreeRole).toString();
+            painter.drawRect(networkTableX, networkTableY, networkColWidths[3], networkRowHeight);
+            painter.setPen(QColor("#1D2129"));
+            painter.drawText(QRect(networkTableX + 5, networkTableY, networkColWidths[3] - 10, networkRowHeight),
+                Qt::AlignCenter | Qt::AlignVCenter, degree);
+            painter.setPen(QPen(QColor("#5B5B5B"), 1));
+            networkTableX += networkColWidths[3];
+
+            // 聚类系数
+            QString clustering = m_brainRegionTableModel->data(idx, BrainRegionTableModel::ClusteringRole).toString();
+            painter.drawRect(networkTableX, networkTableY, networkColWidths[4], networkRowHeight);
+            painter.setPen(QColor("#1D2129"));
+            painter.drawText(QRect(networkTableX + 5, networkTableY, networkColWidths[4] - 10, networkRowHeight),
+                Qt::AlignCenter | Qt::AlignVCenter, clustering);
+            painter.setPen(QPen(QColor("#5B5B5B"), 1));
+            networkTableX += networkColWidths[4];
+
+            // 局部效率
+            QString localEff = m_brainRegionTableModel->data(idx, BrainRegionTableModel::LocalEfficiencyRole).toString();
+            painter.drawRect(networkTableX, networkTableY, networkColWidths[5], networkRowHeight);
+            painter.setPen(QColor("#1D2129"));
+            painter.drawText(QRect(networkTableX + 5, networkTableY, networkColWidths[5] - 10, networkRowHeight),
+                Qt::AlignCenter | Qt::AlignVCenter, localEff);
+
+            networkTableY += networkRowHeight;
+            currentNetworkRow++;
+        }
+    }
+    
+    // ========== 绘制title8图片 ==========
+    QImage title8(":/image/pdf-title8.png");
+    int title8Spacing = 20;
+    int title8Height = title8.height() / 2;
+    int title8Y = networkTableY + title8Spacing; // 脑网络表格下方20px
+    
+    // 判断是否需要换页显示title8
+    int requiredSpaceForTitle8 = title8Height + 40 + 30 + 50; // title8高度 + 文字背景高度(40px) + 备注高度(30px) + 页码空间
+    if (title8Y + requiredSpaceForTitle8 > targetRect.height() - 50) {
+        // 空间不足，绘制当前页页码并换页
+        painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
+        painter.setPen(QColor("#C9CDD4"));
+        QString pageNumber = QString("%1/13").arg(currentPageNumber);
+        QFontMetrics pageNumberFm = painter.fontMetrics();
+        int pageNumberWidth = pageNumberFm.horizontalAdvance(pageNumber);
+        int pageNumberX = (targetRect.width() - pageNumberWidth) / 2;
+        int pageNumberY = targetRect.height() - 20;
+        painter.drawText(pageNumberX, pageNumberY, pageNumber);
+        
+        // 换页
+        writer.newPage();
+        currentPageNumber++;
+        
+        // 绘制新页面顶部标题
+        painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
+        painter.setPen(QColor("#C9CDD4"));
+        QString newPageTopName = QStringLiteral("脑测量分析报告");
+        QFontMetrics newPageTopNameFm = painter.fontMetrics();
+        int newPageTopNameWidth = newPageTopNameFm.horizontalAdvance(newPageTopName);
+        int newPageTopNameX = (targetRect.width() - newPageTopNameWidth) / 2;
+        painter.drawText(newPageTopNameX, 50, newPageTopName);
+        
+        title8Y = 80; // 从新页面顶部开始
+    }
+    
+    // 绘制title8图片
+    QRect targetRectTitle8(0, title8Y, title8.width() / 2, title8Height);
+    painter.drawImage(targetRectTitle8, title8);
+    
+    // ========== 绘制脑龄预测文字背景 ==========
+    int textBgY = title8Y + title8Height + 20; // title8下方20px
+    int textBgWidth = 698;
+    int textBgHeight = 40;
+    int textBgRadius = 8; // 圆角半径
+    int textBgX = (targetRect.width() - textBgWidth) / 2; // 背景居中
+    
+    // 绘制圆角背景矩形
+    QPainterPath textBgPath;
+    textBgPath.addRoundedRect(textBgX, textBgY, textBgWidth, textBgHeight, textBgRadius, textBgRadius);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor("#F2F3F5"));
+    painter.drawPath(textBgPath);
+    
+    // 准备文字内容
+    QString normalText = QStringLiteral("根据AI分析测算，该组数据脑龄预测为：");
+    QString predictedAge = QString::number(getpredictedBrainAge(), 'f', 0); // 保留0位小数（整数）
+    
+    // 计算文字位置（靠左显示）
+    QFont brainAgeNormalFont("Alibaba PuHuiTi 3.0", 12, QFont::Normal); // 普通文字12px
+    QFont brainAgeBoldFont("Alibaba PuHuiTi 3.0", 18, QFont::Bold); // 年龄字体18px
+    
+    QFontMetrics brainAgeNormalFm(brainAgeNormalFont);
+    QFontMetrics brainAgeBoldFm(brainAgeBoldFont);
+    
+    int normalTextWidth = brainAgeNormalFm.horizontalAdvance(normalText);
+    int textLeftMargin = 20; // 左边距
+    int textStartX = textBgX + textLeftMargin; // 靠左对齐
+    
+    // 计算普通文字的Y坐标（在背景中垂直居中，向上偏移3px）
+    int normalTextY = textBgY + (textBgHeight + brainAgeNormalFm.ascent()) / 2 - 2;
+    
+    // 计算蓝色数字的Y坐标（在背景中垂直居中，向上偏移3px）
+    int boldTextY = textBgY + (textBgHeight + brainAgeBoldFm.ascent()) / 2 - 4;
+    
+    // 绘制普通文字
+    painter.setFont(brainAgeNormalFont);
+    painter.setPen(QColor("#1D2129"));
+    painter.drawText(textStartX, normalTextY, normalText);
+    
+    // 绘制预测数字（加粗，蓝色，18px字体，垂直居中）
+    painter.setFont(brainAgeBoldFont);
+    painter.setPen(QColor("#165DFF"));
+    painter.drawText(textStartX + normalTextWidth, boldTextY, predictedAge);
+    
+    // 绘制备注文字（背景下方，左对齐）
+    QString remarkText = QStringLiteral("备注: 本报告非医疗诊断文书，任何医疗行为请遵从医嘱。");
+    QFont remarkFont("Alibaba PuHuiTi 3.0", 8, QFont::Normal);
+    painter.setFont(remarkFont);
+    painter.setPen(QColor("#86909C"));
+    int remarkY = textBgY + textBgHeight + 20; // 背景下方20px
+    painter.drawText(textBgX, remarkY, remarkText);
+    
+    // 绘制最后一页的页码
+    painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
+    painter.setPen(QColor("#C9CDD4"));
+    QString lastPageNumber = QString("%1/13").arg(currentPageNumber);
+    QFontMetrics lastPageNumberFm = painter.fontMetrics();
+    int lastPageNumberWidth = lastPageNumberFm.horizontalAdvance(lastPageNumber);
+    int lastPageNumberX = (targetRect.width() - lastPageNumberWidth) / 2;
+    int lastPageNumberY = targetRect.height() - 20;
+    painter.drawText(lastPageNumberX, lastPageNumberY, lastPageNumber);
     
     painter.end();
     qDebug() << QStringLiteral("PDF 报告生成成功: ") << pdfPath;

@@ -28,5 +28,10 @@
         <file>image/pdf-result.png</file>
         <file>image/pdf-title2.png</file>
         <file>image/pdf-title3.png</file>
+        <file>image/pdf-title4.png</file>
+        <file>image/pdf-title5.png</file>
+        <file>image/pdf-title6.png</file>
+        <file>image/pdf-title7.png</file>
+        <file>image/pdf-title8.png</file>
     </qresource>
 </RCC>
