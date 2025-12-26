@@ -1478,7 +1478,7 @@ void MainViewController::processBrainNetworkAnalysis(const QString& boldPath, co
 
 void MainViewController::generatePdfReport(const QString& savePath)
 {
-    QString pdfPath = "C:\\Users\\71455\\Desktop\\1.pdf";
+    QString pdfPath = savePath;
     if (pdfPath.startsWith("file:///")) {
         pdfPath = pdfPath.mid(8);
     }
