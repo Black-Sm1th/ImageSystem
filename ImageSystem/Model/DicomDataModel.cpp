@@ -29,6 +29,8 @@ bool DicomDataModel::isSegDataMode() const { return m_isSegDataMode; }
 
 double DicomDataModel::windowWidth() const { return m_windowWidth; }
 double DicomDataModel::windowLevel() const { return m_windowLevel; }
+int DicomDataModel::toolMode() const { return m_toolMode; }
+bool DicomDataModel::crosshairEnabled() const { return m_crosshairEnabled; }
 QString DicomDataModel::dicomInfo() const { return m_dicomInfo; }
 bool DicomDataModel::hasData() const { return m_imageData != nullptr; }
 
@@ -124,6 +126,38 @@ void DicomDataModel::setWindowLevel(double level)
         m_windowLevel = level;
         emit windowLevelChanged(level);
     }
+}
+
+void DicomDataModel::setToolMode(int mode)
+{
+    if (mode != m_toolMode) {
+        m_toolMode = mode;
+        emit toolModeChanged(mode);
+    }
+}
+
+void DicomDataModel::setCrosshairEnabled(bool enabled)
+{
+    if (enabled != m_crosshairEnabled) {
+        m_crosshairEnabled = enabled;
+        emit crosshairEnabledChanged(enabled);
+    }
+}
+
+void DicomDataModel::resetAllInteractions()
+{
+    // 1) 恢复 WW/WL 默认值（你当前项目默认：WW=2000, WL=0）
+    setWindowWidth(2000);
+    setWindowLevel(0);
+
+    // 2) 切回窗宽窗位模式，便于继续调节
+    setToolMode(1); // ToolMode::WindowLevel
+
+    // 3) 通知各个 VTK 视图在渲染线程里重置相机/测量等
+    emit interactionResetRequested();
+
+    // 4) 十字线默认关闭（可按需改为 true）
+    setCrosshairEnabled(false);
 }
 
 void DicomDataModel::setSegDataMode(bool enabled)
