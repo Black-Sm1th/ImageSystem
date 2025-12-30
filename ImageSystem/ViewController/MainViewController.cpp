@@ -130,6 +130,41 @@ void SliceInteractorStyle::OnMouseWheelBackward()
 
 void SliceInteractorStyle::OnLeftButtonDown()
 {
+    BeginInteraction(std::nullopt);
+}
+
+void SliceInteractorStyle::OnLeftButtonUp()
+{
+    vtkRenderWindowInteractor* interactor = this->GetInteractor();
+    int* pos = interactor ? interactor->GetEventPosition() : nullptr;
+    const int x = pos ? pos[0] : 0;
+    const int y = pos ? pos[1] : 0;
+
+    if (m_state) {
+        m_state->OnExit(m_ctx, x, y);
+        m_state.reset();
+    }
+}
+
+void SliceInteractorStyle::OnRightButtonDown()
+{
+    // 右键始终缩放（不受当前左键 toolMode 影响）
+    BeginInteraction(ToolMode::Zoom);
+}
+
+void SliceInteractorStyle::OnRightButtonUp()
+{
+    OnLeftButtonUp();
+}
+
+void SliceInteractorStyle::OnMiddleButtonDown()
+{
+    // 中键始终平移（不受当前左键 toolMode 影响）
+    BeginInteraction(ToolMode::Pan);
+}
+
+void SliceInteractorStyle::BeginInteraction(std::optional<ToolMode> forcedMode)
+{
     vtkRenderWindowInteractor* interactor = this->GetInteractor();
     if (!interactor) {
         return;
@@ -153,62 +188,49 @@ void SliceInteractorStyle::OnLeftButtonDown()
     m_ctx.rescaleAxisActor = [this]() { this->rescaleAxisActor(); };
     m_ctx.requestRender = [this]() { if (this->Interactor) this->Interactor->Render(); };
 
-    // 支持按键修饰符临时切换（可按需调整映射）
-    // Shift+Ctrl: 距离测量；Shift+Alt: 角度测量；Shift: 平移；Ctrl: 缩放；Alt: 对比度；否则使用当前工具
-    // 默认从全局模型读取当前工具（这样键盘/工具栏统一生效）
     ToolMode effective = m_toolMode;
-    if (m_dataModel) {
-        effective = static_cast<ToolMode>(m_dataModel->toolMode());
+    if (forcedMode.has_value()) {
+        // 右/中键强制模式：不要被 DataModel.toolMode 覆盖
+        effective = *forcedMode;
     }
-    const bool shift = interactor->GetShiftKey();
-    const bool ctrl = interactor->GetControlKey();
-    const bool alt = interactor->GetAltKey();
-    if (shift && ctrl) effective = ToolMode::MeasureDistance;
-    else if (shift && alt) effective = ToolMode::MeasureAngle;
-    else if (shift) effective = ToolMode::Pan;
-    else if (ctrl) effective = ToolMode::Zoom;
-    else if (alt) effective = ToolMode::Contrast;
+    else {
+        // 默认从全局模型读取当前工具（这样键盘/工具栏统一生效）
+        if (m_dataModel) {
+            effective = static_cast<ToolMode>(m_dataModel->toolMode());
+        }
+
+        // 支持按键修饰符临时切换（可按需调整映射）
+        // Shift+Ctrl: 距离测量；Shift+Alt: 角度测量；Shift: 平移；Ctrl: 缩放；Alt: 对比度；否则使用当前工具
+        const bool shift = interactor->GetShiftKey();
+        const bool ctrl = interactor->GetControlKey();
+        const bool alt = interactor->GetAltKey();
+        if (shift && ctrl) effective = ToolMode::MeasureDistance;
+        else if (shift && alt) effective = ToolMode::MeasureAngle;
+        else if (shift) effective = ToolMode::Pan;
+        else if (ctrl) effective = ToolMode::Zoom;
+        else if (alt) effective = ToolMode::Contrast;
+    }
+
+    // 如果离开测量工具，清理未完成的“点”预览（避免残留在画面上）
+    if (effective != ToolMode::MeasureDistance && effective != ToolMode::MeasureAngle) {
+        if (m_ctx.renderer) {
+            for (auto& a : m_ctx.pendingPointActors) {
+                if (a) m_ctx.renderer->RemoveViewProp(a);
+            }
+            if (m_ctx.pendingAngleFirstLine) {
+                m_ctx.renderer->RemoveViewProp(m_ctx.pendingAngleFirstLine);
+            }
+        }
+        m_ctx.pendingPointActors.clear();
+        m_ctx.pendingPoints.clear();
+        m_ctx.pendingMode = ToolMode::None;
+        m_ctx.pendingAngleFirstLine = nullptr;
+    }
 
     m_state = CreateState(effective);
     if (m_state) {
         m_state->OnEnter(m_ctx, x, y);
     }
-}
-
-void SliceInteractorStyle::OnLeftButtonUp()
-{
-    vtkRenderWindowInteractor* interactor = this->GetInteractor();
-    int* pos = interactor ? interactor->GetEventPosition() : nullptr;
-    const int x = pos ? pos[0] : 0;
-    const int y = pos ? pos[1] : 0;
-
-    if (m_state) {
-        m_state->OnExit(m_ctx, x, y);
-        m_state.reset();
-    }
-}
-
-void SliceInteractorStyle::OnRightButtonDown()
-{
-    // 兼容旧逻辑：右键=缩放（临时，不改变当前工具）
-    const ToolMode saved = m_toolMode;
-    m_toolMode = ToolMode::Zoom;
-    OnLeftButtonDown();
-    m_toolMode = saved;
-}
-
-void SliceInteractorStyle::OnRightButtonUp()
-{
-    OnLeftButtonUp();
-}
-
-void SliceInteractorStyle::OnMiddleButtonDown()
-{
-    // 兼容旧逻辑：中键=平移（临时，不改变当前工具）
-    const ToolMode saved = m_toolMode;
-    m_toolMode = ToolMode::Pan;
-    OnLeftButtonDown();
-    m_toolMode = saved;
 }
 
 void SliceInteractorStyle::OnMiddleButtonUp()
@@ -294,10 +316,22 @@ void SliceInteractorStyle::ResetInteractionState()
                 m_ctx.renderer->RemoveViewProp(it.textActor);
             }
         }
+        // 清除未完成测量的“点”预览
+        for (auto& a : m_ctx.pendingPointActors) {
+            if (a) m_ctx.renderer->RemoveViewProp(a);
+        }
+        // 清除角度测量的预览线
+        if (m_ctx.pendingAngleFirstLine) {
+            m_ctx.renderer->RemoveViewProp(m_ctx.pendingAngleFirstLine);
+            m_ctx.pendingAngleFirstLine = nullptr;
+        }
     }
     m_ctx.measurements.clear();
     m_ctx.pendingPoints.clear();
     m_ctx.pendingMode = ToolMode::None;
+    m_ctx.pendingPointActors.clear();
+    m_ctx.pendingSegMode = false;
+    m_ctx.pendingSliceNumber = 0;
 }
 
 void SliceInteractorStyle::UpdateMeasurementVisibility(int sliceNumber, bool segMode)
@@ -318,6 +352,18 @@ void SliceInteractorStyle::UpdateMeasurementVisibility(int sliceNumber, bool seg
             if (a) a->SetVisibility(visible ? 1 : 0);
         }
         if (it.textActor) it.textActor->SetVisibility(visible ? 1 : 0);
+    }
+
+    // 未完成测量的“点”预览也要跟着切片显示/隐藏
+    const bool pendingVisible =
+        (m_ctx.pendingMode == ToolMode::MeasureDistance || m_ctx.pendingMode == ToolMode::MeasureAngle) &&
+        (m_ctx.pendingSegMode == segMode) &&
+        (m_ctx.pendingSliceNumber == sliceNumber);
+    for (auto& a : m_ctx.pendingPointActors) {
+        if (a) a->SetVisibility(pendingVisible ? 1 : 0);
+    }
+    if (m_ctx.pendingAngleFirstLine) {
+        m_ctx.pendingAngleFirstLine->SetVisibility(pendingVisible ? 1 : 0);
     }
 }
 

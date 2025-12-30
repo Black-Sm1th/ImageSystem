@@ -72,6 +72,14 @@ struct InteractionContext
     std::vector<std::array<double, 3>> pendingPoints;
     ToolMode pendingMode{ ToolMode::None };
 
+    // 未完成测量的“点”预览（每次点击就显示一个点）
+    bool pendingSegMode{ false };
+    int pendingSliceNumber{ 0 };
+    std::vector<vtkSmartPointer<vtkActor>> pendingPointActors;
+
+    // 角度测量：第二次点击时显示的预览线（p1->p0），第三次点击后并入最终测量
+    vtkSmartPointer<vtkActor> pendingAngleFirstLine;
+
     // 已完成的测量集合
     std::vector<MeasurementItem> measurements;
 };

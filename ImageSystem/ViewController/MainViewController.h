@@ -28,6 +28,7 @@
 #include <vtkAxisActor2D.h>
 #include <vtkProperty2D.h>
 #include <memory>
+#include <optional>
 
 // 枚举类型：切片方向
 enum class SliceOrientation : int {
@@ -73,6 +74,7 @@ private:
     int getCurrentSlice() const;
     int getMaxSlice() const;
     void setSlice(int slice);
+    void BeginInteraction(std::optional<ToolMode> forcedMode);
     DicomDataModel* m_dataModel;
     SliceOrientation m_orientation;
 	vtkSmartPointer<vtkAxisActor2D> m_axisActor;

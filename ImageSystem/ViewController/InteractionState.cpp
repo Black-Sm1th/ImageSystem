@@ -8,6 +8,7 @@
 #include <vtkLineSource.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkPropPicker.h>
+#include <vtkSphereSource.h>
 #include <cmath>
 
 namespace
@@ -83,6 +84,25 @@ namespace
         t->GetTextProperty()->SetBold(1);
         t->PickableOff();
         return t;
+    }
+
+    vtkSmartPointer<vtkActor> CreateWorldPoint(const double p[3], const double rgb[3], double radius = 1.5)
+    {
+        auto sphere = vtkSmartPointer<vtkSphereSource>::New();
+        sphere->SetCenter(p);
+        sphere->SetRadius(radius);
+        sphere->SetThetaResolution(16);
+        sphere->SetPhiResolution(16);
+        sphere->Update();
+
+        auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+        mapper->SetInputConnection(sphere->GetOutputPort());
+
+        auto actor = vtkSmartPointer<vtkActor>::New();
+        actor->SetMapper(mapper);
+        actor->GetProperty()->SetColor(rgb[0], rgb[1], rgb[2]);
+        actor->PickableOff();
+        return actor;
     }
 
     std::array<double, 3> MidPoint(const std::array<double, 3>& a, const std::array<double, 3>& b)
@@ -310,6 +330,7 @@ public:
         if (ctx.pendingMode != ToolMode::MeasureDistance) {
             ctx.pendingMode = ToolMode::MeasureDistance;
             ctx.pendingPoints.clear();
+            ctx.pendingPointActors.clear();
         }
 
         double w[3]{ 0,0,0 };
@@ -318,14 +339,28 @@ public:
         }
 
         ctx.pendingPoints.push_back({ w[0], w[1], w[2] });
+        if (ctx.pendingPoints.size() == 1) {
+            ctx.pendingSegMode = ctx.model ? ctx.model->isSegDataMode() : false;
+            ctx.pendingSliceNumber = CurrentSliceNumber(ctx);
+        }
+
+        // 每次点击都立刻落一个点（预览点）
+        const double rgbPt[3]{ 1.0, 1.0, 0.0 };
+        auto ptActor = CreateWorldPoint(w, rgbPt, 1.5);
+        ctx.pendingPointActors.push_back(ptActor);
+        ctx.renderer->AddActor(ptActor);
+        if (ctx.requestRender) ctx.requestRender();
         if (ctx.pendingPoints.size() < 2) {
-            if (ctx.requestRender) ctx.requestRender();
             return;
         }
 
         const auto p0 = ctx.pendingPoints[0];
         const auto p1 = ctx.pendingPoints[1];
         ctx.pendingPoints.clear();
+
+        // 把预览点并入完成的测量项里（点也要保留）
+        std::vector<vtkSmartPointer<vtkActor>> pointActors = std::move(ctx.pendingPointActors);
+        ctx.pendingPointActors.clear();
 
         const double dx = p0[0] - p1[0];
         const double dy = p0[1] - p1[1];
@@ -339,8 +374,9 @@ public:
 
         InteractionContext::MeasurementItem item;
         item.type = ToolMode::MeasureDistance;
-        item.segMode = ctx.model ? ctx.model->isSegDataMode() : false;
-        item.sliceNumber = CurrentSliceNumber(ctx);
+        item.segMode = ctx.pendingSegMode;
+        item.sliceNumber = ctx.pendingSliceNumber;
+        for (auto& pa : pointActors) item.actors.push_back(pa);
         item.actors.push_back(lineActor);
         item.textActor = textActor;
         ctx.measurements.push_back(item);
@@ -375,6 +411,11 @@ public:
         if (ctx.pendingMode != ToolMode::MeasureAngle) {
             ctx.pendingMode = ToolMode::MeasureAngle;
             ctx.pendingPoints.clear();
+            ctx.pendingPointActors.clear();
+            if (ctx.pendingAngleFirstLine) {
+                ctx.renderer->RemoveViewProp(ctx.pendingAngleFirstLine);
+                ctx.pendingAngleFirstLine = nullptr;
+            }
         }
 
         double w[3]{ 0,0,0 };
@@ -383,8 +424,33 @@ public:
         }
 
         ctx.pendingPoints.push_back({ w[0], w[1], w[2] });
-        if (ctx.pendingPoints.size() < 3) {
+        if (ctx.pendingPoints.size() == 1) {
+            ctx.pendingSegMode = ctx.model ? ctx.model->isSegDataMode() : false;
+            ctx.pendingSliceNumber = CurrentSliceNumber(ctx);
+        }
+
+        // 每次点击都立刻落一个点（预览点）
+        // 角度顶点是第二个点（p1），给它一个不同颜色更好辨识
+        const double rgbPt[3]{ (ctx.pendingPoints.size() == 2) ? 0.2 : 1.0,
+                               (ctx.pendingPoints.size() == 2) ? 1.0 : 0.6,
+                               (ctx.pendingPoints.size() == 2) ? 0.2 : 0.0 };
+        auto ptActor = CreateWorldPoint(w, rgbPt, 1.5);
+        ctx.pendingPointActors.push_back(ptActor);
+        ctx.renderer->AddActor(ptActor);
+        if (ctx.requestRender) ctx.requestRender();
+
+        // 第二次点击：把前两点连成一条直线（预览第一条边，p1->p0）
+        if (ctx.pendingPoints.size() == 2) {
+            const auto p0 = ctx.pendingPoints[0];
+            const auto p1 = ctx.pendingPoints[1]; // 暂定为顶点
+            const double rgb[3]{ 1.0, 0.6, 0.0 };
+            ctx.pendingAngleFirstLine = CreateWorldLine(p1.data(), p0.data(), rgb, 2.5);
+            ctx.renderer->AddActor(ctx.pendingAngleFirstLine);
             if (ctx.requestRender) ctx.requestRender();
+            return;
+        }
+
+        if (ctx.pendingPoints.size() < 3) {
             return;
         }
 
@@ -392,6 +458,10 @@ public:
         const auto p1 = ctx.pendingPoints[1]; // 顶点
         const auto p2 = ctx.pendingPoints[2];
         ctx.pendingPoints.clear();
+
+        // 把预览点并入完成的测量项里（点也要保留）
+        std::vector<vtkSmartPointer<vtkActor>> pointActors = std::move(ctx.pendingPointActors);
+        ctx.pendingPointActors.clear();
 
         // 计算角度（p0-p1 与 p2-p1）
         const double v1[3]{ p0[0] - p1[0], p0[1] - p1[1], p0[2] - p1[2] };
@@ -406,20 +476,25 @@ public:
         }
 
         const double rgb[3]{ 1.0, 0.6, 0.0 };
-        auto a1 = CreateWorldLine(p1.data(), p0.data(), rgb, 2.5);
+        // 若第二次点击已创建预览线，则复用作为最终第一条边
+        const bool reusedPreviewLine = (ctx.pendingAngleFirstLine != nullptr);
+        vtkSmartPointer<vtkActor> a1 = reusedPreviewLine ? ctx.pendingAngleFirstLine : CreateWorldLine(p1.data(), p0.data(), rgb, 2.5);
+        ctx.pendingAngleFirstLine = nullptr;
         auto a2 = CreateWorldLine(p1.data(), p2.data(), rgb, 2.5);
         auto textActor = CreateWorldText(p1.data(), std::to_string(deg).substr(0, 6) + " deg", rgb);
 
         InteractionContext::MeasurementItem item;
         item.type = ToolMode::MeasureAngle;
-        item.segMode = ctx.model ? ctx.model->isSegDataMode() : false;
-        item.sliceNumber = CurrentSliceNumber(ctx);
+        item.segMode = ctx.pendingSegMode;
+        item.sliceNumber = ctx.pendingSliceNumber;
+        for (auto& pa : pointActors) item.actors.push_back(pa);
         item.actors.push_back(a1);
         item.actors.push_back(a2);
         item.textActor = textActor;
         ctx.measurements.push_back(item);
 
-        ctx.renderer->AddActor(a1);
+        // a1 可能已在第二次点击时 AddActor 过，这里避免重复添加
+        if (!reusedPreviewLine) ctx.renderer->AddActor(a1);
         ctx.renderer->AddActor(a2);
         ctx.renderer->AddActor(textActor);
         if (ctx.requestRender) ctx.requestRender();
