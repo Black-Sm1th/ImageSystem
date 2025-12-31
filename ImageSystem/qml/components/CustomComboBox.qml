@@ -8,15 +8,15 @@ Item {
     property int comboWidth: 200
     property int comboHeight: 40
     property color borderColor: "#E0E0E0"
-    property color textColor: "#FFFFFF"
-    property color backgroundColor: "#383838"
+    property color textColor: "#E5FFFFFF"
+    property color backgroundColor: "#14FFFFFF"
     property color dropdownBackgroundColor: "#2b2b2b"
     property color itemHoverColor: "#404040"
-    property color itemSelectedColor: "#065B87"
-    property int fontSize: 14
+    property color itemSelectedColor: "#3C7EFF"
+    property int fontSize: 16
     property string placeholderText: "请选择"
-    property int borderWidth: 1
-    property int radius: 8
+    property int borderWidth: 0
+    property int radius: 4
     property int maxDropdownHeight: 300
     
     // 数据模型
