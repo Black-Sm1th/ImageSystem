@@ -8,8 +8,8 @@ Rectangle {
     property int buttonWidth: buttonText.width + 20
     property int buttonHeight: 40
     property color borderColor: "#E0E0E0"
-    property color textColor: "#FFFFFF"
-    property color backgroundColor: "#065B87"
+    property color textColor: "#E5FFFFFF"
+    property color backgroundColor: "#3C7EFF"
     property int fontSize: 16
     property string text: qsTr("按钮")
     property int borderWidth: 0

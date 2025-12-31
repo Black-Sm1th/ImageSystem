@@ -375,7 +375,7 @@ ApplicationWindow {
         
         Rectangle {
             id: rightExpandButton
-            width: 400
+            width: analysisPanelIndex == 2 && (brainpanel.currentIndex === 2 || brainpanel.currentIndex === 3) ? 500 : 400
             height: parent.height
             color: "#171717"
             anchors.right: parent.right

@@ -1,4 +1,4 @@
-#include "InteractionState.h"
+﻿#include "InteractionState.h"
 
 #include "Model/DicomDataModel.h"
 

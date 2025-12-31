@@ -51,5 +51,9 @@
         <file>image/windowIcon.png</file>
         <file>image/kidneyTitleIcon.png</file>
         <file>image/brainTitleBtn.png</file>
+        <file>image/textBackgroundAfter.png</file>
+        <file>image/textBackgroundBefore.png</file>
+        <file>image/preBtnBackground.png</file>
+        <file>image/preBtnBackgroundSelected.png</file>
     </qresource>
 </RCC>

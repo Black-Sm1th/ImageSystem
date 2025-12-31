@@ -58,7 +58,6 @@ Rectangle {
     function detectOutputType(path) {
         // 使用C++方法检测输出类型
         isDeepprepOutput = $MainViewController.isDeepprepOutput(path)
-        console.log("Detected output type - DeepPrep:", isDeepprepOutput, "Path:", path)
     }
 
     function startUnifiedImports(url, normalizedPath) {
@@ -71,7 +70,7 @@ Rectangle {
         $DicomDataModel.loadSegBrainDirectory(url)
         $MainViewController.importBrainData(url)
         // 默认展示分割结果预览
-        segmentationBtn.clicked()
+        segBtnMouseArea.clicked(Qt.LeftButton)
     }
 
     FileDialog {
@@ -387,7 +386,7 @@ Rectangle {
             tryFinishBatch()
         }
     }
-
+    
     Rectangle {
         id: midPanel
         anchors.left: parent.left
@@ -835,105 +834,444 @@ Rectangle {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.top: parent.top
-        width: rightPanelExpanded ? 400 : 0
+        width: rightPanelExpanded ? ((currentIndex === 2 || currentIndex === 3) ? 500 : 400) : 0
+        visible: width > 0
         Behavior on width {
             NumberAnimation { duration: 300; easing.type: Easing.InOutQuad }
         }
         color: "transparent"
+        
+        Image {
+            anchors.fill: parent
+            source: "qrc:/image/rightBackground.png"
+            fillMode: Image.Stretch
+        }
+        
         Rectangle{
             id: preAnalysis
             anchors.fill: parent
+            anchors.margins: 16
             color: "transparent"
             visible: currentIndex === 1
             clip: true
+            
+            property int currentTabIndex: 0
+            
             Column{
                 width: parent.width
-                spacing: 20
-                padding: 5
-                TabSwitcher{
-                    id: tabSwitcher
-                    tabTitles: ["传统处理", "深度学习", "数据详情"]
+                spacing: 16
+
+                Rectangle {
+                    id: tabContainer
+                    width: parent.width
+                    height: 48
+                    color: "#16171B"
+                    radius: 8
+
+                    Row{
+                        id: tabRow
+                        height: parent.height
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        z: 2
+                        // 传统处理 Tab
+                        Item{
+                            id: tab1
+                            height: parent.height
+                            width: 88
+                            
+                            property bool isHovered: false
+                            scale: isHovered && preAnalysis.currentTabIndex !== 0 ? 1.05 : 1.0
+                            
+                            Behavior on scale {
+                                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                            }
+
+                            Label{
+                                text: qsTr("传统处理")
+                                font.pixelSize: 16
+                                anchors.centerIn: parent
+                                color: preAnalysis.currentTabIndex === 0 ? "#E5FFFFFF" : "#80FFFFFF"
+                                font.family: "Alibaba PuHuiTi 3.0"
+
+                                Behavior on color {
+                                    ColorAnimation { duration: 200 }
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                hoverEnabled: true
+                                
+                                onEntered: tab1.isHovered = true
+                                onExited: tab1.isHovered = false
+                                
+                                onClicked: {
+                                    textBackground.animateToTab(0)
+                                    tabIndicator.animateToTab(0)
+                                }
+                            }
+                        }
+
+                        // 深度学习 Tab
+                        Item{
+                            id: tab2
+                            height: parent.height
+                            width: 88
+                            
+                            property bool isHovered: false
+                            scale: isHovered && preAnalysis.currentTabIndex !== 1 ? 1.05 : 1.0
+                            
+                            Behavior on scale {
+                                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                            }
+
+                            Label{
+                                text: qsTr("深度学习")
+                                font.pixelSize: 16
+                                anchors.centerIn: parent
+                                color: preAnalysis.currentTabIndex === 1 ? "#E5FFFFFF" : "#80FFFFFF"
+                                font.family: "Alibaba PuHuiTi 3.0"
+
+                                Behavior on color {
+                                    ColorAnimation { duration: 200 }
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                hoverEnabled: true
+                                
+                                onEntered: tab2.isHovered = true
+                                onExited: tab2.isHovered = false
+                                
+                                onClicked: {
+                                    textBackground.animateToTab(1)
+                                    tabIndicator.animateToTab(1)
+                                }
+                            }
+                        }
+
+                        // 数据详情 Tab
+                        Item{
+                            id: tab3
+                            height: parent.height
+                            width: 88
+                            
+                            property bool isHovered: false
+                            scale: isHovered && preAnalysis.currentTabIndex !== 2 ? 1.05 : 1.0
+                            
+                            Behavior on scale {
+                                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                            }
+
+                            Label{
+                                text: qsTr("数据详情")
+                                font.pixelSize: 16
+                                anchors.centerIn: parent
+                                color: preAnalysis.currentTabIndex === 2 ? "#E5FFFFFF" : "#80FFFFFF"
+                                font.family: "Alibaba PuHuiTi 3.0"
+
+                                Behavior on color {
+                                    ColorAnimation { duration: 200 }
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                hoverEnabled: true
+                                
+                                onEntered: tab3.isHovered = true
+                                onExited: tab3.isHovered = false
+                                
+                                onClicked: {
+                                    textBackground.animateToTab(2)
+                                    tabIndicator.animateToTab(2)
+                                }
+                            }
+                        }
+                    }
+
+                    // 文字背景图片
+                    Image {
+                        id: textBackground
+                        y: (parent.height - height) / 2 - 2
+                        source: "qrc:/image/textBackgroundAfter.png"
+                        z: 1
+                        property int currentTab: 0
+                        property int targetTab: 0
+                        
+                        Component.onCompleted: {
+                            x = getTabX(0)
+                        }
+                        
+                        function getTabX(tabIndex) {
+                            var rowX = (tabContainer.width - 264) / 2
+                            return rowX + tabIndex * 88
+                        }
+                        
+                        function animateToTab(tabIndex) {
+                            if (currentTab === tabIndex) return
+                            targetTab = tabIndex
+                            backgroundSlideAnimation.start()
+                        }
+                        
+                        SequentialAnimation {
+                            id: backgroundSlideAnimation
+                            
+                            // 第一步：变换为 Before 图片并缩短到10px
+                            ParallelAnimation {
+                                PropertyAction {
+                                    target: textBackground
+                                    property: "source"
+                                    value: "qrc:/image/textBackgroundBefore.png"
+                                }
+                                NumberAnimation {
+                                    target: textBackground
+                                    property: "width"
+                                    to: 10
+                                    duration: 150
+                                    easing.type: Easing.InQuad
+                                }
+                                NumberAnimation {
+                                    target: textBackground
+                                    property: "x"
+                                    to: textBackground.getTabX(textBackground.currentTab) + 39
+                                    duration: 150
+                                    easing.type: Easing.InQuad
+                                }
+                            }
+                            
+                            // 第二步：平移到目标tab的中间
+                            NumberAnimation {
+                                target: textBackground
+                                property: "x"
+                                to: textBackground.getTabX(textBackground.targetTab) + 39
+                                duration: 200
+                                easing.type: Easing.InOutQuad
+                            }
+                            
+                            // 第三步：变换为 After 图片并伸展到88px
+                            ParallelAnimation {
+                                PropertyAction {
+                                    target: textBackground
+                                    property: "source"
+                                    value: "qrc:/image/textBackgroundAfter.png"
+                                }
+                                NumberAnimation {
+                                    target: textBackground
+                                    property: "width"
+                                    to: 88
+                                    duration: 150
+                                    easing.type: Easing.OutQuad
+                                }
+                                NumberAnimation {
+                                    target: textBackground
+                                    property: "x"
+                                    to: textBackground.getTabX(textBackground.targetTab)
+                                    duration: 150
+                                    easing.type: Easing.OutQuad
+                                }
+                            }
+                            
+                            // 动画结束后更新状态
+                            ScriptAction {
+                                script: {
+                                    textBackground.currentTab = textBackground.targetTab
+                                }
+                            }
+                        }
+                    }
+
+                    // 蓝色横线指示器
+                    Rectangle {
+                        id: tabIndicator
+                        anchors.bottom: parent.bottom
+                        height: 2
+                        width: 88
+                        color: "#0078d4"
+                        radius: 1
+
+                        property int currentTab: 0
+                        property int targetTab: 0
+
+                        Component.onCompleted: {
+                            x = getTabX(0)
+                        }
+
+                        function getTabX(tabIndex) {
+                            var rowX = (tabContainer.width - 264) / 2
+                            return rowX + tabIndex * 88
+                        }
+
+                        function animateToTab(tabIndex) {
+                            if (currentTab === tabIndex) return
+                            targetTab = tabIndex
+                            slideAnimation.start()
+                        }
+
+                        SequentialAnimation {
+                            id: slideAnimation
+
+                            // 第一步：从两边向中间缩短到10px
+                            ParallelAnimation {
+                                NumberAnimation {
+                                    target: tabIndicator
+                                    property: "width"
+                                    to: 10
+                                    duration: 150
+                                    easing.type: Easing.InQuad
+                                }
+                                NumberAnimation {
+                                    target: tabIndicator
+                                    property: "x"
+                                    to: tabIndicator.getTabX(tabIndicator.currentTab) + 39
+                                    duration: 150
+                                    easing.type: Easing.InQuad
+                                }
+                            }
+
+                            // 第二步：平移到目标tab的中间
+                            NumberAnimation {
+                                target: tabIndicator
+                                property: "x"
+                                to: tabIndicator.getTabX(tabIndicator.targetTab) + 39
+                                duration: 200
+                                easing.type: Easing.InOutQuad
+                            }
+
+                            // 第三步：从中间向两边伸展到88px
+                            ParallelAnimation {
+                                NumberAnimation {
+                                    target: tabIndicator
+                                    property: "width"
+                                    to: 88
+                                    duration: 150
+                                    easing.type: Easing.OutQuad
+                                }
+                                NumberAnimation {
+                                    target: tabIndicator
+                                    property: "x"
+                                    to: tabIndicator.getTabX(tabIndicator.targetTab)
+                                    duration: 150
+                                    easing.type: Easing.OutQuad
+                                }
+                            }
+
+                            // 动画结束后更新状态
+                            ScriptAction {
+                                script: {
+                                    preAnalysis.currentTabIndex = tabIndicator.targetTab
+                                    tabIndicator.currentTab = tabIndicator.targetTab
+                                }
+                            }
+                        }
+                    }
                 }
                 Column{
                     id: fmriprepCol
-                    width: parent.width - 15
-                    spacing: 20
-                    visible: tabSwitcher.currentIndex === 0
+                    width: parent.width
+                    spacing: 12
+                    visible: preAnalysis.currentTabIndex === 0
                     // 四个标签的最大宽度，保持对齐
                     property int maxLabelWidth: Math.max(
                                                     Math.max(label1.implicitWidth, label2.implicitWidth),
                                                     Math.max(label3.implicitWidth, label4.implicitWidth))
                     Row{
-                        height: 30
-                        spacing: 5
+                        height: 38
+                        spacing: 10
                         Label {
                             id:label1
                             text: qsTr("输入Dicom文件夹：")
-                            color: "#ffffff"
+                            font.pixelSize: 16
+                            color: "#80FFFFFF"
                             anchors.verticalCenter: parent.verticalCenter
                             width: fmriprepCol.maxLabelWidth
                         }
                         SingleLineTextInput{
                             id: dicomDir
-                            width: 150
+                            width: fmriprepCol.width - label1.width - 60 - 20
+                            height: 38
+                            inputRadius: 4
+                            backgroundColor: "#14FFFFFF"
                         }
                         CustomButton{
-                            width: fmriprepCol.width - label1.width - 150 - 10
-                            height: 30
+                            width: 60
+                            height: 36
+                            buttonRadius: 4
+                            fontSize: 14
                             text: qsTr("导入")
+                            anchors.verticalCenter: parent.verticalCenter
                             onClicked: {
                                 preFileDialog.open()
                             }
                         }
                     }
                     Row{
-                        height: 30
-                        spacing: 5
+                        height: 38
+                        spacing: 10
                         Label {
                             id:label2
                             text: qsTr("输出Bids文件夹：")
-                            color: "#ffffff"
+                            font.pixelSize: 16
+                            color: "#80FFFFFF"
                             anchors.verticalCenter: parent.verticalCenter
                             width: fmriprepCol.maxLabelWidth
                         }
                         SingleLineTextInput{
                             id: bidsDir
-                            width: fmriprepCol.width - label2.width - 5
+                            width: fmriprepCol.width - label2.width - 10
+                            height: 38
+                            inputRadius: 4
+                            backgroundColor: "#14FFFFFF"
                         }
                     }
                     Row{
-                        height: 30
-                        spacing: 5
+                        height: 38
+                        spacing: 10
                         Label {
                             id:label3
                             text: qsTr("输出Output文件夹：")
-                            color: "#ffffff"
+                            font.pixelSize: 16
+                            color: "#80FFFFFF"
                             anchors.verticalCenter: parent.verticalCenter
                             width: fmriprepCol.maxLabelWidth
                         }
                         SingleLineTextInput{
                             id: outputDir
-                            width: fmriprepCol.width - label3.width - 5
+                            width: fmriprepCol.width - label3.width - 10
+                            height: 38
+                            inputRadius: 4
+                            backgroundColor: "#14FFFFFF"
                         }
                     }
                     Row{
-                        height: 30
-                        spacing: 5
+                        height: 38
+                        spacing: 10
                         Label {
                             id:label4
                             text: qsTr("license文件地址：")
-                            color: "#ffffff"
+                            font.pixelSize: 16
+                            color: "#80FFFFFF"
                             anchors.verticalCenter: parent.verticalCenter
                             width: fmriprepCol.maxLabelWidth
                         }
                         SingleLineTextInput{
                             id: licenseFile
-                            width: 150
+                            width: fmriprepCol.width - label4.width - 60 - 20
+                            height: 38
+                            inputRadius: 4
+                            backgroundColor: "#14FFFFFF"
                         }
                         CustomButton{
-                            width: fmriprepCol.width - label4.width - 150 - 10
-                            height: 30
+                            width: 60
+                            height: 36
+                            buttonRadius: 4
+                            fontSize: 14
                             text: qsTr("导入")
+                            anchors.verticalCenter: parent.verticalCenter
                             onClicked: {
                                 licenseFileDialog.open()
                             }
@@ -941,21 +1279,21 @@ Rectangle {
                     }
                     Row{
                         height: 30
-                        spacing: 5
+                        spacing: 8
                         CheckBox {
                             id: freesurferCheckBox
                             checked: false
-                            width: 16
-                            height: 16
+                            width: 14
+                            height: 14
                             anchors.verticalCenter: parent.verticalCenter
                             indicator: Rectangle {
-                                implicitWidth: 16
-                                implicitHeight: 16
-                                radius: 4
+                                implicitWidth: 14
+                                implicitHeight: 14
+                                radius: 2
                                 anchors.verticalCenter: parent.verticalCenter
-                                border.color: freesurferCheckBox.checked ? "#006BFF" : "#40000000"
+                                border.color: freesurferCheckBox.checked ? "#3C7EFF" : "#40000000"
                                 border.width: 1
-                                color: freesurferCheckBox.checked ? "#006BFF" : "#ffffff"
+                                color: freesurferCheckBox.checked ? "#3C7EFF" : "#ffffff"
 
                                 Image{
                                     source: "qrc:/image/vector.png"
@@ -971,7 +1309,7 @@ Rectangle {
                         }
                         Label{
                             text: qsTr("使用freesurfer")
-                            color: "#ffffff"
+                            color: "#E5FFFFFF"
                             anchors.verticalCenter: parent.verticalCenter
                             MouseArea {
                                 anchors.fill: parent
@@ -982,7 +1320,7 @@ Rectangle {
                     }
                     CustomButton{
                         width: parent.width
-                        height: 30
+                        height: 48
                         text: qsTr("分析")
                         onClicked: {
                             function warn(msg) {
@@ -1021,11 +1359,9 @@ Rectangle {
                     // log 日志展示
                     Rectangle {
                         width: parent.width
-                        height: preAnalysis.height - 140 - 180 - tabSwitcher.height - 10
-                        color: "#0f0f0f"
-                        radius: 4
-                        border.color: "#303030"
-                        border.width: 1
+                        height: preAnalysis.height - tabContainer.height - 16 - 38 * 4 - 30 - 48 - 6 * 12
+                        color: "#E016171B"
+                        radius: 8
 
                         ScrollView {
                             anchors.fill: parent
@@ -1034,9 +1370,9 @@ Rectangle {
                                 id: logArea
                                 readOnly: true
                                 wrapMode: TextEdit.Wrap
-                                font.pixelSize: 12
+                                font.pixelSize: 16
                                 font.family: "Alibaba PuHuiTi 3.0"
-                                color: "#ffffff"
+                                color: "#E5FFFFFF"
                                 text: $MainViewController.fmriprepLog
                                 background: null
 
@@ -1054,84 +1390,106 @@ Rectangle {
                 }
                 Column{
                     id: deepprepCol
-                    width: parent.width - 15
-                    spacing: 20
-                    visible: tabSwitcher.currentIndex === 1
+                    width: parent.width
+                    spacing: 12
+                    visible: preAnalysis.currentTabIndex === 1
                     // 四个标签的最大宽度，保持对齐
                     property int maxLabelWidth: Math.max(
                                                     Math.max(label_dp1.implicitWidth, label_dp2.implicitWidth),
                                                     Math.max(label_dp3.implicitWidth, label_dp4.implicitWidth))
                     Row{
-                        height: 30
-                        spacing: 5
+                        height: 38
+                        spacing: 10
                         Label {
                             id:label_dp1
-                            text: qsTr("输入文件夹：")
-                            color: "#ffffff"
+                            text: qsTr("输入Dicom文件夹：")
+                            font.pixelSize: 16
+                            color: "#80FFFFFF"
                             anchors.verticalCenter: parent.verticalCenter
                             width: deepprepCol.maxLabelWidth
                         }
                         SingleLineTextInput{
                             id: inputDirDeep
-                            width: 150
+                            width: fmriprepCol.width - label_dp1.width - 60 - 20
+                            height: 38
+                            inputRadius: 4
+                            backgroundColor: "#14FFFFFF"
                         }
                         CustomButton{
-                            width: deepprepCol.width - label_dp1.width - 150 - 10
-                            height: 30
+                            width: 60
+                            height: 36
+                            buttonRadius: 4
+                            fontSize: 14
                             text: qsTr("导入")
+                            anchors.verticalCenter: parent.verticalCenter
                             onClicked: {
                                 inputDirDialog.open()
                             }
                         }
                     }
                     Row{
-                        height: 30
-                        spacing: 5
+                        height: 38
+                        spacing: 10
                         Label {
                             id:label_dp2
                             text: qsTr("输出Bids文件夹：")
-                            color: "#ffffff"
+                            font.pixelSize: 16
+                            color: "#80FFFFFF"
                             anchors.verticalCenter: parent.verticalCenter
                             width: deepprepCol.maxLabelWidth
                         }
                         SingleLineTextInput{
                             id: bidsDirDeep
-                            width: deepprepCol.width - label_dp2.width - 5
+                            width: fmriprepCol.width - label_dp2.width - 10
+                            height: 38
+                            inputRadius: 4
+                            backgroundColor: "#14FFFFFF"
                         }
                     }
                     Row{
-                        height: 30
-                        spacing: 5
+                        height: 38
+                        spacing: 10
                         Label {
                             id:label_dp3
                             text: qsTr("输出Output文件夹：")
-                            color: "#ffffff"
+                            font.pixelSize: 16
+                            color: "#80FFFFFF"
                             anchors.verticalCenter: parent.verticalCenter
                             width: deepprepCol.maxLabelWidth
                         }
                         SingleLineTextInput{
                             id: outputDirDeep
-                            width: deepprepCol.width - label_dp3.width - 5
+                            width: fmriprepCol.width - label_dp3.width - 10
+                            height: 38
+                            inputRadius: 4
+                            backgroundColor: "#14FFFFFF"
                         }
                     }
                     Row{
-                        height: 30
-                        spacing: 5
+                        height: 38
+                        spacing: 10
                         Label {
                             id:label_dp4
                             text: qsTr("license文件地址：")
-                            color: "#ffffff"
+                            font.pixelSize: 16
+                            color: "#80FFFFFF"
                             anchors.verticalCenter: parent.verticalCenter
                             width: deepprepCol.maxLabelWidth
                         }
                         SingleLineTextInput{
                             id: licenseFileDeep
-                            width: 150
+                            width: fmriprepCol.width - label_dp4.width - 60 - 20
+                            height: 38
+                            inputRadius: 4
+                            backgroundColor: "#14FFFFFF"
                         }
                         CustomButton{
-                            width: deepprepCol.width - label_dp4.width - 150 - 10
-                            height: 30
+                            width: 60
+                            height: 36
+                            buttonRadius: 4
+                            fontSize: 14
                             text: qsTr("导入")
+                            anchors.verticalCenter: parent.verticalCenter
                             onClicked: {
                                 licenseFileDialogDeep.open()
                             }
@@ -1139,7 +1497,7 @@ Rectangle {
                     }
                     CustomButton{
                         width: parent.width
-                        height: 30
+                        height: 48
                         text: qsTr("分析")
                         onClicked: {
                             function warn(msg) {
@@ -1178,11 +1536,9 @@ Rectangle {
                     // log 日志展示
                     Rectangle {
                         width: parent.width
-                        height: preAnalysis.height - 140 - 140 - tabSwitcher.height - 10
-                        color: "#0f0f0f"
-                        radius: 4
-                        border.color: "#303030"
-                        border.width: 1
+                        height: preAnalysis.height - tabContainer.height - 16 - 38 * 4 - 48 - 5 * 12
+                        color: "#E016171B"
+                        radius: 8
 
                         ScrollView {
                             anchors.fill: parent
@@ -1191,9 +1547,9 @@ Rectangle {
                                 id: logAreaDeep
                                 readOnly: true
                                 wrapMode: TextEdit.Wrap
-                                font.pixelSize: 12
+                                font.pixelSize: 16
                                 font.family: "Alibaba PuHuiTi 3.0"
-                                color: "#ffffff"
+                                color: "#E5FFFFFF"
                                 text: $MainViewController.deepprepLog
                                 background: null
 
@@ -1211,186 +1567,453 @@ Rectangle {
                 }
                 Column{
                     id: preDetailCol
-                    width: parent.width - 15
-                    spacing: 20
-                    visible: tabSwitcher.currentIndex === 2
+                    width: parent.width
+                    spacing: 12
+                    visible: preAnalysis.currentTabIndex === 2
                     Row{
-                        height: 30
-                        spacing: 5
+                        height: 38
+                        spacing: 10
                         Label {
                             id: label5
                             text: qsTr("预处理后文件夹：")
-                            color: "#ffffff"
+                            color: "#80FFFFFF"
+                            font.pixelSize: 16
                             anchors.verticalCenter: parent.verticalCenter
                         }
                         SingleLineTextInput{
                             id: outputDetailDir
-                            width: 150
+                            width: preDetailCol.width - label5.width - 60 - 20
+                            height: 38
+                            inputRadius: 4
+                            backgroundColor: "#14FFFFFF"
                         }
                         CustomButton{
-                            width: fmriprepCol.width - label5.width - 150 - 10
-                            height: 30
+                            width: 60
+                            height: 36
+                            buttonRadius: 4
+                            fontSize: 14
                             text: qsTr("导入")
+                            anchors.verticalCenter: parent.verticalCenter
                             onClicked: {
                                 outputDetailDialog.open()
                             }
                         }
                     }
+                    Rectangle{
+                        width: parent.width
+                        color: "transparent"
+                        height: 8
+                    }
                     Label {
                         text: qsTr("Structural Phase")
-                        font.pixelSize: 16
+                        font.pixelSize: 18
                         color: "#ffffff"
                     }
-                    CustomButton{
+                    Item{
                         id: segmentationBtn
-                        backgroundColor: preShowResultIndex === 0 ? "green" : "transparent"
-                        textColor: "#ffffff"
-                        borderColor: "#ffffff"
-                        borderWidth: 1
-                        fontSize: 14
-                        text: qsTr("Segmentation")
-                        onClicked: {
-                            if(outputDetailDir.text === ""){
-                                return
+                        width: btnText0.width + 40
+                        height: 36
+                        
+                        property bool isHovered: false
+                        
+                        Image {
+                            id: btnImg0
+                            anchors.fill: parent
+                            source: preShowResultIndex === 0 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
+                            fillMode: Image.Stretch
+                            opacity: segmentationBtn.isHovered ? 0.8 : 1.0
+                            
+                            Behavior on opacity {
+                                NumberAnimation { duration: 200 }
                             }
-                            preShowResultIndex = 0
-                            var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
-                            var fileName = isDeepprepOutput ? "sub-01_desc-volparc_T1w.svg" : "sub-01_dseg.svg"
-                            preResult.url = outputDetailDir.text + basePath + fileName
+                        }
+                        
+                        Text {
+                            id: btnText0
+                            anchors.centerIn: parent
+                            text: qsTr("Segmentation")
+                            color: "#B2FFFFFF"
+                            font.pixelSize: 14
+                            font.family: "Alibaba PuHuiTi 3.0"
+                        }
+                        
+                        MouseArea {
+                            id: segBtnMouseArea
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            hoverEnabled: true
+                            
+                            onEntered: segmentationBtn.isHovered = true
+                            onExited: segmentationBtn.isHovered = false
+                            
+                            onClicked: {
+                                if(outputDetailDir.text === ""){
+                                    return
+                                }
+                                preShowResultIndex = 0
+                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
+                                var fileName = isDeepprepOutput ? "sub-01_desc-volparc_T1w.svg" : "sub-01_dseg.svg"
+                                preResult.url = outputDetailDir.text + basePath + fileName
+                            }
                         }
                     }
-                    CustomButton{
-                        backgroundColor: preShowResultIndex === 1 ? "green" : "transparent"
-                        textColor: "#ffffff"
-                        borderColor: "#ffffff"
-                        borderWidth: 1
-                        fontSize: 14
-                        text: qsTr("Registration")
-                        onClicked: {
-                            if(outputDetailDir.text === ""){
-                                return
+                    Item{
+                        id: regBtn
+                        width: btnText1.width + 40
+                        height: 36
+                        
+                        property bool isHovered: false
+                        
+                        Image {
+                            id: btnImg1
+                            anchors.fill: parent
+                            source: preShowResultIndex === 1 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
+                            fillMode: Image.Stretch
+                            opacity: regBtn.isHovered ? 0.8 : 1.0
+                            
+                            Behavior on opacity {
+                                NumberAnimation { duration: 200 }
                             }
-                            preShowResultIndex = 1
-                            var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
-                            var fileName = isDeepprepOutput ? "sub-01_task-rest_desc-coreg_bold.svg" : "sub-01_space-MNI152NLin2009cAsym_T1w.svg"
-                            preResult.url = outputDetailDir.text + basePath + fileName
                         }
+                        
+                        Text {
+                            id: btnText1
+                            anchors.centerIn: parent
+                            text: qsTr("Registration")
+                            color: "#B2FFFFFF"
+                            font.pixelSize: 14
+                            font.family: "Alibaba PuHuiTi 3.0"
+                        }
+                        
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            hoverEnabled: true
+                            
+                            onEntered: regBtn.isHovered = true
+                            onExited: regBtn.isHovered = false
+                            
+                            onClicked: {
+                                if(outputDetailDir.text === ""){
+                                    return
+                                }
+                                preShowResultIndex = 1
+                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
+                                var fileName = isDeepprepOutput ? "sub-01_task-rest_desc-coreg_bold.svg" : "sub-01_space-MNI152NLin2009cAsym_T1w.svg"
+                                preResult.url = outputDetailDir.text + basePath + fileName
+                            }
+                        }
+                    }
+                    Rectangle{
+                        width: parent.width
+                        color: "transparent"
+                        height: 8
                     }
                     Label {
                         text: qsTr("Standard Space")
-                        font.pixelSize: 16
+                        font.pixelSize: 18
                         color: "#ffffff"
                     }
-                    CustomButton{
-                        backgroundColor: preShowResultIndex === 2 ? "green" : "transparent"
-                        textColor: "#ffffff"
-                        borderColor: "#ffffff"
-                        borderWidth: 1
-                        fontSize: 14
-                        text: qsTr("MN152NLin2009cAsym")
-                        onClicked: {
-                            if(outputDetailDir.text === ""){
-                                return
+                    Item{
+                        id: mniBtn
+                        width: btnText2.width + 40
+                        height: 36
+                        
+                        property bool isHovered: false
+                        
+                        Image {
+                            id: btnImg2
+                            anchors.fill: parent
+                            source: preShowResultIndex === 2 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
+                            fillMode: Image.Stretch
+                            opacity: mniBtn.isHovered ? 0.8 : 1.0
+                            
+                            Behavior on opacity {
+                                NumberAnimation { duration: 200 }
                             }
-                            preShowResultIndex = 2
-                            var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
-                            var fileName = isDeepprepOutput ? "sub-01_desc-T1toMNI152_combine.svg" : "sub-01_space-MNI152NLin2009cAsym_T1w.svg"
-                            preResult.url = outputDetailDir.text + basePath + fileName
                         }
+                        
+                        Text {
+                            id: btnText2
+                            anchors.centerIn: parent
+                            text: qsTr("MN152NLin2009cAsym")
+                            color: "#B2FFFFFF"
+                            font.pixelSize: 14
+                            font.family: "Alibaba PuHuiTi 3.0"
+                        }
+                        
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            hoverEnabled: true
+                            
+                            onEntered: mniBtn.isHovered = true
+                            onExited: mniBtn.isHovered = false
+                            
+                            onClicked: {
+                                if(outputDetailDir.text === ""){
+                                    return
+                                }
+                                preShowResultIndex = 2
+                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
+                                var fileName = isDeepprepOutput ? "sub-01_desc-T1toMNI152_combine.svg" : "sub-01_space-MNI152NLin2009cAsym_T1w.svg"
+                                preResult.url = outputDetailDir.text + basePath + fileName
+                            }
+                        }
+                    }
+                    Rectangle{
+                        width: parent.width
+                        color: "transparent"
+                        height: 8
                     }
                     Label {
                         text: qsTr("Functional Phase")
-                        font.pixelSize: 16
+                        font.pixelSize: 18
                         color: "#ffffff"
                     }
-                    CustomButton{
-                        backgroundColor: preShowResultIndex === 3 ? "green" : "transparent"
-                        textColor: "#ffffff"
-                        borderColor: "#ffffff"
-                        borderWidth: 1
-                        fontSize: 14
-                        text: qsTr("T1 to Fun")
-                        onClicked: {
-                            if(outputDetailDir.text === ""){
-                                return
+                    Item{
+                        id: t1FunBtn
+                        width: btnText3.width + 40
+                        height: 36
+                        
+                        property bool isHovered: false
+                        
+                        Image {
+                            id: btnImg3
+                            anchors.fill: parent
+                            source: preShowResultIndex === 3 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
+                            fillMode: Image.Stretch
+                            opacity: t1FunBtn.isHovered ? 0.8 : 1.0
+                            
+                            Behavior on opacity {
+                                NumberAnimation { duration: 200 }
                             }
-                            preShowResultIndex = 3
-                            var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
-                            var fileName = "sub-01_task-rest_desc-coreg_bold.svg"
-                            preResult.url = outputDetailDir.text + basePath + fileName
+                        }
+                        
+                        Text {
+                            id: btnText3
+                            anchors.centerIn: parent
+                            text: qsTr("T1 to Fun")
+                            color: "#B2FFFFFF"
+                            font.pixelSize: 14
+                            font.family: "Alibaba PuHuiTi 3.0"
+                        }
+                        
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            hoverEnabled: true
+                            
+                            onEntered: t1FunBtn.isHovered = true
+                            onExited: t1FunBtn.isHovered = false
+                            
+                            onClicked: {
+                                if(outputDetailDir.text === ""){
+                                    return
+                                }
+                                preShowResultIndex = 3
+                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
+                                var fileName = "sub-01_task-rest_desc-coreg_bold.svg"
+                                preResult.url = outputDetailDir.text + basePath + fileName
+                            }
                         }
                     }
-                    CustomButton{
-                        backgroundColor: preShowResultIndex === 4 ? "green" : "transparent"
-                        textColor: "#ffffff"
-                        borderColor: "#ffffff"
-                        borderWidth: 1
-                        fontSize: 14
-                        text: qsTr("BOLD summary")
-                        onClicked: {
-                            if(outputDetailDir.text === ""){
-                                return
+                    Item{
+                        id: boldBtn
+                        width: btnText4.width + 40
+                        height: 36
+                        
+                        property bool isHovered: false
+                        
+                        Image {
+                            id: btnImg4
+                            anchors.fill: parent
+                            source: preShowResultIndex === 4 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
+                            fillMode: Image.Stretch
+                            opacity: boldBtn.isHovered ? 0.8 : 1.0
+                            
+                            Behavior on opacity {
+                                NumberAnimation { duration: 200 }
                             }
-                            preShowResultIndex = 4
-                            var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
-                            var fileName = isDeepprepOutput ? "sub-01_task-rest_desc-carpet_bold.svg" : "sub-01_task-rest_desc-carpetplot_bold.svg"
-                            preResult.url = outputDetailDir.text + basePath + fileName
                         }
+                        
+                        Text {
+                            id: btnText4
+                            anchors.centerIn: parent
+                            text: qsTr("BOLD summary")
+                            color: "#B2FFFFFF"
+                            font.pixelSize: 14
+                            font.family: "Alibaba PuHuiTi 3.0"
+                        }
+                        
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            hoverEnabled: true
+                            
+                            onEntered: boldBtn.isHovered = true
+                            onExited: boldBtn.isHovered = false
+                            
+                            onClicked: {
+                                if(outputDetailDir.text === ""){
+                                    return
+                                }
+                                preShowResultIndex = 4
+                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
+                                var fileName = isDeepprepOutput ? "sub-01_task-rest_desc-carpet_bold.svg" : "sub-01_task-rest_desc-carpetplot_bold.svg"
+                                preResult.url = outputDetailDir.text + basePath + fileName
+                            }
+                        }
+                    }
+                    Rectangle{
+                        width: parent.width
+                        color: "transparent"
+                        height: 8
                     }
                     Label {
                         text: isDeepprepOutput ? qsTr("DeepPrep Outputs") : qsTr("QC quality control")
-                        font.pixelSize: 16
+                        font.pixelSize: 18
                         color: "#ffffff"
                     }
-                    CustomButton{
-                        backgroundColor: preShowResultIndex === 5 ? "green" : "transparent"
-                        textColor: "#ffffff"
-                        borderColor: "#ffffff"
-                        borderWidth: 1
-                        fontSize: 14
-                        text: isDeepprepOutput ? qsTr("Cortical surface") : qsTr("CompCor ROIs")
-                        onClicked: {
-                            if(outputDetailDir.text === ""){
-                                return
+                    Item{
+                        id: corticalBtn
+                        width: btnText5.width + 40
+                        height: 36
+                        
+                        property bool isHovered: false
+                        
+                        Image {
+                            id: btnImg5
+                            anchors.fill: parent
+                            source: preShowResultIndex === 5 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
+                            fillMode: Image.Stretch
+                            opacity: corticalBtn.isHovered ? 0.8 : 1.0
+                            
+                            Behavior on opacity {
+                                NumberAnimation { duration: 200 }
                             }
-                            preShowResultIndex = 5
-                            var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
-                            var fileName = isDeepprepOutput ? "sub-01_desc-surfparc_T1w.svg" : "sub-01_task-rest_desc-rois_bold.svg"
-                            preResult.url = outputDetailDir.text + basePath + fileName
+                        }
+                        
+                        Text {
+                            id: btnText5
+                            anchors.centerIn: parent
+                            text: isDeepprepOutput ? qsTr("Cortical surface") : qsTr("CompCor ROIs")
+                            color: "#B2FFFFFF"
+                            font.pixelSize: 14
+                            font.family: "Alibaba PuHuiTi 3.0"
+                        }
+                        
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            hoverEnabled: true
+                            
+                            onEntered: corticalBtn.isHovered = true
+                            onExited: corticalBtn.isHovered = false
+                            
+                            onClicked: {
+                                if(outputDetailDir.text === ""){
+                                    return
+                                }
+                                preShowResultIndex = 5
+                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
+                                var fileName = isDeepprepOutput ? "sub-01_desc-surfparc_T1w.svg" : "sub-01_task-rest_desc-rois_bold.svg"
+                                preResult.url = outputDetailDir.text + basePath + fileName
+                            }
                         }
                     }
-                    CustomButton{
-                        backgroundColor: preShowResultIndex === 6 ? "green" : "transparent"
-                        textColor: "#ffffff"
-                        borderColor: "#ffffff"
-                        borderWidth: 1
-                        fontSize: 14
-                        text: isDeepprepOutput ? qsTr("tSNR") : qsTr("Variance")
-                        onClicked: {
-                            if(outputDetailDir.text === ""){
-                                return
+                    Item{
+                        id: tsnrBtn
+                        width: btnText6.width + 40
+                        height: 36
+                        
+                        property bool isHovered: false
+                        
+                        Image {
+                            id: btnImg6
+                            anchors.fill: parent
+                            source: preShowResultIndex === 6 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
+                            fillMode: Image.Stretch
+                            opacity: tsnrBtn.isHovered ? 0.8 : 1.0
+                            
+                            Behavior on opacity {
+                                NumberAnimation { duration: 200 }
                             }
-                            preShowResultIndex = 6
-                            var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
-                            var fileName = isDeepprepOutput ? "sub-01_task-rest_bold_desc-tsnr_bold.svg" : "sub-01_task-rest_desc-compcorvar_bold.svg"
-                            preResult.url = outputDetailDir.text + basePath + fileName
+                        }
+                        
+                        Text {
+                            id: btnText6
+                            anchors.centerIn: parent
+                            text: isDeepprepOutput ? qsTr("tSNR") : qsTr("Variance")
+                            color: "#B2FFFFFF"
+                            font.pixelSize: 14
+                            font.family: "Alibaba PuHuiTi 3.0"
+                        }
+                        
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            hoverEnabled: true
+                            
+                            onEntered: tsnrBtn.isHovered = true
+                            onExited: tsnrBtn.isHovered = false
+                            
+                            onClicked: {
+                                if(outputDetailDir.text === ""){
+                                    return
+                                }
+                                preShowResultIndex = 6
+                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
+                                var fileName = isDeepprepOutput ? "sub-01_task-rest_bold_desc-tsnr_bold.svg" : "sub-01_task-rest_desc-compcorvar_bold.svg"
+                                preResult.url = outputDetailDir.text + basePath + fileName
+                            }
                         }
                     }
-                    CustomButton{
-                        backgroundColor: preShowResultIndex === 7 ? "green" : "transparent"
-                        textColor: "#ffffff"
-                        borderColor: "#ffffff"
-                        borderWidth: 1
-                        fontSize: 14
-                        text: isDeepprepOutput ? qsTr("Surface reconstruction") : qsTr("nuisance regressors Correlations")
-                        onClicked: {
-                            if(outputDetailDir.text === ""){
-                                return
+                    Item{
+                        id: surfaceBtn
+                        width: btnText7.width + 40
+                        height: 36
+                        
+                        property bool isHovered: false
+                        
+                        Image {
+                            id: btnImg7
+                            anchors.fill: parent
+                            source: preShowResultIndex === 7 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
+                            fillMode: Image.Stretch
+                            opacity: surfaceBtn.isHovered ? 0.8 : 1.0
+                            
+                            Behavior on opacity {
+                                NumberAnimation { duration: 200 }
                             }
-                            preShowResultIndex = 7
-                            var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
-                            var fileName = isDeepprepOutput ? "sub-01_desc-volsurf_T1w.svg" : "sub-01_task-rest_desc-confoundcorr_bold.svg"
-                            preResult.url = outputDetailDir.text + basePath + fileName
+                        }
+                        
+                        Text {
+                            id: btnText7
+                            anchors.centerIn: parent
+                            text: isDeepprepOutput ? qsTr("Surface reconstruction") : qsTr("nuisance regressors Correlations")
+                            color: "#B2FFFFFF"
+                            font.pixelSize: 14
+                            font.family: "Alibaba PuHuiTi 3.0"
+                        }
+                        
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            hoverEnabled: true
+                            
+                            onEntered: surfaceBtn.isHovered = true
+                            onExited: surfaceBtn.isHovered = false
+                            
+                            onClicked: {
+                                if(outputDetailDir.text === ""){
+                                    return
+                                }
+                                preShowResultIndex = 7
+                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
+                                var fileName = isDeepprepOutput ? "sub-01_desc-volsurf_T1w.svg" : "sub-01_task-rest_desc-confoundcorr_bold.svg"
+                                preResult.url = outputDetailDir.text + basePath + fileName
+                            }
                         }
                     }
                 }
@@ -1399,25 +2022,29 @@ Rectangle {
         Rectangle{
             id: segmentationAnalysis
             anchors.fill: parent
+            anchors.leftMargin: 16
+            anchors.rightMargin: 16
+            anchors.topMargin: 22
+            anchors.bottomMargin: 22
             color: "transparent"
             visible: currentIndex === 2
             clip: true
             Column{
                 width: parent.width
-                spacing: 10
+                spacing: 24
                 Label{
+                    id: segLabel
                     text: qsTr("使用预处理路径：") + outputDetailDir.text
                     color: "#ffffff"
-                    font.pixelSize: 14
+                    font.weight: Font.Medium
+                    font.pixelSize: 16
                     wrapMode: Text.WrapAnywhere
                 }
                 ///脑区表格
                 Rectangle {
-                    width: parent.width - 5
-                    height: segmentationAnalysis.height - 50 - 5
-                    color: "#1a1a1a"
-                    border.color: "#404040"
-                    border.width: 1
+                    width: parent.width
+                    height: segmentationAnalysis.height - segLabel.height - 24
+                    color: "#99232324"
 
                     Column {
                         id: segTableColumn

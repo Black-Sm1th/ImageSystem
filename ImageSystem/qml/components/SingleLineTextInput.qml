@@ -8,9 +8,9 @@ Rectangle {
     property int inputWidth: 300
     property int inputHeight: 30
     property color borderColor: "transparent"
-    property color focusedBorderColor: "#006BFF"
+    property color focusedBorderColor: "#3C7EFF"
     property color backgroundColor: "#383838"
-    property color textColor: "#ffffff"
+    property color textColor: "#E5FFFFFF"
     property color placeholderColor: "#c3c3c3"
     property int fontSize: 16
     property string placeholderText: qsTr("请输入...")
