@@ -6,8 +6,8 @@ import com.vtk.dicom 1.0
 Item {
     id: root
     
-    // 十字线功能总开关（先屏蔽：false）
-    property bool crosshairEnabled: false
+    // 十字线功能总开关（Key_8 可切换）
+    property bool crosshairEnabled: $DicomDataModel.crosshairEnabled
 
     // 公共十字线属性（荧光绿）
     readonly property color crossColor: "#00ff7f"

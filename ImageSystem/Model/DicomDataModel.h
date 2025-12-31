@@ -34,6 +34,10 @@ class DicomDataModel : public QObject
         Q_PROPERTY(bool isSegDataMode READ isSegDataMode NOTIFY segDataModeChanged)
         Q_PROPERTY(double windowWidth READ windowWidth WRITE setWindowWidth NOTIFY windowWidthChanged)
         Q_PROPERTY(double windowLevel READ windowLevel WRITE setWindowLevel NOTIFY windowLevelChanged)
+        // 当前交互模式（键盘/工具栏切换用），与 ViewController/InteractionState.h 的 ToolMode 数值保持一致
+        Q_PROPERTY(int toolMode READ toolMode WRITE setToolMode NOTIFY toolModeChanged)
+        // QML 十字线开关（Key_8 toggle）
+        Q_PROPERTY(bool crosshairEnabled READ crosshairEnabled WRITE setCrosshairEnabled NOTIFY crosshairEnabledChanged)
         Q_PROPERTY(QString dicomInfo READ dicomInfo NOTIFY dataLoaded)
         Q_PROPERTY(bool hasData READ hasData NOTIFY dataLoaded)
 
@@ -61,6 +65,8 @@ public:
     
     double windowWidth() const;
     double windowLevel() const;
+    int toolMode() const;
+    bool crosshairEnabled() const;
     QString dicomInfo() const;
     bool hasData() const;
     vtkSmartPointer<vtkImageData> getImageData();
@@ -79,6 +85,11 @@ public:
 
     void setWindowWidth(double width);
     void setWindowLevel(double level);
+    void setToolMode(int mode);
+    void setCrosshairEnabled(bool enabled);
+
+    // Key_7: reset 所有交互状态（WW/WL、相机平移/缩放、测量等）
+    Q_INVOKABLE void resetAllInteractions();
     Q_INVOKABLE bool loadDicomDirectory(const QString& path);
 
     Q_INVOKABLE void loadSegBrainDirectory(const QString& path);
@@ -98,6 +109,8 @@ signals:
     void segCoronalSliceChanged(int slice);
     void windowWidthChanged(double width);
     void windowLevelChanged(double level);
+    void toolModeChanged(int mode);
+    void crosshairEnabledChanged(bool enabled);
     void dataLoaded();
     void segDataLoaded();
     void segDataModeChanged();
@@ -105,6 +118,7 @@ signals:
     void segLoadingProgress(int percent, const QString& message);
     void segLoadingFinished(bool success, const QString& message);
     void segRefreshRenderer();
+    void interactionResetRequested();
 
 private:
     void finalizeSegDataLoad(std::unique_ptr<BrainRegionVisualizer> region);
@@ -124,6 +138,8 @@ private:
     bool m_isSegDataMode = false;
     double m_windowWidth = 2000;
     double m_windowLevel = 0;
+    int m_toolMode = 1; // 默认 WindowLevel
+    bool m_crosshairEnabled = false;
     QString m_dicomInfo;
     bool m_segLoadingInProgress = false;
     QString m_statsDir;

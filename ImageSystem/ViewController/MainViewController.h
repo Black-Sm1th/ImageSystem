@@ -27,13 +27,17 @@
 #include <QFile.h>
 #include <vtkAxisActor2D.h>
 #include <vtkProperty2D.h>
+#include <memory>
+#include <optional>
 
 // 枚举类型：切片方向
-enum class SliceOrientation {
+enum class SliceOrientation : int {
     Axial,    // 轴向 (Z方向)
     Sagittal, // 矢状 (X方向)
     Coronal   // 冠状 (Y方向)
 };
+
+#include "ViewController/InteractionState.h"
 
 // 通用交互样式类 - 减少重复代码
 class SliceInteractorStyle : public vtkInteractorStyleImage
@@ -43,6 +47,8 @@ public:
     vtkTypeMacro(SliceInteractorStyle, vtkInteractorStyleImage);
 
     void SetOrientation(SliceOrientation orientation);
+    void SetToolMode(ToolMode mode);
+    ToolMode toolMode() const { return m_toolMode; }
 	void setAxisActor(vtkSmartPointer<vtkAxisActor2D> axisActor);
 	void rescaleAxisActor();
 
@@ -55,6 +61,11 @@ public:
     void OnMiddleButtonDown() override;
     void OnMiddleButtonUp() override;
     void OnMouseMove() override;
+    void OnKeyPress() override;
+
+    // Reset：清除测量/取消当前 state（相机重置由视图层完成）
+    void ResetInteractionState();
+    void UpdateMeasurementVisibility(int sliceNumber, bool segMode);
 
 protected:
     SliceInteractorStyle();
@@ -63,14 +74,15 @@ private:
     int getCurrentSlice() const;
     int getMaxSlice() const;
     void setSlice(int slice);
+    void BeginInteraction(std::optional<ToolMode> forcedMode);
     DicomDataModel* m_dataModel;
     SliceOrientation m_orientation;
-    bool m_isDragging;
-    bool m_isScaling;
-    bool m_isPanning;
-    int m_lastX;
-    int m_lastY;
 	vtkSmartPointer<vtkAxisActor2D> m_axisActor;
+
+    // 交互框架：当前工具 + 当前状态 + 上下文
+    ToolMode m_toolMode{ ToolMode::WindowLevel };
+    std::unique_ptr<IInteractionState> m_state;
+    InteractionContext m_ctx;
 };
 
 
@@ -87,6 +99,7 @@ public:
     vtkSmartPointer<vtkTextMapper> wwwlTextMapper;
     vtkSmartPointer<vtkActor2D> wwwlTextActor;
 	vtkSmartPointer<vtkAxisActor2D> axisActor;
+    vtkSmartPointer<SliceInteractorStyle> interactorStyle;
 
 protected:
     SliceViewData() {}
@@ -112,12 +125,14 @@ private slots:
     void onSliceChanged(int slice);
     void onSegSliceChanged(int slice);
     void onWindowChanged();
+    void onInteractionResetRequested();
 
 private:
     void setupView(vtkRenderWindow* renderWindow, SliceViewData* data, vtkImageData* imageData);
     void applyParallelScale(vtkImageSlice* imageSlice, vtkRenderer* renderer);
     void setMapperOrientation(vtkImageSliceMapper* mapper);
     void setupCamera(vtkRenderer* renderer);
+    void resetViewState(vtkRenderWindow* rw, SliceViewData* data);
 
     int getCurrentSlice() const;
     int getSegCurrentSlice() const;
@@ -185,6 +200,7 @@ private slots:
     void onDataLoaded();
     void onSegDataLoaded();
     void onSegRefreshRenderer();
+    void onInteractionResetRequested();
 
 private:
     static void setupView(vtkRenderWindow* renderWindow, VolumeViewData* data, vtkImageData* imageData);

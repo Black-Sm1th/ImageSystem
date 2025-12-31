@@ -34,7 +34,7 @@
     <QtInstall>5.15.2_msvc2019_64</QtInstall>
     <QtModules>quick;webengine;webenginewidgets</QtModules>
     <QtBuildConfig>debug</QtBuildConfig>
-    <QtQMLDebugEnable>false</QtQMLDebugEnable>
+    <QtQMLDebugEnable>true</QtQMLDebugEnable>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
     <QtInstall>5.15.2_msvc2019_64</QtInstall>
@@ -117,6 +117,7 @@
     <ClCompile Include="Modules\BrainNetworkData.cpp" />
     <ClCompile Include="Modules\BrainMetrics.cpp" />
     <ClCompile Include="Modules\BrainRegionVisualizer.cpp" />
+    <ClCompile Include="ViewController\InteractionState.cpp" />
     <ClCompile Include="ViewController\MainViewController.cpp" />
     <QtRcc Include="qml.qrc" />
   </ItemGroup>
@@ -134,6 +135,7 @@
     <ClInclude Include="Modules\BrainMetrics.h" />
     <ClInclude Include="Modules\BrainRegionVisualizer.h" />
     <ClInclude Include="Modules\CommonFunc.h" />
+    <ClInclude Include="ViewController\InteractionState.h" />
     <QtMoc Include="ViewController\MainViewController.h" />
     <QtMoc Include="Model\DicomDataModel.h" />
     <QtMoc Include="Model\BrainRegionTableModel.h" />

@@ -67,6 +67,9 @@
     <ClCompile Include="ViewController\MainViewController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ViewController\InteractionState.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Modules\BrainNetworkData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -87,7 +90,7 @@
     <ClInclude Include="Modules\BrainRegionVisualizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Modules\Version.h">
+    <ClInclude Include="ViewController\InteractionState.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

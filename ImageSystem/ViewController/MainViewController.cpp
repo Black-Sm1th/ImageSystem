@@ -21,24 +21,32 @@ vtkStandardNewMacro(VolumeViewData);
 
 // ===== SliceInteractorStyle implementations =====
 SliceInteractorStyle::SliceInteractorStyle()
-    : m_orientation(SliceOrientation::Axial),
-      m_isDragging(false),
-      m_isScaling(false),
-      m_isPanning(false),
-      m_lastX(0),
-      m_lastY(0)
+    : m_orientation(SliceOrientation::Axial)
 {
     m_dataModel = GET_SINGLETON(DicomDataModel);
+    m_ctx.model = m_dataModel;
+    m_ctx.orientation = m_orientation;
 }
 
 void SliceInteractorStyle::SetOrientation(SliceOrientation orientation)
 {
     m_orientation = orientation;
+    m_ctx.orientation = orientation;
+}
+
+void SliceInteractorStyle::SetToolMode(ToolMode mode)
+{
+    m_toolMode = mode;
+    // 同步到全局模型，便于从 Qt 层/全局键盘事件切换
+    if (m_dataModel) {
+        m_dataModel->setToolMode(static_cast<int>(mode));
+    }
 }
 
 void SliceInteractorStyle::setAxisActor(vtkSmartPointer<vtkAxisActor2D> axisActor)
 {
 	m_axisActor = axisActor;
+    m_ctx.axisActor = axisActor;
 }
 
 void SliceInteractorStyle::rescaleAxisActor()
@@ -122,159 +130,240 @@ void SliceInteractorStyle::OnMouseWheelBackward()
 
 void SliceInteractorStyle::OnLeftButtonDown()
 {
-    m_isDragging = true;
-    int* pos = this->GetInteractor()->GetEventPosition();
-    m_lastX = pos[0];
-    m_lastY = pos[1];
+    BeginInteraction(std::nullopt);
 }
 
 void SliceInteractorStyle::OnLeftButtonUp()
 {
-    m_isDragging = false;
+    vtkRenderWindowInteractor* interactor = this->GetInteractor();
+    int* pos = interactor ? interactor->GetEventPosition() : nullptr;
+    const int x = pos ? pos[0] : 0;
+    const int y = pos ? pos[1] : 0;
+
+    if (m_state) {
+        m_state->OnExit(m_ctx, x, y);
+        m_state.reset();
+    }
 }
 
 void SliceInteractorStyle::OnRightButtonDown()
 {
-    m_isScaling = true;
-    int* pos = this->GetInteractor()->GetEventPosition();
-    m_lastX = pos[0];
-    m_lastY = pos[1];
+    // 右键始终缩放（不受当前左键 toolMode 影响）
+    BeginInteraction(ToolMode::Zoom);
 }
 
 void SliceInteractorStyle::OnRightButtonUp()
 {
-    m_isScaling = false;
+    OnLeftButtonUp();
 }
 
 void SliceInteractorStyle::OnMiddleButtonDown()
 {
-    m_isPanning = true;
-    int* pos = this->GetInteractor()->GetEventPosition();
-    m_lastX = pos[0];
-    m_lastY = pos[1];
+    // 中键始终平移（不受当前左键 toolMode 影响）
+    BeginInteraction(ToolMode::Pan);
+}
+
+void SliceInteractorStyle::BeginInteraction(std::optional<ToolMode> forcedMode)
+{
+    vtkRenderWindowInteractor* interactor = this->GetInteractor();
+    if (!interactor) {
+        return;
+    }
+
+    int* pos = interactor->GetEventPosition();
+    const int x = pos ? pos[0] : 0;
+    const int y = pos ? pos[1] : 0;
+
+    // 组装上下文（每次按下都刷新 renderer/camera 指针）
+    m_ctx.model = m_dataModel;
+    m_ctx.orientation = m_orientation;
+    m_ctx.interactor = interactor;
+    m_ctx.renderer = this->GetCurrentRenderer();
+    if (!m_ctx.renderer && interactor->GetRenderWindow()) {
+        vtkRendererCollection* renderers = interactor->GetRenderWindow()->GetRenderers();
+        m_ctx.renderer = renderers ? renderers->GetFirstRenderer() : nullptr;
+    }
+    m_ctx.camera = m_ctx.renderer ? m_ctx.renderer->GetActiveCamera() : nullptr;
+    m_ctx.axisActor = m_axisActor;
+    m_ctx.rescaleAxisActor = [this]() { this->rescaleAxisActor(); };
+    m_ctx.requestRender = [this]() { if (this->Interactor) this->Interactor->Render(); };
+
+    ToolMode effective = m_toolMode;
+    if (forcedMode.has_value()) {
+        // 右/中键强制模式：不要被 DataModel.toolMode 覆盖
+        effective = *forcedMode;
+    }
+    else {
+        // 默认从全局模型读取当前工具（这样键盘/工具栏统一生效）
+        if (m_dataModel) {
+            effective = static_cast<ToolMode>(m_dataModel->toolMode());
+        }
+
+        // 支持按键修饰符临时切换（可按需调整映射）
+        // Shift+Ctrl: 距离测量；Shift+Alt: 角度测量；Shift: 平移；Ctrl: 缩放；Alt: 对比度；否则使用当前工具
+        const bool shift = interactor->GetShiftKey();
+        const bool ctrl = interactor->GetControlKey();
+        const bool alt = interactor->GetAltKey();
+        if (shift && ctrl) effective = ToolMode::MeasureDistance;
+        else if (shift && alt) effective = ToolMode::MeasureAngle;
+        else if (shift) effective = ToolMode::Pan;
+        else if (ctrl) effective = ToolMode::Zoom;
+        else if (alt) effective = ToolMode::Contrast;
+    }
+
+    // 如果离开测量工具，清理未完成的“点”预览（避免残留在画面上）
+    if (effective != ToolMode::MeasureDistance && effective != ToolMode::MeasureAngle) {
+        if (m_ctx.renderer) {
+            for (auto& a : m_ctx.pendingPointActors) {
+                if (a) m_ctx.renderer->RemoveViewProp(a);
+            }
+            if (m_ctx.pendingAngleFirstLine) {
+                m_ctx.renderer->RemoveViewProp(m_ctx.pendingAngleFirstLine);
+            }
+        }
+        m_ctx.pendingPointActors.clear();
+        m_ctx.pendingPoints.clear();
+        m_ctx.pendingMode = ToolMode::None;
+        m_ctx.pendingAngleFirstLine = nullptr;
+    }
+
+    m_state = CreateState(effective);
+    if (m_state) {
+        m_state->OnEnter(m_ctx, x, y);
+    }
 }
 
 void SliceInteractorStyle::OnMiddleButtonUp()
 {
-    m_isPanning = false;
+    OnLeftButtonUp();
 }
 
 void SliceInteractorStyle::OnMouseMove()
 {
-    int* pos = this->GetInteractor()->GetEventPosition();
-    
-    if (m_isDragging && !m_dataModel->isSegDataMode()) {
-        int dx = pos[0] - m_lastX;
-        int dy = pos[1] - m_lastY;
+        vtkRenderWindowInteractor* interactor = this->GetInteractor();
+    if (!interactor) return;
 
-        // 水平拖动调整窗宽，垂直拖动调整窗位
-        double currentWidth = m_dataModel->windowWidth();
-        double currentLevel = m_dataModel->windowLevel();
+    int* pos = interactor->GetEventPosition();
+    const int x = pos ? pos[0] : 0;
+    const int y = pos ? pos[1] : 0;
 
-        double newWidth = currentWidth + dx * 4.0;
-        double newLevel = currentLevel + dy * 4.0;
-
-        if (newWidth < 1) newWidth = 1;
-
-        m_dataModel->setWindowWidth(newWidth);
-        m_dataModel->setWindowLevel(newLevel);
-
-        m_lastX = pos[0];
-        m_lastY = pos[1];
+    if (m_state) {
+        m_state->OnMove(m_ctx, x, y);
     }
-    else if (m_isScaling) {
-        int dy = pos[1] - m_lastY;
-        
-        // 获取当前渲染器和相机
+}
+
+void SliceInteractorStyle::OnKeyPress()
+{
+        vtkRenderWindowInteractor* interactor = this->GetInteractor();
+    if (!interactor) {
+        vtkInteractorStyleImage::OnKeyPress();
+        return;
+    }
+
+    const char key = interactor->GetKeyCode(); // '1'..'6'
+    switch (key)
+    {
+    case '1':
+        SetToolMode(ToolMode::WindowLevel);
+        qDebug() << "[Interaction] ToolMode = WindowLevel (1)";
+        break;
+    case '2':
+        SetToolMode(ToolMode::Contrast);
+        qDebug() << "[Interaction] ToolMode = Contrast (2)";
+        break;
+    case '3':
+        SetToolMode(ToolMode::Zoom);
+        qDebug() << "[Interaction] ToolMode = Zoom (3)";
+        break;
+    case '4':
+        SetToolMode(ToolMode::Pan);
+        qDebug() << "[Interaction] ToolMode = Pan (4)";
+        break;
+    case '5':
+        SetToolMode(ToolMode::MeasureDistance);
+        qDebug() << "[Interaction] ToolMode = MeasureDistance (5)";
+        break;
+    case '6':
+        SetToolMode(ToolMode::MeasureAngle);
+        qDebug() << "[Interaction] ToolMode = MeasureAngle (6)";
+        break;
+    case '0':
+        SetToolMode(ToolMode::None);
+        qDebug() << "[Interaction] ToolMode = None (0)";
+        break;
+    default:
+        break;
+    }
+
+    vtkInteractorStyleImage::OnKeyPress();
+}
+
+void SliceInteractorStyle::ResetInteractionState()
+{
+    // 取消当前 state
+    if (m_state) {
+        m_state.reset();
+    }
+
+    // 清除测量：从 renderer 移除所有 actor，并清空列表
+    if (m_ctx.renderer) {
+        for (auto& it : m_ctx.measurements) {
+            for (auto& a : it.actors) {
+                // 统一用 vtkProp 级别移除，避免类型不匹配
+                if (a) m_ctx.renderer->RemoveViewProp(a);
+            }
+            if (it.textActor) {
+                m_ctx.renderer->RemoveViewProp(it.textActor);
+            }
+        }
+        // 清除未完成测量的“点”预览
+        for (auto& a : m_ctx.pendingPointActors) {
+            if (a) m_ctx.renderer->RemoveViewProp(a);
+        }
+        // 清除角度测量的预览线
+        if (m_ctx.pendingAngleFirstLine) {
+            m_ctx.renderer->RemoveViewProp(m_ctx.pendingAngleFirstLine);
+            m_ctx.pendingAngleFirstLine = nullptr;
+        }
+    }
+    m_ctx.measurements.clear();
+    m_ctx.pendingPoints.clear();
+    m_ctx.pendingMode = ToolMode::None;
+    m_ctx.pendingPointActors.clear();
+    m_ctx.pendingSegMode = false;
+    m_ctx.pendingSliceNumber = 0;
+}
+
+void SliceInteractorStyle::UpdateMeasurementVisibility(int sliceNumber, bool segMode)
+{
+    if (!m_ctx.renderer) {
+        // 尝试从当前 interactor 推导 renderer
         vtkRenderWindowInteractor* interactor = this->GetInteractor();
         if (interactor && interactor->GetRenderWindow()) {
             vtkRendererCollection* renderers = interactor->GetRenderWindow()->GetRenderers();
-            if (renderers->GetNumberOfItems() > 0) {
-                vtkRenderer* renderer = renderers->GetFirstRenderer();
-                vtkCamera* camera = renderer->GetActiveCamera();
-                
-                // 根据鼠标垂直移动调整缩放
-                double currentScale = camera->GetParallelScale();
-                double scaleFactor = 1.0 + (dy * 0.01);  // 缩放灵敏度
-                double newScale = currentScale * scaleFactor;
-                
-                // 限制缩放范围
-                if (newScale > 1.0 && newScale < 10000.0) {
-                    camera->SetParallelScale(newScale);
-                    rescaleAxisActor();
-                    interactor->Render();
-                }
-            }
+            m_ctx.renderer = renderers ? renderers->GetFirstRenderer() : nullptr;
         }
-        
-        m_lastX = pos[0];
-        m_lastY = pos[1];
     }
-    else if (m_isPanning) {
-        int dx = pos[0] - m_lastX;
-        int dy = pos[1] - m_lastY;
-        
-        // 获取当前渲染器和相机
-        vtkRenderWindowInteractor* interactor = this->GetInteractor();
-        if (interactor && interactor->GetRenderWindow()) {
-            vtkRendererCollection* renderers = interactor->GetRenderWindow()->GetRenderers();
-            if (renderers->GetNumberOfItems() > 0) {
-                vtkRenderer* renderer = renderers->GetFirstRenderer();
-                vtkCamera* camera = renderer->GetActiveCamera();
-                
-                // 获取相机的平行投影缩放和窗口大小
-                double scale = camera->GetParallelScale();
-                int* size = renderer->GetSize();
-                
-                // 计算平移量（根据视图空间转换到世界空间）
-                double fx = -dx * scale * 2.0 / size[1];
-                double fy = -dy * scale * 2.0 / size[1];
-                
-                // 获取相机的方向向量
-                double* position = camera->GetPosition();
-                double* focalPoint = camera->GetFocalPoint();
-                double* viewUp = camera->GetViewUp();
-                
-                // 计算相机的右向量（叉乘）
-                double viewPlaneNormal[3];
-                viewPlaneNormal[0] = position[0] - focalPoint[0];
-                viewPlaneNormal[1] = position[1] - focalPoint[1];
-                viewPlaneNormal[2] = position[2] - focalPoint[2];
-                
-                // 归一化视平面法向量
-                double norm = sqrt(viewPlaneNormal[0] * viewPlaneNormal[0] +
-                                 viewPlaneNormal[1] * viewPlaneNormal[1] +
-                                 viewPlaneNormal[2] * viewPlaneNormal[2]);
-                if (norm > 0) {
-                    viewPlaneNormal[0] /= norm;
-                    viewPlaneNormal[1] /= norm;
-                    viewPlaneNormal[2] /= norm;
-                }
-                
-                // 计算右向量（ViewUp × ViewPlaneNormal）
-                double rightVector[3];
-                rightVector[0] = viewUp[1] * viewPlaneNormal[2] - viewUp[2] * viewPlaneNormal[1];
-                rightVector[1] = viewUp[2] * viewPlaneNormal[0] - viewUp[0] * viewPlaneNormal[2];
-                rightVector[2] = viewUp[0] * viewPlaneNormal[1] - viewUp[1] * viewPlaneNormal[0];
-                
-                // 计算新的相机位置和焦点
-                double newPosition[3];
-                double newFocalPoint[3];
-                
-                for (int i = 0; i < 3; i++) {
-                    newPosition[i] = position[i] + rightVector[i] * fx + viewUp[i] * fy;
-                    newFocalPoint[i] = focalPoint[i] + rightVector[i] * fx + viewUp[i] * fy;
-                }
-                
-                camera->SetPosition(newPosition);
-                camera->SetFocalPoint(newFocalPoint);
-                rescaleAxisActor();
-                interactor->Render();
-            }
+    if (!m_ctx.renderer) return;
+
+    for (auto& it : m_ctx.measurements) {
+        const bool visible = (it.segMode == segMode) && (it.sliceNumber == sliceNumber);
+        for (auto& a : it.actors) {
+            if (a) a->SetVisibility(visible ? 1 : 0);
         }
-        
-        m_lastX = pos[0];
-        m_lastY = pos[1];
+        if (it.textActor) it.textActor->SetVisibility(visible ? 1 : 0);
+    }
+
+    // 未完成测量的“点”预览也要跟着切片显示/隐藏
+    const bool pendingVisible =
+        (m_ctx.pendingMode == ToolMode::MeasureDistance || m_ctx.pendingMode == ToolMode::MeasureAngle) &&
+        (m_ctx.pendingSegMode == segMode) &&
+        (m_ctx.pendingSliceNumber == sliceNumber);
+    for (auto& a : m_ctx.pendingPointActors) {
+        if (a) a->SetVisibility(pendingVisible ? 1 : 0);
+    }
+    if (m_ctx.pendingAngleFirstLine) {
+        m_ctx.pendingAngleFirstLine->SetVisibility(pendingVisible ? 1 : 0);
     }
 }
 
@@ -381,6 +470,8 @@ QQuickVTKItem::vtkUserData SliceVtkItemBase::initializeVTK(vtkRenderWindow* rend
         this, &SliceVtkItemBase::onWindowChanged);
     connect(m_dataModel, &DicomDataModel::windowLevelChanged,
         this, &SliceVtkItemBase::onWindowChanged);
+    connect(m_dataModel, &DicomDataModel::interactionResetRequested,
+        this, &SliceVtkItemBase::onInteractionResetRequested);
 
     // 在渲染线程初始化VTK对象
     vtkSmartPointer<vtkImageData> imageData = m_dataModel->getImageData();
@@ -389,6 +480,17 @@ QQuickVTKItem::vtkUserData SliceVtkItemBase::initializeVTK(vtkRenderWindow* rend
     }
 
     return data;
+}
+
+void SliceVtkItemBase::onInteractionResetRequested()
+{
+    dispatch_async([this](vtkRenderWindow* rw, vtkUserData userData) {
+        if (userData) {
+            SliceViewData* data = static_cast<SliceViewData*>(userData.GetPointer());
+            resetViewState(rw, data);
+        }
+    });
+    scheduleRender();
 }
 
 void SliceVtkItemBase::onDataLoaded()
@@ -463,6 +565,7 @@ void SliceVtkItemBase::onSegDataLoaded()
             vtkSmartPointer<SliceInteractorStyle> style = vtkSmartPointer<SliceInteractorStyle>::New();
             style->SetOrientation(m_orientation);
             style->setAxisActor(data->axisActor);
+            data->interactorStyle = style;
             rw->GetInteractor()->SetInteractorStyle(style);
 
             // 设置相机方向
@@ -486,6 +589,10 @@ void SliceVtkItemBase::onSliceChanged(int slice)
                 data->imageMapper->SetSliceNumber(getCurrentSlice());
                 data->imageMapper->Modified();
             }
+            // 更新测量显示/隐藏（普通模式）
+            if (data->interactorStyle) {
+                data->interactorStyle->UpdateMeasurementVisibility(getCurrentSlice(), false);
+            }
         }
         });
     scheduleRender();
@@ -505,6 +612,10 @@ void SliceVtkItemBase::onSegSliceChanged(int slice)
                     mapper->SetSliceNumber(getSegCurrentSlice());
                     mapper->Modified();
                 }
+            }
+            // 更新测量显示/隐藏（分割模式）
+            if (data->interactorStyle) {
+                data->interactorStyle->UpdateMeasurementVisibility(getSegCurrentSlice(), true);
             }
         }
         });
@@ -595,12 +706,41 @@ void SliceVtkItemBase::setupView(vtkRenderWindow* renderWindow, SliceViewData* d
     vtkSmartPointer<SliceInteractorStyle> style = vtkSmartPointer<SliceInteractorStyle>::New();
     style->SetOrientation(m_orientation);
     style->setAxisActor(data->axisActor);
+    data->interactorStyle = style;
     renderWindow->GetInteractor()->SetInteractorStyle(style);
 
     // 设置相机方向并锁定并行缩放（保持视口尺寸稳定）
     setupCamera(data->renderer);
     applyParallelScale(data->imageSlice, data->renderer);
     style->rescaleAxisActor();
+}
+
+void SliceVtkItemBase::resetViewState(vtkRenderWindow* rw, SliceViewData* data)
+{
+    if (!rw || !data) return;
+
+    // 1) 清除测量/取消 state
+    if (data->interactorStyle) {
+        data->interactorStyle->ResetInteractionState();
+    }
+
+    // 2) 重置相机（平移/缩放回初始）
+    if (data->renderer) {
+        setupCamera(data->renderer);
+        if (data->imageSlice) {
+            applyParallelScale(data->imageSlice, data->renderer);
+        }
+        data->renderer->ResetCameraClippingRange();
+    }
+
+    // 3) 标尺重算
+    if (data->interactorStyle) {
+        data->interactorStyle->rescaleAxisActor();
+        // reset 后隐藏所有测量（因为已清空）
+        const bool segMode = m_dataModel->isSegDataMode();
+        const int slice = segMode ? getSegCurrentSlice() : getCurrentSlice();
+        data->interactorStyle->UpdateMeasurementVisibility(slice, segMode);
+    }
 }
 
 void SliceVtkItemBase::setMapperOrientation(vtkImageSliceMapper* mapper)
@@ -750,6 +890,8 @@ QQuickVTKItem::vtkUserData VolumeVtkItem::initializeVTK(vtkRenderWindow* renderW
         this, &VolumeVtkItem::onSegDataLoaded);
     connect(GET_SINGLETON(DicomDataModel), &DicomDataModel::segRefreshRenderer,
         this, &VolumeVtkItem::onSegRefreshRenderer);
+    connect(GET_SINGLETON(DicomDataModel), &DicomDataModel::interactionResetRequested,
+        this, &VolumeVtkItem::onInteractionResetRequested);
     // 在渲染线程初始化VTK对象
     vtkSmartPointer<vtkImageData> imageData = GET_SINGLETON(DicomDataModel)->getImageData();
     if (imageData) {
@@ -757,6 +899,24 @@ QQuickVTKItem::vtkUserData VolumeVtkItem::initializeVTK(vtkRenderWindow* renderW
     }
 
     return data;
+}
+
+void VolumeVtkItem::onInteractionResetRequested()
+{
+    // 仅重置相机（3D 没有测量 widget）
+    dispatch_async([](vtkRenderWindow* rw, vtkUserData userData) {
+        if (!rw || !userData) return;
+        VolumeViewData* data = static_cast<VolumeViewData*>(userData.GetPointer());
+        if (!data || !data->renderer) return;
+        vtkCamera* cam = data->renderer->GetActiveCamera();
+        if (cam) {
+            cam->SetViewUp(0, 0, -1);
+            cam->SetPosition(0, 1, 0);
+            cam->SetFocalPoint(0, 0, 0);
+        }
+        data->renderer->ResetCamera();
+    });
+    scheduleRender();
 }
 
 void VolumeVtkItem::onDataLoaded()
@@ -1492,7 +1652,7 @@ void MainViewController::generatePdfReport(const QString& savePath)
     QPageLayout layout = writer.pageLayout();
     layout.setMargins(QMarginsF(0, 0, 0, 0));
     writer.setPageLayout(layout);
-
+    
     QPainter painter(&writer);
     if (!painter.isActive()) {
         qWarning() << QStringLiteral("无法创建 PDF 文件");
@@ -1651,7 +1811,7 @@ void MainViewController::generatePdfReport(const QString& savePath)
     painter.drawText(page2NumberX, page2NumberY, page2Number);
 
     //第三页
-    writer.newPage();
+            writer.newPage();
     painter.setFont(QFont("Alibaba PuHuiTi 3.0", 22, QFont::Medium));
     painter.setPen(QColor("#000000"));
     
@@ -1859,7 +2019,7 @@ void MainViewController::generatePdfReport(const QString& savePath)
     painter.drawText(page3NumberX, page3NumberY, page3Number);
 
     // 第四页
-    writer.newPage();
+                writer.newPage();
     painter.setFont(QFont("Alibaba PuHuiTi 3.0", 9, QFont::Normal));
     painter.setPen(QColor("#C9CDD4"));
     QString pageTopName = QStringLiteral("脑测量分析报告");
