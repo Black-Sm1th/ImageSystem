@@ -7,10 +7,10 @@ import "./components"
 ApplicationWindow {
     id: win
     visible: true
-    width: 1600
-    height: 1000
+    width: 1920
+    height: 1080
     title: qsTr("DICOM 医学影像查看器")
-    color: "#18191C"
+    color: "#000000"
     property int analysisPanelIndex: 0
     font.family: "Alibaba PuHuiTi 3.0"
     font.pixelSize: 14
@@ -19,30 +19,15 @@ ApplicationWindow {
         id: dialogMessageBox
         anchors.fill: parent
     }
-    // 顶部工具栏
+    // 顶部功能栏
     Rectangle {
         id: topToolbar
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 60
-        color: "transparent"
+        height: 82
+        color: "#CC303338"
         
-        // 文件选择按钮
-        CustomButton {
-            id: openButton
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.margins: 10
-            width: 160
-            height: 40
-            text: "打开 DICOM 文件夹"
-            backgroundColor: "#004578"
-
-            onClicked: {
-                fileDialog.open()
-            }
-        }
         FileDialog {
             id: fileDialog
             title: qsTr("选择要上传的文件")
@@ -51,579 +36,1001 @@ ApplicationWindow {
                 $DicomDataModel.loadDicomDirectory(fileDialog.fileUrls[0])
             }
         }
-        Rectangle {
-            anchors.left: openButton.right
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.leftMargin: 10
-            width: 1
-            height: parent.height - 20
-            color: "#404040"
-        }
+        Row{
+            height: parent.height
+            leftPadding: 20
+            spacing: 20
+            Image{
+                id: openButton
+                anchors.verticalCenter: parent.verticalCenter
+                source: "qrc:/image/fileUpload.png"
+                opacity: 1.0
+                scale: 1.0
+                Behavior on opacity {
+                    NumberAnimation { duration: 200 }
+                }
 
-        // DICOM信息显示
-        Label {
-            id: infoText
-            anchors.left: openButton.right
-            anchors.right: lungWindowButton.left
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.leftMargin: 20
-            anchors.rightMargin: 15
-            text: $DicomDataModel.hasData ? $DicomDataModel.dicomInfo : "未加载 DICOM 数据"
-            color: "#cccccc"
-            font.pixelSize: 12
-            elide: Text.ElideRight
-        }
+                Behavior on scale {
+                    NumberAnimation { duration: 200 }
+                }
 
-        // 预设窗宽窗位按钮
-        CustomButton {
-            id: kidneyButton
-            anchors.right: brainButton.left
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.rightMargin: 10
-            width: 70
-            height: 35
-            text: "肾功能"
-            backgroundColor: analysisPanelIndex === 1 ? "green" : "#383838"
-            onClicked: {
-                if(analysisPanelIndex === 1){
-                    analysisPanelIndex = 0
-                }else{
-                    analysisPanelIndex = 1
+                MouseArea{
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    hoverEnabled: true
+
+                    onEntered: {
+                        openButton.opacity = 0.8
+                        openButton.scale = 1.05
+                    }
+
+                    onExited: {
+                        openButton.opacity = 1.0
+                        openButton.scale = 1.0
+                    }
+
+                    onPressed: {
+                        openButton.source = "qrc:/image/fileUpload-pressed.png"
+                        openButton.scale = 0.95
+                    }
+
+                    onReleased: {
+                        openButton.source = "qrc:/image/fileUpload.png"
+                        openButton.scale = containsMouse ? 1.05 : 1.0
+                    }
+
+                    onClicked: {
+                        fileDialog.open()
+                    }
                 }
             }
-        }
 
-        // 预设窗宽窗位按钮
-        CustomButton {
-            id: brainButton
-            anchors.right: split1.left
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.rightMargin: 10
-            width: 70
-            height: 35
-            text: "脑功能"
-            backgroundColor: analysisPanelIndex === 2 ? "green" : "#383838"
-            onClicked: {
-                if(analysisPanelIndex === 2){
-                    analysisPanelIndex = 0
-                }else{
-                    analysisPanelIndex = 2
-                }
+            Rectangle {
+                width: 1
+                height: 50
+                color: "#80FFFFFF"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            // DICOM信息显示
+            Label {
+                id: infoText
+                anchors.verticalCenter: parent.verticalCenter
+                text: $DicomDataModel.hasData ? $DicomDataModel.dicomInfo : "未加载 DICOM 数据"
+                color: "#80FFFFFF"
+                font.pixelSize: 12
+                elide: Text.ElideRight
             }
         }
-
-        Rectangle {
-            id: split1
-            anchors.right: lungWindowButton.left
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.rightMargin: 10
-            width: 1
-            height: parent.height - 20
-            color: "#404040"
-        }
-
-        // 预设窗宽窗位按钮
-        CustomButton {
-            id: lungWindowButton
-            anchors.right: boneWindowButton.left
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.rightMargin: 10
-            width: 70
-            height: 35
-            text: "肺窗"
-            backgroundColor: "#383838"
-            onClicked: {
-                $DicomDataModel.windowWidth = 1500
-                $DicomDataModel.windowLevel = -600
-            }
-        }
-
-        CustomButton {
-            id: boneWindowButton
-            anchors.right: brainWindowButton.left
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.rightMargin: 10
-            width: 70
-            height: 35
-            text: "骨窗"
-            backgroundColor: "#383838"
-            onClicked: {
-                $DicomDataModel.windowWidth = 2000
-                $DicomDataModel.windowLevel = 300
-            }
-        }
-
-        CustomButton {
-            id: brainWindowButton
-            anchors.right: abdomenWindowButton.left
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.rightMargin: 10
-            width: 70
-            height: 35
-            text: "脑窗"
-            backgroundColor: "#383838"
-            onClicked: {
-                $DicomDataModel.windowWidth = 80
-                $DicomDataModel.windowLevel = 40
-            }
-        }
-
-        CustomButton {
-            id: abdomenWindowButton
+        Row{
             anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.rightMargin: 10
-            width: 70
-            height: 35
-            text: "腹窗"
-            backgroundColor: "#383838"
-            onClicked: {
-                $DicomDataModel.windowWidth = 400
-                $DicomDataModel.windowLevel = 40
+            height: parent.height
+            rightPadding: 20
+            spacing: 15
+            
+            // 带背景图片的按钮
+            Item {
+                id: kidneyButton
+                anchors.verticalCenter: parent.verticalCenter
+                width: kidneyBtnImage.width
+                height: kidneyBtnImage.height
+                
+                property bool isSelected: analysisPanelIndex === 1
+                
+                onIsSelectedChanged: {
+                    if (isSelected) {
+                        kidneySelectAnimation.start()
+                    } else {
+                        kidneyBtnImage.source = "qrc:/image/btnBackground.png"
+                    }
+                }
+                
+                Image {
+                    id: kidneyBtnImage
+                    source: analysisPanelIndex === 1 ? "qrc:/image/btnBackgroundSelected4.png" : "qrc:/image/btnBackground.png"
+                    opacity: 1.0
+                    scale: 1.0
+                    
+                    Behavior on opacity {
+                        NumberAnimation { duration: 200 }
+                    }
+                    
+                    Behavior on scale {
+                        NumberAnimation { duration: 200 }
+                    }
+                    
+                    Row{
+                        height: parent.height
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 5
+                        Image{
+                            source: "qrc:/image/kidneyIcon.png"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        // 按钮文字
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "肾功能"
+                            color: "#E5FFFFFF"
+                            font.pixelSize: 16
+                            font.family: "Alibaba PuHuiTi 3.0"
+                        }
+                    }
+                }
+                
+                SequentialAnimation {
+                    id: kidneySelectAnimation
+                    PropertyAction {
+                        target: kidneyBtnImage
+                        property: "source"
+                        value: "qrc:/image/btnBackgroundSelected1.png"
+                    }
+                    PauseAnimation { duration: 100 }
+                    PropertyAction {
+                        target: kidneyBtnImage
+                        property: "source"
+                        value: "qrc:/image/btnBackgroundSelected2.png"
+                    }
+                    PauseAnimation { duration: 100 }
+                    PropertyAction {
+                        target: kidneyBtnImage
+                        property: "source"
+                        value: "qrc:/image/btnBackgroundSelected3.png"
+                    }
+                    PauseAnimation { duration: 100 }
+                    PropertyAction {
+                        target: kidneyBtnImage
+                        property: "source"
+                        value: "qrc:/image/btnBackgroundSelected4.png"
+                    }
+                }
+                
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    hoverEnabled: true
+                    
+                    onEntered: {
+                        if (!kidneyButton.isSelected) {
+                            kidneyBtnImage.opacity = 0.8
+                            kidneyBtnImage.scale = 1.05
+                        }
+                    }
+                    
+                    onExited: {
+                        if (!kidneyButton.isSelected) {
+                            kidneyBtnImage.opacity = 1.0
+                            kidneyBtnImage.scale = 1.0
+                        }
+                    }
+                    
+                    onPressed: {
+                        kidneyBtnImage.scale = 0.95
+                    }
+                    
+                    onReleased: {
+                        kidneyBtnImage.scale = containsMouse && !kidneyButton.isSelected ? 1.05 : 1.0
+                    }
+                    
+                    onClicked: {
+                        if(analysisPanelIndex === 1){
+                            analysisPanelIndex = 0
+                        } else{
+                            analysisPanelIndex = 1
+                        }
+                    }
+                }
+            }
+            Item {
+                id: brainButton
+                anchors.verticalCenter: parent.verticalCenter
+                width: brainBtnImage.width
+                height: brainBtnImage.height
+
+                property bool isSelected: analysisPanelIndex === 2
+                
+                onIsSelectedChanged: {
+                    if (isSelected) {
+                        brainSelectAnimation.start()
+                    } else {
+                        brainBtnImage.source = "qrc:/image/btnBackground.png"
+                    }
+                }
+
+                Image {
+                    id: brainBtnImage
+                    source: analysisPanelIndex === 2 ? "qrc:/image/btnBackgroundSelected4.png" : "qrc:/image/btnBackground.png"
+                    opacity: 1.0
+                    scale: 1.0
+
+                    Behavior on opacity {
+                        NumberAnimation { duration: 200 }
+                    }
+
+                    Behavior on scale {
+                        NumberAnimation { duration: 200 }
+                    }
+
+                    Row{
+                        height: parent.height
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 5
+                        Image{
+                            source: "qrc:/image/brainIcon.png"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        // 按钮文字
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "脑功能"
+                            color: "#E5FFFFFF"
+                            font.pixelSize: 16
+                            font.family: "Alibaba PuHuiTi 3.0"
+                        }
+                    }
+                }
+
+                SequentialAnimation {
+                    id: brainSelectAnimation
+                    PropertyAction {
+                        target: brainBtnImage
+                        property: "source"
+                        value: "qrc:/image/btnBackgroundSelected1.png"
+                    }
+                    PauseAnimation { duration: 100 }
+                    PropertyAction {
+                        target: brainBtnImage
+                        property: "source"
+                        value: "qrc:/image/btnBackgroundSelected2.png"
+                    }
+                    PauseAnimation { duration: 100 }
+                    PropertyAction {
+                        target: brainBtnImage
+                        property: "source"
+                        value: "qrc:/image/btnBackgroundSelected3.png"
+                    }
+                    PauseAnimation { duration: 100 }
+                    PropertyAction {
+                        target: brainBtnImage
+                        property: "source"
+                        value: "qrc:/image/btnBackgroundSelected4.png"
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    hoverEnabled: true
+
+                    onEntered: {
+                        if (!brainButton.isSelected) {
+                            brainBtnImage.opacity = 0.8
+                            brainBtnImage.scale = 1.05
+                        }
+                    }
+
+                    onExited: {
+                        if (!brainButton.isSelected) {
+                            brainBtnImage.opacity = 1.0
+                            brainBtnImage.scale = 1.0
+                        }
+                    }
+
+                    onPressed: {
+                        brainBtnImage.scale = 0.95
+                    }
+
+                    onReleased: {
+                        brainBtnImage.scale = containsMouse && !brainButton.isSelected ? 1.05 : 1.0
+                    }
+
+                    onClicked: {
+                        if(analysisPanelIndex === 2){
+                            analysisPanelIndex = 0
+                        } else{
+                            analysisPanelIndex = 2
+                        }
+                    }
+                }
+            }
+
+            Image{
+                anchors.verticalCenter: parent.verticalCenter
+                source: "qrc:/image/aiBtn.png"
             }
         }
     }
-
-    // 底部状态栏
+    // 顶部扩展栏
     Rectangle {
-        id: bottomStatusBar
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: 30
+        id: topExpandBar
+        width: parent.width
+        height: 16
+        anchors.top: topToolbar.bottom
         color: "transparent"
         
-        Label {
-            anchors.centerIn: parent
-            text: "DICOM 医学影像查看器 v1.0"
-            color: "#888888"
+        property bool leftExpanded: true
+        property bool rightExpanded: true
+        property bool brainRightExpanded: true
+        
+        Rectangle{
+            id: leftExpandButton
+            width: 60
+            height: parent.height
+            color: "#171717"
+            
+            Image{
+                id: leftArrowImage
+                source: topExpandBar.leftExpanded ? "qrc:/image/arrowLeft.png" : "qrc:/image/arrowRight.png"
+                anchors.centerIn: parent
+            }
+            
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    topExpandBar.leftExpanded = !topExpandBar.leftExpanded
+                }
+            }
+        }
+        
+        Rectangle {
+            id: rightExpandButton
+            width: 400
+            height: parent.height
+            color: "#171717"
+            anchors.right: parent.right
+            
+            Image{
+                id: rightArrowImage
+                source: {
+                    if (analysisPanelIndex === 2) {
+                        return topExpandBar.brainRightExpanded ? "qrc:/image/arrowRight.png" : "qrc:/image/arrowLeft.png"
+                    } else {
+                        return topExpandBar.rightExpanded ? "qrc:/image/arrowRight.png" : "qrc:/image/arrowLeft.png"
+                    }
+                }
+                anchors.centerIn: parent
+            }
+            
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    if (analysisPanelIndex === 2) {
+                        topExpandBar.brainRightExpanded = !topExpandBar.brainRightExpanded
+                    } else {
+                        topExpandBar.rightExpanded = !topExpandBar.rightExpanded
+                    }
+                }
+            }
+        }
+    }
+    
+    // 左侧工具栏
+    Rectangle{
+        id: leftToolbar
+        anchors.top: topExpandBar.bottom
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        width: topExpandBar.leftExpanded ? 60 : 0
+        color: "#CC303338"
+        visible: width > 0
+        clip: true
+        
+        Behavior on width {
+            NumberAnimation { duration: 300; easing.type: Easing.InOutQuad }
         }
     }
 
     // 右侧控制面板
-    Rectangle {
+    Item {
         id: rightPanel
-        anchors.top: topToolbar.bottom
-        anchors.bottom: bottomStatusBar.top
+        anchors.top: topExpandBar.bottom
+        anchors.bottom: parent.bottom
         anchors.right: parent.right
-        width: 280
-        visible: analysisPanelIndex !== 2
-        color: "transparent"
+        anchors.bottomMargin: 16
+        width: topExpandBar.rightExpanded ? 400 : 0
+        visible: analysisPanelIndex !== 2 && width > 0
+        clip: true
 
-        ScrollView {
+        Behavior on width {
+            NumberAnimation { duration: 300; easing.type: Easing.InOutQuad }
+        }
+        Image {
+            source: "qrc:/image/rightBackground.png"
             anchors.fill: parent
-            anchors.margins: 10
-            clip: true
-
-            Column {
-                width: rightPanel.width - 20
-                spacing: 20
-
-                // 切片控制区域
-                GroupBox {
+        }
+        Column{
+            anchors.fill: parent
+            padding: 16
+            spacing: 12
+            Rectangle {
+                id: sliceRec
+                width: parent.width - 32
+                height: sliceCol.height
+                color: "#E016171B"
+                radius: 8
+                Column {
+                    id: sliceCol
                     width: parent.width
-                    title: "切片控制"
-                    
-                    background: Rectangle {
-                        color: "#252525"
-                        border.color: "#404040"
-                        radius: 5
+                    spacing: 12
+                    leftPadding: 12
+                    rightPadding: 12
+                    topPadding: 16
+                    bottomPadding: 24
+                    Row {
+                        height: 32
+                        width: parent.width - 24
+                        spacing: 6
+                        Image {
+                            source: "qrc:/image/sliceIcon.png"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Label {
+                            text: qsTr("切片控制")
+                            color: "#E5FFFFFF"
+                            font.pixelSize: 18
+                            font.weight: Font.Medium
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
                     }
-                    
-                    label: Label {
-                        text: parent.title
-                        color: "#ffffff"
-                        font.bold: true
-                        font.pixelSize: 14
-                    }
-
                     Column {
-                        width: parent.width
-                        spacing: 15
-
-                        // 轴向切片
-                        Column {
+                        width: parent.width - 24
+                        spacing: 8
+                        Rectangle{
                             width: parent.width
-                            spacing: 5
-
+                            height: 24
+                            color: "transparent"
                             Label {
-                                text: "轴向切片: " + $DicomDataModel.axialSlice + " / " + $DicomDataModel.maxAxialSlice
-                                color: "#ffff00"
-                                font.pixelSize: 12
+                                text: qsTr("轴向切片")
+                                color: "#E5FFFFFF"
+                                font.pixelSize: 16
+                                anchors.verticalCenter: parent.verticalCenter
                             }
-
-                            Slider {
-                                id: axialSlider
-                                width: parent.width
-                                from: 0
-                                to: $DicomDataModel.maxAxialSlice
-                                stepSize: 1
-                                enabled: $DicomDataModel.hasData
-                                
-                                Component.onCompleted: {
-                                    value = $DicomDataModel.axialSlice
-                                }
-                                
-                                Connections {
-                                    target: $DicomDataModel
-                                    function onAxialSliceChanged(slice) {
-                                        if (!axialSlider.pressed) {
-                                            axialSlider.value = slice
-                                        }
-                                    }
-                                }
-                                
-                                onMoved: {
-                                    $DicomDataModel.axialSlice = value
-                                }
-                                
-                                background: Rectangle {
-                                    x: parent.leftPadding
-                                    y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                                    width: parent.availableWidth
-                                    height: 4
-                                    radius: 2
-                                    color: "#404040"
-
-                                    Rectangle {
-                                        width: parent.parent.visualPosition * parent.width
-                                        height: parent.height
-                                        color: "#0078d4"
-                                        radius: 2
-                                    }
-                                }
-
-                                handle: Rectangle {
-                                    x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
-                                    y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                                    width: 16
-                                    height: 16
-                                    radius: 8
-                                    color: parent.pressed ? "#005a9e" : "#0078d4"
-                                    border.color: "#ffffff"
-                                    border.width: 2
-                                }
+                            Label {
+                                text: qsTr($DicomDataModel.axialSlice + " / " + $DicomDataModel.maxAxialSlice)
+                                color: "#3C7EFF"
+                                font.pixelSize: 16
+                                font.weight: Font.Bold
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.right: parent.right
                             }
                         }
-
-                        // 矢状切片
-                        Column {
+                        Slider {
+                            id: axialSlider
                             width: parent.width
-                            spacing: 5
+                            from: 0
+                            to: $DicomDataModel.maxAxialSlice
+                            stepSize: 1
+                            enabled: $DicomDataModel.hasData
 
-                            Label {
-                                text: "矢状切片: " + $DicomDataModel.sagittalSlice + " / " + $DicomDataModel.maxSagittalSlice
-                                color: "#ffff00"
-                                font.pixelSize: 12
+                            Component.onCompleted: {
+                                value = $DicomDataModel.axialSlice
                             }
 
-                            Slider {
-                                id: sagittalSlider
-                                width: parent.width
-                                from: 0
-                                to: $DicomDataModel.maxSagittalSlice
-                                stepSize: 1
-                                enabled: $DicomDataModel.hasData
-                                
-                                Component.onCompleted: {
-                                    value = $DicomDataModel.sagittalSlice
-                                }
-                                
-                                Connections {
-                                    target: $DicomDataModel
-                                    function onSagittalSliceChanged(slice) {
-                                        if (!sagittalSlider.pressed) {
-                                            sagittalSlider.value = slice
-                                        }
+                            Connections {
+                                target: $DicomDataModel
+                                function onAxialSliceChanged(slice) {
+                                    if (!axialSlider.pressed) {
+                                        axialSlider.value = slice
                                     }
                                 }
-                                
-                                onMoved: {
-                                    $DicomDataModel.sagittalSlice = value
-                                }
-                                
-                                background: Rectangle {
-                                    x: parent.leftPadding
-                                    y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                                    width: parent.availableWidth
-                                    height: 4
-                                    radius: 2
-                                    color: "#404040"
+                            }
 
-                                    Rectangle {
-                                        width: parent.parent.visualPosition * parent.width
-                                        height: parent.height
-                                        color: "#0078d4"
-                                        radius: 2
-                                    }
-                                }
+                            onMoved: {
+                                $DicomDataModel.axialSlice = value
+                            }
 
-                                handle: Rectangle {
-                                    x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
-                                    y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                                    width: 16
-                                    height: 16
-                                    radius: 8
-                                    color: parent.pressed ? "#005a9e" : "#0078d4"
-                                    border.color: "#ffffff"
-                                    border.width: 2
+                            background: Rectangle {
+                                x: parent.leftPadding
+                                y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                                width: parent.availableWidth
+                                height: 4
+                                radius: 6
+                                color: "#454854"
+
+                                Rectangle {
+                                    width: parent.parent.visualPosition * parent.width
+                                    height: parent.height
+                                    color: "#3C7EFF"
+                                    radius: 6
                                 }
+                            }
+
+                            handle: Rectangle {
+                                x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
+                                y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                                width: 10
+                                height: 10
+                                radius: 10
+                                color: parent.pressed ? "#0078d4" : "#3C7EFF"
+                                border.color: "#ffffff"
+                                border.width: 2
                             }
                         }
-
-                        // 冠状切片
-                        Column {
+                    }
+                    Column {
+                        width: parent.width - 24
+                        spacing: 8
+                        Rectangle{
                             width: parent.width
-                            spacing: 5
-
+                            height: 24
+                            color: "transparent"
                             Label {
-                                text: "冠状切片: " + $DicomDataModel.coronalSlice + " / " + $DicomDataModel.maxCoronalSlice
-                                color: "#ffff00"
-                                font.pixelSize: 12
+                                text: qsTr("矢状切片")
+                                color: "#E5FFFFFF"
+                                font.pixelSize: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Label {
+                                text: qsTr($DicomDataModel.sagittalSlice + " / " + $DicomDataModel.maxSagittalSlice)
+                                color: "#3C7EFF"
+                                font.pixelSize: 16
+                                font.weight: Font.Bold
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.right: parent.right
+                            }
+                        }
+                        Slider {
+                            id: sagittalSlider
+                            width: parent.width
+                            from: 0
+                            to: $DicomDataModel.maxSagittalSlice
+                            stepSize: 1
+                            enabled: $DicomDataModel.hasData
+
+                            Component.onCompleted: {
+                                value = $DicomDataModel.sagittalSlice
                             }
 
-                            Slider {
-                                id: coronalSlider
-                                width: parent.width
-                                from: 0
-                                to: $DicomDataModel.maxCoronalSlice
-                                stepSize: 1
-                                enabled: $DicomDataModel.hasData
-                                
-                                value: $DicomDataModel.coronalSlice
-                                
-                                onMoved: {
-                                    $DicomDataModel.coronalSlice = value
-                                }
-                                
-                                background: Rectangle {
-                                    x: parent.leftPadding
-                                    y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                                    width: parent.availableWidth
-                                    height: 4
-                                    radius: 2
-                                    color: "#404040"
-
-                                    Rectangle {
-                                        width: parent.parent.visualPosition * parent.width
-                                        height: parent.height
-                                        color: "#0078d4"
-                                        radius: 2
+                            Connections {
+                                target: $DicomDataModel
+                                function onSagittalSliceChanged(slice) {
+                                    if (!sagittalSlider.pressed) {
+                                        sagittalSlider.value = slice
                                     }
                                 }
+                            }
 
-                                handle: Rectangle {
-                                    x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
-                                    y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                                    width: 16
-                                    height: 16
-                                    radius: 8
-                                    color: parent.pressed ? "#005a9e" : "#0078d4"
-                                    border.color: "#ffffff"
-                                    border.width: 2
+                            onMoved: {
+                                $DicomDataModel.sagittalSlice = value
+                            }
+
+                            background: Rectangle {
+                                x: parent.leftPadding
+                                y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                                width: parent.availableWidth
+                                height: 4
+                                radius: 6
+                                color: "#454854"
+
+                                Rectangle {
+                                    width: parent.parent.visualPosition * parent.width
+                                    height: parent.height
+                                    color: "#3C7EFF"
+                                    radius: 6
                                 }
+                            }
+
+                            handle: Rectangle {
+                                x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
+                                y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                                width: 10
+                                height: 10
+                                radius: 10
+                                color: parent.pressed ? "#0078d4" : "#3C7EFF"
+                                border.color: "#ffffff"
+                                border.width: 2
+                            }
+                        }
+                    }
+                    Column {
+                        width: parent.width - 24
+                        spacing: 8
+                        Rectangle{
+                            width: parent.width
+                            height: 24
+                            color: "transparent"
+                            Label {
+                                text: qsTr("冠状切片")
+                                color: "#E5FFFFFF"
+                                font.pixelSize: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Label {
+                                text: qsTr($DicomDataModel.coronalSlice + " / " + $DicomDataModel.maxCoronalSlice)
+                                color: "#3C7EFF"
+                                font.pixelSize: 16
+                                font.weight: Font.Bold
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.right: parent.right
+                            }
+                        }
+                        Slider {
+                            id: coronalSlider
+                            width: parent.width
+                            from: 0
+                            to: $DicomDataModel.maxCoronalSlice
+                            stepSize: 1
+                            enabled: $DicomDataModel.hasData
+
+                            Component.onCompleted: {
+                                value = $DicomDataModel.coronalSlice
+                            }
+
+                            Connections {
+                                target: $DicomDataModel
+                                function onCoronalSliceChanged(slice) {
+                                    if (!coronalSlider.pressed) {
+                                        coronalSlider.value = slice
+                                    }
+                                }
+                            }
+
+                            onMoved: {
+                                $DicomDataModel.coronalSlice = value
+                            }
+
+                            background: Rectangle {
+                                x: parent.leftPadding
+                                y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                                width: parent.availableWidth
+                                height: 4
+                                radius: 6
+                                color: "#454854"
+
+                                Rectangle {
+                                    width: parent.parent.visualPosition * parent.width
+                                    height: parent.height
+                                    color: "#3C7EFF"
+                                    radius: 6
+                                }
+                            }
+
+                            handle: Rectangle {
+                                x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
+                                y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                                width: 10
+                                height: 10
+                                radius: 10
+                                color: parent.pressed ? "#0078d4" : "#3C7EFF"
+                                border.color: "#ffffff"
+                                border.width: 2
                             }
                         }
                     }
                 }
+            }
 
-                // 窗宽窗位控制
-                GroupBox {
+            Rectangle {
+                id: windowRec
+                width: parent.width - 32
+                height: windowCol.height
+                color: "#E016171B"
+                radius: 8
+                Column {
+                    id: windowCol
                     width: parent.width
-                    title: "窗宽窗位"
-                    
-                    background: Rectangle {
-                        color: "#252525"
-                        border.color: "#404040"
-                        radius: 5
+                    spacing: 12
+                    leftPadding: 12
+                    rightPadding: 12
+                    topPadding: 16
+                    bottomPadding: 24
+                    Row {
+                        height: 32
+                        width: parent.width - 24
+                        spacing: 6
+                        Image {
+                            source: "qrc:/image/windowIcon.png"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Label {
+                            text: qsTr("宽窗窗位")
+                            color: "#E5FFFFFF"
+                            font.pixelSize: 18
+                            font.weight: Font.Medium
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
                     }
-                    
-                    label: Label {
-                        text: parent.title
-                        color: "#ffffff"
-                        font.bold: true
-                        font.pixelSize: 14
-                    }
-
                     Column {
-                        width: parent.width
-                        spacing: 15
-
-                        // 窗宽
-                        Column {
+                        width: parent.width - 24
+                        spacing: 8
+                        Rectangle{
                             width: parent.width
-                            spacing: 5
-
+                            height: 24
+                            color: "transparent"
                             Label {
-                                text: "窗宽 (Width): " + Math.round($DicomDataModel.windowWidth)
-                                color: "#00ff00"
-                                font.pixelSize: 12
+                                text: qsTr("宽窗(Width)")
+                                color: "#E5FFFFFF"
+                                font.pixelSize: 16
+                                anchors.verticalCenter: parent.verticalCenter
                             }
-
-                            Slider {
-                                id: windowWidthSlider
-                                width: parent.width
-                                from: 1
-                                to: 4000
-                                stepSize: 10
-                                enabled: $DicomDataModel.hasData
-                                
-                                Component.onCompleted: {
-                                    value = $DicomDataModel.windowWidth
-                                }
-                                
-                                Connections {
-                                    target: $DicomDataModel
-                                    function onWindowWidthChanged(width) {
-                                        if (!windowWidthSlider.pressed) {
-                                            windowWidthSlider.value = width
-                                        }
-                                    }
-                                }
-                                
-                                onMoved: {
-                                    $DicomDataModel.windowWidth = value
-                                }
-                                
-                                background: Rectangle {
-                                    x: parent.leftPadding
-                                    y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                                    width: parent.availableWidth
-                                    height: 4
-                                    radius: 2
-                                    color: "#404040"
-
-                                    Rectangle {
-                                        width: parent.parent.visualPosition * parent.width
-                                        height: parent.height
-                                        color: "#00ff00"
-                                        radius: 2
-                                    }
-                                }
-
-                                handle: Rectangle {
-                                    x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
-                                    y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                                    width: 16
-                                    height: 16
-                                    radius: 8
-                                    color: parent.pressed ? "#00aa00" : "#00ff00"
-                                    border.color: "#ffffff"
-                                    border.width: 2
-                                }
+                            Label {
+                                text: qsTr(Math.round($DicomDataModel.windowWidth).toString())
+                                color: "#27C346"
+                                font.pixelSize: 16
+                                font.weight: Font.Bold
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.right: parent.right
                             }
                         }
-
-                        // 窗位
-                        Column {
+                        Slider {
+                            id: windowWidthSlider
                             width: parent.width
-                            spacing: 5
+                            from: 1
+                            to: 4000
+                            stepSize: 10
+                            enabled: $DicomDataModel.hasData
 
-                            Label {
-                                text: "窗位 (Level): " + Math.round($DicomDataModel.windowLevel)
-                                color: "#ff6600"
-                                font.pixelSize: 12
+                            Component.onCompleted: {
+                                value = $DicomDataModel.windowWidth
                             }
 
-                            Slider {
-                                id: windowLevelSlider
-                                width: parent.width
-                                from: -1024
-                                to: 3071
-                                stepSize: 10
-                                enabled: $DicomDataModel.hasData
-                                
-                                Component.onCompleted: {
-                                    value = $DicomDataModel.windowLevel
-                                }
-                                
-                                Connections {
-                                    target: $DicomDataModel
-                                    function onWindowLevelChanged(level) {
-                                        if (!windowLevelSlider.pressed) {
-                                            windowLevelSlider.value = level
-                                        }
+                            Connections {
+                                target: $DicomDataModel
+                                function onWindowWidthChanged(width) {
+                                    if (!windowWidthSlider.pressed) {
+                                        windowWidthSlider.value = width
                                     }
                                 }
-                                
-                                onMoved: {
-                                    $DicomDataModel.windowLevel = value
-                                }
-                                
-                                background: Rectangle {
-                                    x: parent.leftPadding
-                                    y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                                    width: parent.availableWidth
-                                    height: 4
-                                    radius: 2
-                                    color: "#404040"
+                            }
 
-                                    Rectangle {
-                                        width: parent.parent.visualPosition * parent.width
-                                        height: parent.height
-                                        color: "#ff6600"
-                                        radius: 2
+                            onMoved: {
+                                $DicomDataModel.windowWidth = value
+                            }
+
+                            background: Rectangle {
+                                x: parent.leftPadding
+                                y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                                width: parent.availableWidth
+                                height: 4
+                                radius: 6
+                                color: "#454854"
+
+                                Rectangle {
+                                    width: parent.parent.visualPosition * parent.width
+                                    height: parent.height
+                                    color: "#27C346"
+                                    radius: 6
+                                }
+                            }
+
+                            handle: Rectangle {
+                                x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
+                                y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                                width: 10
+                                height: 10
+                                radius: 10
+                                color: parent.pressed ? "#00aa00" : "#27C346"
+                                border.color: "#ffffff"
+                                border.width: 2
+                            }
+                        }
+                    }
+                    Column {
+                        width: parent.width - 24
+                        spacing: 8
+                        Rectangle{
+                            width: parent.width
+                            height: 24
+                            color: "transparent"
+                            Label {
+                                text: qsTr("窗位(Level)")
+                                color: "#E5FFFFFF"
+                                font.pixelSize: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Label {
+                                text: qsTr(Math.round($DicomDataModel.windowLevel).toString())
+                                color: "#27C346"
+                                font.pixelSize: 16
+                                font.weight: Font.Bold
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.right: parent.right
+                            }
+                        }
+                        Slider {
+                            id: windowLevelSlider
+                            width: parent.width
+                            from: 1
+                            to: 4000
+                            stepSize: 10
+                            enabled: $DicomDataModel.hasData
+
+                            Component.onCompleted: {
+                                value = $DicomDataModel.windowLevel
+                            }
+
+                            Connections {
+                                target: $DicomDataModel
+                                function onWindowLevelChanged(width) {
+                                    if (!windowLevelSlider.pressed) {
+                                        windowLevelSlider.value = width
                                     }
                                 }
+                            }
 
-                                handle: Rectangle {
-                                    x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
-                                    y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                                    width: 16
-                                    height: 16
-                                    radius: 8
-                                    color: parent.pressed ? "#cc5200" : "#ff6600"
-                                    border.color: "#ffffff"
-                                    border.width: 2
+                            onMoved: {
+                                $DicomDataModel.windowLevel = value
+                            }
+
+                            background: Rectangle {
+                                x: parent.leftPadding
+                                y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                                width: parent.availableWidth
+                                height: 4
+                                radius: 6
+                                color: "#454854"
+
+                                Rectangle {
+                                    width: parent.parent.visualPosition * parent.width
+                                    height: parent.height
+                                    color: "#27C346"
+                                    radius: 6
                                 }
+                            }
+
+                            handle: Rectangle {
+                                x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
+                                y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                                width: 10
+                                height: 10
+                                radius: 10
+                                color: parent.pressed ? "#00aa00" : "#27C346"
+                                border.color: "#ffffff"
+                                border.width: 2
                             }
                         }
                     }
                 }
+            }
 
-                // 使用说明
-                GroupBox {
-                    width: parent.width
-                    title: "使用说明"
-                    
-                    background: Rectangle {
-                        color: "#252525"
-                        border.color: "#404040"
-                        radius: 5
-                    }
-                    
-                    label: Label {
-                        text: parent.title
-                        color: "#ffffff"
-                        font.bold: true
-                        font.pixelSize: 14
-                    }
-
-                    Label {
-                        width: parent.width
-                        text: "• 三视图左键拖动：调整窗宽窗位\n" +
-                              "  (横向-窗宽, 纵向-窗位)\n" +
-                              "• 鼠标滚轮：切片浏览\n" +
-                              "• 3D视图：旋转查看\n" +
-                              "• 预设窗口：快速切换\n" +
-                              "• 右下角实时显示窗宽窗位"
-                        color: "#aaaaaa"
-                        font.pixelSize: 12
-                        wrapMode: Text.WordWrap
-                        lineHeight: 1.5
+            Rectangle{
+                id: infoRec
+                width: parent.width - 32
+                height: parent.height - 24 - 32 - sliceRec.height - windowRec.height
+                color: "#E016171B"
+                radius: 8
+                ScrollView{
+                    anchors.fill: parent
+                    leftPadding: 12
+                    rightPadding: 12
+                    topPadding: 16
+                    bottomPadding: 24
+                    clip: true
+                    Column {
+                        id: infoCol
+                        width: parent.width - 24
+                        spacing: 12
+                        Row {
+                            height: 32
+                            width: parent.width
+                            spacing: 6
+                            Image {
+                                source: "qrc:/image/infoIcon.png"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Label {
+                                text: qsTr("使用说明")
+                                color: "#E5FFFFFF"
+                                font.pixelSize: 18
+                                font.weight: Font.Medium
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                        Row{
+                            height: 29
+                            width: parent.width
+                            spacing: 10
+                            Rectangle {
+                                width: 10
+                                height: 10
+                                radius:10
+                                color: "#D26913"
+                                border.width: 2
+                                border.color: "#FFFFFF"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Label {
+                                text: qsTr("三视图左键拖动：调整窗宽窗位")
+                                color: "#E5FFFFFF"
+                                font.pixelSize: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                        Row{
+                            height: 29
+                            width: parent.width
+                            spacing: 10
+                            Rectangle {
+                                width: 10
+                                height: 10
+                                radius:10
+                                color: "#D26913"
+                                border.width: 2
+                                border.color: "#FFFFFF"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Label {
+                                text: qsTr("鼠标滚轮：切片浏览")
+                                color: "#E5FFFFFF"
+                                font.pixelSize: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                        Row{
+                            height: 29
+                            width: parent.width
+                            spacing: 10
+                            Rectangle {
+                                width: 10
+                                height: 10
+                                radius:10
+                                color: "#D26913"
+                                border.width: 2
+                                border.color: "#FFFFFF"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Label {
+                                text: qsTr("3D视图：旋转查看")
+                                color: "#E5FFFFFF"
+                                font.pixelSize: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                        Row{
+                            height: 29
+                            width: parent.width
+                            spacing: 10
+                            Rectangle {
+                                width: 10
+                                height: 10
+                                radius:10
+                                color: "#D26913"
+                                border.width: 2
+                                border.color: "#FFFFFF"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Label {
+                                text: qsTr("预设窗口：快速切换")
+                                color: "#E5FFFFFF"
+                                font.pixelSize: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                        Row{
+                            height: 29
+                            width: parent.width
+                            spacing: 10
+                            Rectangle {
+                                width: 10
+                                height: 10
+                                radius:10
+                                color: "#D26913"
+                                border.width: 2
+                                border.color: "#FFFFFF"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Label {
+                                text: qsTr("右下角实时显示窗宽窗位")
+                                color: "#E5FFFFFF"
+                                font.pixelSize: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
                     }
                 }
             }
         }
     }
-
     //左侧功能区域
     Rectangle {
         id: leftAnalysisPanel
-        anchors.top: topToolbar.bottom
-        anchors.bottom: bottomStatusBar.top
-        anchors.left: parent.left
-        width: 300
+        anchors.top: topExpandBar.bottom
+        anchors.bottom: parent.bottom
+        anchors.left: leftToolbar.right
+        anchors.leftMargin: 16
+        width: 280
         color: "transparent"
         visible: analysisPanelIndex !== 0 && analysisPanelIndex !== 2
         KidneyPanel {
@@ -635,28 +1042,32 @@ ApplicationWindow {
     // 主四视图容器（当不在脑分割面板时使用）
     Item {
         id: mainFourViewContainer
-        anchors.top: topToolbar.bottom
-        anchors.bottom: bottomStatusBar.top
-        anchors.left: analysisPanelIndex !== 0 ? leftAnalysisPanel.right : parent.left
+        anchors.top: topExpandBar.bottom
+        anchors.bottom: parent.bottom
+        anchors.left: analysisPanelIndex !== 0 ? leftAnalysisPanel.right : leftToolbar.right
         anchors.right: rightPanel.left
+        anchors.bottomMargin: 16
+        anchors.leftMargin: 16
+        anchors.rightMargin: 16
         visible: analysisPanelIndex !== 2
     }
-
-    BrainPanel{
-        id: brainpanel
-        visible: analysisPanelIndex === 2
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: topToolbar.bottom
-        anchors.bottom: bottomStatusBar.top
-        fourViewPanel: fourViewPanel
-        messageManager: dialogMessageBox
-    }
-
     // 全局唯一的四视图实例
     FourViewPanel {
         id: fourViewPanel
         parent: analysisPanelIndex === 2 ? brainpanel.fourViewContainer : mainFourViewContainer
         anchors.fill: parent
+    }
+    BrainPanel{
+        id: brainpanel
+        visible: analysisPanelIndex === 2
+        anchors.left: leftToolbar.right
+        anchors.right: parent.right
+        anchors.leftMargin: 16
+        anchors.bottomMargin: 16
+        anchors.top: topExpandBar.bottom
+        anchors.bottom: parent.bottom
+        fourViewPanel: fourViewPanel
+        messageManager: dialogMessageBox
+        rightPanelExpanded: topExpandBar.brainRightExpanded
     }
 }

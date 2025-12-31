@@ -10,27 +10,34 @@ Rectangle {
     property int colWidth: 80
     Column{
         width: parent.width
-        padding: 10
-        spacing: 10
-        Label {
-            id: buttonText
-            text: qsTr("特征输入")
-            color: "#ffffff"
-            font.pixelSize: 16
+        spacing: 12
+        Row{
+            height: 32
+            Image {
+                source: "qrc:/image/kidneyTitleIcon.png"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+            Label {
+                id: buttonText
+                text: qsTr("特征输入")
+                anchors.verticalCenter: parent.verticalCenter
+                color: "#E5FFFFFF"
+                font.pixelSize: 18
+            }
         }
         Row {
-            height: 40
+            height: 38
             spacing: 8
             Label {
                 text: qsTr("T2信号：")
-                font.pixelSize: 14
-                color: "#ffffff"
+                font.pixelSize: 16
+                color: "#80FFFFFF"
                 width: colWidth
                 anchors.verticalCenter: parent.verticalCenter
             }
             CustomComboBox {
                 id: t2ComboBox
-                width: rootPanel.width - 20 - 8 - colWidth
+                width: rootPanel.width - 8 - colWidth
                 model: ["低信号", "中信号", "高信号"]
                 onSelectionChanged: function(selectedIndices, selectedItems) {
                     if (selectedIndices.length > 0) {
@@ -41,18 +48,18 @@ Rectangle {
         }
 
         Row {
-            height: 40
+            height: 38
             spacing: 8
             Label {
                 text: qsTr("皮髓质期：")
-                font.pixelSize: 14
-                color: "#ffffff"
+                font.pixelSize: 16
+                color: "#80FFFFFF"
                 width: colWidth
                 anchors.verticalCenter: parent.verticalCenter
             }
             CustomComboBox {
                 id: skinComboBox
-                width: rootPanel.width - 20 - 8 - colWidth
+                width: rootPanel.width - 8 - colWidth
                 model: ["轻度强化", "中度强化", "明显强化"]
                 onSelectionChanged: function(selectedIndices, selectedItems) {
                     if (selectedIndices.length > 0) {
@@ -63,18 +70,18 @@ Rectangle {
         }
 
         Row {
-            height: 40
+            height: 38
             spacing: 8
             Label {
                 text: qsTr("微观脂肪：")
-                font.pixelSize: 14
-                color: "#ffffff"
+                font.pixelSize: 16
+                color: "#80FFFFFF"
                 width: colWidth
                 anchors.verticalCenter: parent.verticalCenter
             }
             CustomComboBox {
                 id: microComboBox
-                width: rootPanel.width - 20 - 8 - colWidth
+                width: rootPanel.width - 8 - colWidth
                 model: ["无", "有"]
                 onSelectionChanged: function(selectedIndices, selectedItems) {
                     if (selectedIndices.length > 0) {
@@ -85,18 +92,18 @@ Rectangle {
         }
 
         Row {
-            height: 40
+            height: 38
             spacing: 8
             Label {
                 text: qsTr("SEI：")
-                font.pixelSize: 14
-                color: "#ffffff"
+                font.pixelSize: 16
+                color: "#80FFFFFF"
                 width: colWidth
                 anchors.verticalCenter: parent.verticalCenter
             }
             CustomComboBox {
                 id: seiComboBox
-                width: rootPanel.width - 20 - 8 - colWidth
+                width: rootPanel.width - 8 - colWidth
                 model: ["无", "有"]
                 onSelectionChanged: function(selectedIndices, selectedItems) {
                     if (selectedIndices.length > 0) {
@@ -107,18 +114,18 @@ Rectangle {
         }
 
         Row {
-            height: 40
+            height: 38
             spacing: 8
             Label {
                 text: qsTr("ADER≥1.5：")
-                font.pixelSize: 14
-                color: "#ffffff"
+                font.pixelSize: 16
+                color: "#80FFFFFF"
                 width: colWidth
                 anchors.verticalCenter: parent.verticalCenter
             }
             CustomComboBox {
                 id: aderComboBox
-                width: rootPanel.width - 20 - 8 - colWidth
+                width: rootPanel.width - 8 - colWidth
                 model: ["无", "有"]
                 onSelectionChanged: function(selectedIndices, selectedItems) {
                     if (selectedIndices.length > 0) {
@@ -129,18 +136,18 @@ Rectangle {
         }
 
         Row {
-            height: 40
+            height: 38
             spacing: 8
             Label {
                 text: qsTr("弥散受限：")
-                font.pixelSize: 14
-                color: "#ffffff"
+                font.pixelSize: 16
+                color: "#80FFFFFF"
                 width: colWidth
                 anchors.verticalCenter: parent.verticalCenter
             }
             CustomComboBox {
                 id: dispComboBox
-                width: rootPanel.width - 20 - 8 - colWidth
+                width: rootPanel.width - 8 - colWidth
                 model: ["无", "有"]
                 onSelectionChanged: function(selectedIndices, selectedItems) {
                     if (selectedIndices.length > 0) {
@@ -151,9 +158,12 @@ Rectangle {
         }
         CustomButton {
             id: calculateButton
-            buttonWidth: parent.width - 20
+            buttonWidth: parent.width
             text: "计算"
-            backgroundColor: "#004578"
+            buttonRadius: 4
+            fontSize: 16
+            textColor: "#E5FFFFFF"
+            backgroundColor: "#3C7EFF"
             onClicked: {
                 $MainViewController.calculateKidney()
             }
@@ -161,14 +171,12 @@ Rectangle {
         Label {
             text: qsTr("CCLS：") + $MainViewController.cclsResult.toFixed(2)
             font.pixelSize: 14
-            color: "#00ff00"
-            font.bold: true
+            color: "#FF9626"
         }
         Label {
             text: qsTr("CCRCC：") + $MainViewController.ccrccResult.toFixed(4)
             font.pixelSize: 14
-            color: "#00ff00"
-            font.bold: true
+            color: "#FF9626"
         }
     }
 }

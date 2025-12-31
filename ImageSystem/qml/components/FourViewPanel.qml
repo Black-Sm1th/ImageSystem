@@ -53,18 +53,16 @@ Item {
     Rectangle {
         anchors.top: parent.top
         anchors.left: parent.left
-        anchors.topMargin: 5
-        anchors.leftMargin: 5
-        width: (parent.width - 15) / 2
-        height: (parent.height - 15) / 2
+        width: (parent.width - 10) / 2
+        height: (parent.height - 10) / 2
         color: "#000000"
-        border.color: "#404040"
+        border.color: "#484849"
         border.width: 1
 
         AxialView {
             id: axialView
             anchors.fill: parent
-            anchors.margins: 2
+            anchors.margins: 1
             property real crossX: width/2
             property real crossY: height/2
             property real crossAngle: 0
@@ -72,8 +70,8 @@ Item {
         // 叠加层，放在 VTK 之上捕获鼠标并绘制十字线
         Item {
             anchors.fill: parent
-            anchors.margins: 2
             z: 10
+            anchors.margins: 1
             MouseArea {
                 anchors.fill: parent
                 enabled: root.crosshairEnabled
@@ -276,25 +274,23 @@ Item {
     Rectangle {
         anchors.top: parent.top
         anchors.right: parent.right
-        anchors.topMargin: 5
-        anchors.rightMargin: 5
-        width: (parent.width - 15) / 2
-        height: (parent.height - 15) / 2
-        color: "#1a1a1a"
-        border.color: "#404040"
+        width: (parent.width - 10) / 2
+        height: (parent.height - 10) / 2
+        color: "#000000"
+        border.color: "#484849"
         border.width: 1
 
         SagittalView {
             id: sagittalView
             anchors.fill: parent
-            anchors.margins: 2
+            anchors.margins: 1
             property real crossX: width/2
             property real crossY: height/2
             property real crossAngle: 0
         }
         Item {
             anchors.fill: parent
-            anchors.margins: 2
+            anchors.margins: 1
             z: 10
             MouseArea {
                 anchors.fill: parent
@@ -485,25 +481,23 @@ Item {
     Rectangle {
         anchors.bottom: parent.bottom
         anchors.left: parent.left
-        anchors.bottomMargin: 5
-        anchors.leftMargin: 5
-        width: (parent.width - 15) / 2
-        height: (parent.height - 15) / 2
-        color: "#1a1a1a"
-        border.color: "#404040"
+        width: (parent.width - 10) / 2
+        height: (parent.height - 10) / 2
+        color: "#000000"
+        border.color: "#484849"
         border.width: 1
 
         CoronalView {
             id: coronalView
             anchors.fill: parent
-            anchors.margins: 2
+            anchors.margins: 1
             property real crossX: width/2
             property real crossY: height/2
             property real crossAngle: 0
         }
         Item {
             anchors.fill: parent
-            anchors.margins: 2
+            anchors.margins: 1
             z: 10
             MouseArea {
                 anchors.fill: parent
@@ -694,18 +688,16 @@ Item {
     Rectangle {
         anchors.bottom: parent.bottom
         anchors.right: parent.right
-        anchors.bottomMargin: 5
-        anchors.rightMargin: 5
-        width: (parent.width - 15) / 2
-        height: (parent.height - 15) / 2
-        color: "#1a1a1a"
-        border.color: "#404040"
+        width: (parent.width - 10) / 2
+        height: (parent.height - 10) / 2
+        color: "#000000"
+        border.color: "#484849"
         border.width: 1
 
         VolumeView {
             id: volumeView
+            anchors.margins: 1
             anchors.fill: parent
-            anchors.margins: 2
         }
     }
 }
