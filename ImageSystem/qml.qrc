@@ -55,5 +55,6 @@
         <file>image/textBackgroundBefore.png</file>
         <file>image/preBtnBackground.png</file>
         <file>image/preBtnBackgroundSelected.png</file>
+        <file>image/richClub.png</file>
     </qresource>
 </RCC>

@@ -2022,8 +2022,8 @@ Rectangle {
         Rectangle{
             id: segmentationAnalysis
             anchors.fill: parent
-            anchors.leftMargin: 16
             anchors.rightMargin: 16
+            anchors.leftMargin: 16
             anchors.topMargin: 22
             anchors.bottomMargin: 22
             color: "transparent"
@@ -2040,32 +2040,29 @@ Rectangle {
                     font.pixelSize: 16
                     wrapMode: Text.WrapAnywhere
                 }
-                ///脑区表格
+
                 Rectangle {
                     width: parent.width
                     height: segmentationAnalysis.height - segLabel.height - 24
-                    color: "#99232324"
+                    color: "#14FFFFFF"
 
                     Column {
                         id: segTableColumn
                         anchors.fill: parent
-                        anchors.margins: 5
-                        spacing: 0
-
                         // 定义列宽常量
-                        readonly property int colVisibleWidth: 40
-                        readonly property int colColorWidth: 40
-                        readonly property int colChineseWidth: 100
-                        readonly property int colHemisphereWidth: 50
-                        readonly property int colVolumeWidth: 70
-                        readonly property int colPercentWidth: 70
-                        readonly property int colAsymmetryWidth: 60
+                        readonly property int colVisibleWidth: 50
+                        readonly property int colColorWidth: 50
+                        readonly property int colChineseWidth: 110
+                        readonly property int colHemisphereWidth: 60
+                        readonly property int colVolumeWidth: 110
+                        readonly property int colPercentWidth: 95
+                        readonly property int colAsymmetryWidth: 85
                         readonly property int totalContentWidth: colVisibleWidth + colColorWidth + colChineseWidth + colHemisphereWidth + colVolumeWidth + colPercentWidth + colAsymmetryWidth
 
                         // 横向滚动的表头容器
                         Item {
-                            width: parent.width - 8  // 留出纵向滚动条的空间
-                            height: 35
+                            width: parent.width - 12 // 留出纵向滚动条的空间
+                            height: 38
                             clip: true
 
                             Flickable {
@@ -2079,8 +2076,8 @@ Rectangle {
                                 Rectangle {
                                     id: segTableHeader
                                     width: segTableColumn.totalContentWidth
-                                    height: 35
-                                    color: "#2a2a2a"
+                                    height: 38
+                                    color: "#14FFFFFF"
 
                                     Row {
                                         width: parent.width
@@ -2091,13 +2088,11 @@ Rectangle {
                                             width: segTableColumn.colVisibleWidth
                                             height: parent.height
                                             color: "transparent"
-                                            border.color: "#404040"
-                                            border.width: 1
                                             Label {
                                                 anchors.centerIn: parent
                                                 text: "显示"
-                                                color: "#ffffff"
-                                                font.pixelSize: 12
+                                                color: "#E5FFFFFF"
+                                                font.pixelSize: 16
                                                 font.bold: true
                                             }
                                         }
@@ -2107,13 +2102,11 @@ Rectangle {
                                             width: segTableColumn.colColorWidth
                                             height: parent.height
                                             color: "transparent"
-                                            border.color: "#404040"
-                                            border.width: 1
                                             Label {
                                                 anchors.centerIn: parent
                                                 text: "颜色"
-                                                color: "#ffffff"
-                                                font.pixelSize: 12
+                                                color: "#E5FFFFFF"
+                                                font.pixelSize: 16
                                                 font.bold: true
                                             }
                                         }
@@ -2123,13 +2116,11 @@ Rectangle {
                                             width: segTableColumn.colChineseWidth
                                             height: parent.height
                                             color: "transparent"
-                                            border.color: "#404040"
-                                            border.width: 1
                                             Label {
                                                 anchors.centerIn: parent
                                                 text: "中文名称"
-                                                color: "#ffffff"
-                                                font.pixelSize: 12
+                                                color: "#E5FFFFFF"
+                                                font.pixelSize: 16
                                                 font.bold: true
                                             }
                                         }
@@ -2139,13 +2130,11 @@ Rectangle {
                                             width: segTableColumn.colHemisphereWidth
                                             height: parent.height
                                             color: "transparent"
-                                            border.color: "#404040"
-                                            border.width: 1
                                             Label {
                                                 anchors.centerIn: parent
                                                 text: "位置"
-                                                color: "#ffffff"
-                                                font.pixelSize: 12
+                                                color: "#E5FFFFFF"
+                                                font.pixelSize: 16
                                                 font.bold: true
                                             }
                                         }
@@ -2155,13 +2144,11 @@ Rectangle {
                                             width: segTableColumn.colVolumeWidth
                                             height: parent.height
                                             color: "transparent"
-                                            border.color: "#404040"
-                                            border.width: 1
                                             Label {
                                                 anchors.centerIn: parent
                                                 text: "容积(cm³)"
-                                                color: "#ffffff"
-                                                font.pixelSize: 12
+                                                color: "#E5FFFFFF"
+                                                font.pixelSize: 16
                                                 font.bold: true
                                             }
                                         }
@@ -2171,13 +2158,11 @@ Rectangle {
                                             width: segTableColumn.colPercentWidth
                                             height: parent.height
                                             color: "transparent"
-                                            border.color: "#404040"
-                                            border.width: 1
                                             Label {
                                                 anchors.centerIn: parent
                                                 text: "全脑占比"
-                                                color: "#ffffff"
-                                                font.pixelSize: 12
+                                                color: "#E5FFFFFF"
+                                                font.pixelSize: 16
                                                 font.bold: true
                                             }
                                         }
@@ -2187,13 +2172,11 @@ Rectangle {
                                             width: segTableColumn.colAsymmetryWidth
                                             height: parent.height
                                             color: "transparent"
-                                            border.color: "#404040"
-                                            border.width: 1
                                             Label {
                                                 anchors.centerIn: parent
                                                 text: "不对称"
-                                                color: "#ffffff"
-                                                font.pixelSize: 12
+                                                color: "#E5FFFFFF"
+                                                font.pixelSize: 16
                                                 font.bold: true
                                             }
                                         }
@@ -2205,12 +2188,12 @@ Rectangle {
                         // 表格内容（支持横向滚动）
                         Item {
                             width: parent.width
-                            height: parent.height - 35
+                            height: parent.height - 38
 
                             Flickable {
                                 id: contentFlickable
                                 anchors.fill: parent
-                                anchors.rightMargin: 8  // 为纵向滚动条留空间
+                                anchors.rightMargin: 12  // 为纵向滚动条留空间
                                 contentWidth: segTableColumn.totalContentWidth
                                 contentHeight: segmentationTableView.contentHeight
                                 clip: true
@@ -2224,27 +2207,28 @@ Rectangle {
                                 ScrollBar.horizontal: ScrollBar {
                                     policy: ScrollBar.AsNeeded
                                     background: Rectangle {
-                                        color: "#1a1a1a"
+                                        color: "#99232324"
                                     }
                                     contentItem: Rectangle {
                                         implicitHeight: 8
                                         radius: 4
-                                        color: "#404040"
+                                        color: "#484849"
                                     }
                                 }
 
                                 ListView {
                                     id: segmentationTableView
                                     width: segTableColumn.totalContentWidth
-                                    height: parent.height
+                                    height: parent.height - 12
+                                    anchors.bottomMargin: 12
                                     interactive: false  // 禁用ListView自身的交互，使用Flickable的交互
                                     clip: true
                                     model: $BrainSegmentationTableModel
 
                                     delegate: Rectangle {
                                         width: segTableColumn.totalContentWidth
-                                        height: 30
-                                        color: index % 2 === 0 ? "#1a1a1a" : "#252525"
+                                        height: 39
+                                        color: "#99232324"
 
                                         Row {
                                             width: parent.width
@@ -2296,8 +2280,8 @@ Rectangle {
                                                 Label {
                                                     anchors.centerIn: parent
                                                     text: model.chineseName
-                                                    color: "#cccccc"
-                                                    font.pixelSize: 11
+                                                    color: "#B2FFFFFF"
+                                                    font.pixelSize: 16
                                                     elide: Text.ElideRight
                                                     width: parent.width - 4
                                                     horizontalAlignment: Text.AlignHCenter
@@ -2312,8 +2296,8 @@ Rectangle {
                                                 Label {
                                                     anchors.centerIn: parent
                                                     text: model.hemisphere
-                                                    color: "#cccccc"
-                                                    font.pixelSize: 11
+                                                    color: "#B2FFFFFF"
+                                                    font.pixelSize: 16
                                                 }
                                             }
 
@@ -2325,8 +2309,8 @@ Rectangle {
                                                 Label {
                                                     anchors.centerIn: parent
                                                     text: model.volume
-                                                    color: "#cccccc"
-                                                    font.pixelSize: 11
+                                                    color: "#B2FFFFFF"
+                                                    font.pixelSize: 16
                                                 }
                                             }
 
@@ -2338,8 +2322,8 @@ Rectangle {
                                                 Label {
                                                     anchors.centerIn: parent
                                                     text: model.volumePercent
-                                                    color: "#cccccc"
-                                                    font.pixelSize: 11
+                                                    color: "#B2FFFFFF"
+                                                    font.pixelSize: 16
                                                 }
                                             }
 
@@ -2351,10 +2335,18 @@ Rectangle {
                                                 Label {
                                                     anchors.centerIn: parent
                                                     text: model.asymmetryIndex
-                                                    color: "#cccccc"
-                                                    font.pixelSize: 11
+                                                    color: "#B2FFFFFF"
+                                                    font.pixelSize: 16
                                                 }
                                             }
+                                        }
+
+                                        // 分割线
+                                        Rectangle {
+                                            width: parent.width
+                                            height: 1
+                                            color: "#484849"
+                                            anchors.bottom: parent.bottom
                                         }
                                     }
                                 }
@@ -2378,12 +2370,12 @@ Rectangle {
                                 }
 
                                 background: Rectangle {
-                                    color: "#1a1a1a"
+                                    color: "#99232324"
                                 }
                                 contentItem: Rectangle {
                                     implicitWidth: 8
                                     radius: 4
-                                    color: "#404040"
+                                    color: "#484849"
                                 }
                             }
                         }
@@ -2394,235 +2386,247 @@ Rectangle {
         Rectangle{
             id: networkAnalysis
             anchors.fill: parent
+            anchors.rightMargin: 16
+            anchors.leftMargin: 16
+            anchors.topMargin: 22
+            anchors.bottomMargin: 22
             color: "transparent"
             visible: currentIndex === 3
             clip: true
             Column {
-                padding: 10
                 width: parent.width
-                spacing: 10
+                spacing: 24
                 Label{
+                    id: networkLabel
                     text: qsTr("使用预处理路径：") + outputDetailDir.text
                     color: "#ffffff"
-                    font.pixelSize: 14
+                    font.weight: Font.Medium
+                    font.pixelSize: 16
                     wrapMode: Text.WrapAnywhere
                 }
-                Rectangle{
-                    width: parent.width - 20
-                    height: infoList.height
-                    color: "#000000"
-                    Column{
-                        id:infoList
+                Column {
+                    height: networkAnalysis.height - 24 - networkLabel.height
+                    width: parent.width
+                    spacing: 16
+                    Rectangle{
                         width: parent.width
-                        spacing: 5
-                        padding: 5
-                        Label{
-                            text: qsTr("全局效率：" + $MainViewController.globalEfficiency)
-                            color: "#ffffff"
-                            font.pixelSize: 16
-                        }
-                        Label{
-                            text: qsTr("平均局部效率：" + $MainViewController.averageLocalEfficiency)
-                            color: "#ffffff"
-                            font.pixelSize: 16
-                        }
-                        Label{
-                            text: qsTr("平均聚类系数：" + $MainViewController.averageClusteringCoefficient)
-                            color: "#ffffff"
-                            font.pixelSize: 16
-                        }
-                        Label{
-                            text: qsTr("富俱乐部系数")
-                            color: "#ffffff"
-                            font.weight: Font.Bold
-                            font.pixelSize: 16
-                        }
-                        Label{
-                            text: qsTr("富俱乐部连接：" + $MainViewController.richClubConnections)
-                            color: "#ffffff"
-                            font.pixelSize: 16
-                        }
-                        Label{
-                            text: qsTr("桥接连接：" + $MainViewController.bridgeConnections)
-                            color: "#ffffff"
-                            font.pixelSize: 16
-                        }
-                        Label{
-                            text: qsTr("局部连接：" + $MainViewController.localConnections)
-                            color: "#ffffff"
-                            font.pixelSize: 16
+                        height: infoList.height
+                        color: "#E016171B"
+                        radius: 8
+                        Column{
+                            id:infoList
+                            width: parent.width
+                            spacing: 12
+                            leftPadding: 12
+                            rightPadding: 12
+                            topPadding: 16
+                            bottomPadding: 24
+                            Row{
+                                height: 38
+                                spacing: 20
+                                Label{
+                                    text: qsTr("全局效率：")
+                                    color: "#80FFFFFF"
+                                    font.pixelSize: 16
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 140
+                                }
+                                Rectangle{
+                                    width: infoList.width - 24 - 140 - 20
+                                    height: parent.height
+                                    radius: 4
+                                    color: "#14FFFFFF"
+                                    Label{
+                                        text: qsTr($MainViewController.globalEfficiency.toString())
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        color: "#E5FFFFFF"
+                                        font.pixelSize: 16
+                                        leftPadding: 12
+                                        rightPadding: 12
+                                    }
+                                }
+                            }
+                            Row{
+                                height: 38
+                                spacing: 20
+                                Label{
+                                    text: qsTr("平均局部效率：")
+                                    color: "#80FFFFFF"
+                                    font.pixelSize: 16
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 140
+                                }
+                                Rectangle{
+                                    width: infoList.width - 24 - 140 - 20
+                                    height: parent.height
+                                    radius: 4
+                                    color: "#14FFFFFF"
+                                    Label{
+                                        text: qsTr($MainViewController.averageLocalEfficiency.toString())
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        color: "#E5FFFFFF"
+                                        font.pixelSize: 16
+                                        leftPadding: 12
+                                        rightPadding: 12
+                                    }
+                                }
+                            }
+                            Row{
+                                height: 38
+                                spacing: 20
+                                Label{
+                                    text: qsTr("平均聚类系数：")
+                                    color: "#80FFFFFF"
+                                    font.pixelSize: 16
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 140
+                                }
+                                Rectangle{
+                                    width: infoList.width - 24 - 140 - 20
+                                    height: parent.height
+                                    radius: 4
+                                    color: "#14FFFFFF"
+                                    Label{
+                                        text: qsTr($MainViewController.averageClusteringCoefficient.toString())
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        color: "#E5FFFFFF"
+                                        font.pixelSize: 16
+                                        leftPadding: 12
+                                        rightPadding: 12
+                                    }
+                                }
+                            }
+                            Row{
+                                height: 32
+                                spacing: 6
+                                Image{
+                                    source: "qrc:/image/richClub.png"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                                Label{
+                                    text: qsTr("富俱乐部系数")
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    color: "#E5FFFFFF"
+                                    font.pixelSize: 18
+                                    font.weight: Font.Medium
+                                }
+                            }
+                            Row{
+                                height: 38
+                                spacing: 20
+                                Label{
+                                    text: qsTr("富俱乐部连接：")
+                                    color: "#80FFFFFF"
+                                    font.pixelSize: 16
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 140
+                                }
+                                Rectangle{
+                                    width: infoList.width - 24 - 140 - 20
+                                    height: parent.height
+                                    radius: 4
+                                    color: "#14FFFFFF"
+                                    Label{
+                                        text: qsTr($MainViewController.richClubConnections.toString())
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        color: "#E5FFFFFF"
+                                        font.pixelSize: 16
+                                        leftPadding: 12
+                                        rightPadding: 12
+                                    }
+                                }
+                            }
+                            Row{
+                                height: 38
+                                spacing: 20
+                                Label{
+                                    text: qsTr("桥接连接：")
+                                    color: "#80FFFFFF"
+                                    font.pixelSize: 16
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 140
+                                }
+                                Rectangle{
+                                    width: infoList.width - 24 - 140 - 20
+                                    height: parent.height
+                                    radius: 4
+                                    color: "#14FFFFFF"
+                                    Label{
+                                        text: qsTr($MainViewController.bridgeConnections.toString())
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        color: "#E5FFFFFF"
+                                        font.pixelSize: 16
+                                        leftPadding: 12
+                                        rightPadding: 12
+                                    }
+                                }
+                            }
+                            Row{
+                                height: 38
+                                spacing: 20
+                                Label{
+                                    text: qsTr("局部连接：")
+                                    color: "#80FFFFFF"
+                                    font.pixelSize: 16
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 140
+                                }
+                                Rectangle{
+                                    width: infoList.width - 24 - 140 - 20
+                                    height: parent.height
+                                    radius: 4
+                                    color: "#14FFFFFF"
+                                    Label{
+                                        text: qsTr($MainViewController.localConnections.toString())
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        color: "#E5FFFFFF"
+                                        font.pixelSize: 16
+                                        leftPadding: 12
+                                        rightPadding: 12
+                                    }
+                                }
+                            }
                         }
                     }
-                }
 
-                // 脑区数据表格
-                Rectangle {
-                    width: parent.width - 20
-                    height: networkAnalysis.height - infoList.height - 60 - 15
-                    color: "#1a1a1a"
-                    border.color: "#404040"
-                    border.width: 1
+                    // 脑区数据表格
+                    Rectangle {
+                        width: parent.width
+                        height: parent.height - 16 - infoList.height
+                        color: "#99232324"
 
-                    Column {
-                        id: tableColumn
-                        anchors.fill: parent
-                        anchors.margins: 5
-                        spacing: 0
+                        Column {
+                            id: tableColumn
+                            anchors.fill: parent
 
-                        // 定义列宽常量
-                        readonly property int colIndexWidth: 40
-                        readonly property int colChineseWidth: 80
-                        readonly property int colEnglishWidth: 80
-                        readonly property int colDegreeWidth: 40
-                        readonly property int colClusteringWidth: 45
+                            // 定义列宽常量
+                            readonly property int colIndexWidth: 40
+                            readonly property int colChineseWidth: 120
+                            readonly property int colEnglishWidth: 130
+                            readonly property int colDegreeWidth: 40
+                            readonly property int colClusteringWidth: 50
 
-                        // 表格标题
-                        Rectangle {
-                            id: tableHeader
-                            width: parent.width
-                            height: 35
-                            color: "#2a2a2a"
-
-                            Row {
-                                anchors.fill: parent
-
-                                // 序号列
-                                Rectangle {
-                                    width: tableColumn.colIndexWidth
-                                    height: parent.height
-                                    color: "transparent"
-                                    border.color: "#404040"
-                                    border.width: 1
-                                    Label {
-                                        anchors.centerIn: parent
-                                        text: "#"
-                                        color: "#ffffff"
-                                        font.pixelSize: 12
-                                        font.bold: true
-                                    }
-                                }
-
-                                // 中文名称
-                                Rectangle {
-                                    width: tableColumn.colChineseWidth
-                                    height: parent.height
-                                    color: "transparent"
-                                    border.color: "#404040"
-                                    border.width: 1
-                                    Label {
-                                        anchors.centerIn: parent
-                                        text: "中文名称"
-                                        color: "#ffffff"
-                                        font.pixelSize: 12
-                                        font.bold: true
-                                    }
-                                }
-
-                                // Mricro命名
-                                Rectangle {
-                                    width: tableColumn.colEnglishWidth
-                                    height: parent.height
-                                    color: "transparent"
-                                    border.color: "#404040"
-                                    border.width: 1
-                                    Label {
-                                        anchors.centerIn: parent
-                                        text: "Mricro命名"
-                                        color: "#ffffff"
-                                        font.pixelSize: 12
-                                        font.bold: true
-                                    }
-                                }
-
-                                // 度
-                                Rectangle {
-                                    width: tableColumn.colDegreeWidth
-                                    height: parent.height
-                                    color: "transparent"
-                                    border.color: "#404040"
-                                    border.width: 1
-                                    Label {
-                                        anchors.centerIn: parent
-                                        text: "度"
-                                        color: "#ffffff"
-                                        font.pixelSize: 12
-                                        font.bold: true
-                                    }
-                                }
-
-                                // 聚类
-                                Rectangle {
-                                    width: tableColumn.colClusteringWidth
-                                    height: parent.height
-                                    color: "transparent"
-                                    border.color: "#404040"
-                                    border.width: 1
-                                    Label {
-                                        anchors.centerIn: parent
-                                        text: "聚类"
-                                        color: "#ffffff"
-                                        font.pixelSize: 12
-                                        font.bold: true
-                                    }
-                                }
-
-                                // 局部效率
-                                Rectangle {
-                                    width: tableColumn.width - tableColumn.colIndexWidth - tableColumn.colChineseWidth - tableColumn.colEnglishWidth - tableColumn.colDegreeWidth - tableColumn.colClusteringWidth - 10
-                                    height: parent.height
-                                    color: "transparent"
-                                    border.color: "#404040"
-                                    border.width: 1
-                                    Label {
-                                        anchors.centerIn: parent
-                                        text: "局部效率"
-                                        color: "#ffffff"
-                                        font.pixelSize: 12
-                                        font.bold: true
-                                    }
-                                }
-                            }
-                        }
-
-                        // 表格内容
-                        ListView {
-                            id: regionTableView
-                            width: parent.width
-                            height: parent.height - 35
-                            clip: true
-                            model: $BrainRegionTableModel
-                            currentIndex: 0
-
-                            ScrollBar.vertical: ScrollBar {
-                                policy: ScrollBar.AlwaysOn
-                                background: Rectangle {
-                                    color: "#1a1a1a"
-                                }
-                                contentItem: Rectangle {
-                                    implicitWidth: 8
-                                    radius: 4
-                                    color: "#404040"
-                                }
-                            }
-
-                            delegate: Rectangle {
-                                width: regionTableView.width - 10
-                                height: 30
-                                color: regionTableView.currentIndex === index ? "#0078d4" : (index % 2 === 0 ? "#1a1a1a" : "#252525")
+                            // 表格标题
+                            Rectangle {
+                                id: tableHeader
+                                width: parent.width
+                                height: 38
+                                color: "#14FFFFFF"
 
                                 Row {
                                     anchors.fill: parent
 
-                                    // 序号
+                                    // 序号列
                                     Rectangle {
                                         width: tableColumn.colIndexWidth
                                         height: parent.height
                                         color: "transparent"
                                         Label {
                                             anchors.centerIn: parent
-                                            text: (index + 1)
-                                            color: regionTableView.currentIndex === index ? "#ffffff" : "#cccccc"
-                                            font.pixelSize: 11
+                                            text: "#"
+                                            color: "#E5FFFFFF"
+                                            font.pixelSize: 16
+                                            font.bold: true
                                         }
                                     }
 
@@ -2633,12 +2637,10 @@ Rectangle {
                                         color: "transparent"
                                         Label {
                                             anchors.centerIn: parent
-                                            text: model.chineseName
-                                            color: regionTableView.currentIndex === index ? "#ffffff" : "#cccccc"
-                                            font.pixelSize: 11
-                                            elide: Text.ElideRight
-                                            width: parent.width - 4
-                                            horizontalAlignment: Text.AlignHCenter
+                                            text: "中文名称"
+                                            color: "#E5FFFFFF"
+                                            font.pixelSize: 16
+                                            font.bold: true
                                         }
                                     }
 
@@ -2649,12 +2651,10 @@ Rectangle {
                                         color: "transparent"
                                         Label {
                                             anchors.centerIn: parent
-                                            text: model.englishName
-                                            color: regionTableView.currentIndex === index ? "#ffffff" : "#cccccc"
-                                            font.pixelSize: 11
-                                            elide: Text.ElideRight
-                                            width: parent.width - 4
-                                            horizontalAlignment: Text.AlignHCenter
+                                            text: "Mricro命名"
+                                            color: "#E5FFFFFF"
+                                            font.pixelSize: 16
+                                            font.bold: true
                                         }
                                     }
 
@@ -2665,9 +2665,10 @@ Rectangle {
                                         color: "transparent"
                                         Label {
                                             anchors.centerIn: parent
-                                            text: model.degree
-                                            color: regionTableView.currentIndex === index ? "#ffffff" : "#cccccc"
-                                            font.pixelSize: 11
+                                            text: "度"
+                                            color: "#E5FFFFFF"
+                                            font.pixelSize: 16
+                                            font.bold: true
                                         }
                                     }
 
@@ -2678,9 +2679,10 @@ Rectangle {
                                         color: "transparent"
                                         Label {
                                             anchors.centerIn: parent
-                                            text: model.clustering
-                                            color: regionTableView.currentIndex === index ? "#ffffff" : "#cccccc"
-                                            font.pixelSize: 11
+                                            text: "聚类"
+                                            color: "#E5FFFFFF"
+                                            font.pixelSize: 16
+                                            font.bold: true
                                         }
                                     }
 
@@ -2691,18 +2693,141 @@ Rectangle {
                                         color: "transparent"
                                         Label {
                                             anchors.centerIn: parent
-                                            text: model.localEfficiency
-                                            color: regionTableView.currentIndex === index ? "#ffffff" : "#cccccc"
-                                            font.pixelSize: 11
+                                            text: "局部效率"
+                                            color: "#E5FFFFFF"
+                                            font.pixelSize: 16
+                                            font.bold: true
                                         }
                                     }
                                 }
+                            }
 
-                                MouseArea {
-                                    anchors.fill: parent
-                                    onClicked: {
-                                        regionTableView.currentIndex = index
-                                        $MainViewController.selectBrainRegion(index)
+                            // 表格内容
+                            ListView {
+                                id: regionTableView
+                                width: parent.width
+                                height: parent.height - 38
+                                clip: true
+                                model: $BrainRegionTableModel
+                                currentIndex: 0
+
+                                ScrollBar.vertical: ScrollBar {
+                                    policy: ScrollBar.AsNeeded
+                                    background: Rectangle {
+                                        color: "#99232324"
+                                    }
+                                    contentItem: Rectangle {
+                                        implicitWidth: 8
+                                        radius: 4
+                                        color: "#484849"
+                                    }
+                                }
+
+                                delegate: Rectangle {
+                                    width: regionTableView.width - 10
+                                    height: 39
+                                    color: regionTableView.currentIndex === index ? "#B23C7EFF" : "#99232324"
+
+                                    Row {
+                                        anchors.fill: parent
+
+                                        // 序号
+                                        Rectangle {
+                                            width: tableColumn.colIndexWidth
+                                            height: parent.height
+                                            color: "transparent"
+                                            Label {
+                                                anchors.centerIn: parent
+                                                text: (index + 1)
+                                                color: regionTableView.currentIndex === index ? "#ffffff" : "#B2FFFFFF"
+                                                font.pixelSize: 16
+                                            }
+                                        }
+
+                                        // 中文名称
+                                        Rectangle {
+                                            width: tableColumn.colChineseWidth
+                                            height: parent.height
+                                            color: "transparent"
+                                            Label {
+                                                anchors.centerIn: parent
+                                                text: model.chineseName
+                                                color: regionTableView.currentIndex === index ? "#ffffff" : "#B2FFFFFF"
+                                                font.pixelSize: 16
+                                                elide: Text.ElideRight
+                                                width: parent.width - 4
+                                                horizontalAlignment: Text.AlignHCenter
+                                            }
+                                        }
+
+                                        // Mricro命名
+                                        Rectangle {
+                                            width: tableColumn.colEnglishWidth
+                                            height: parent.height
+                                            color: "transparent"
+                                            Label {
+                                                anchors.centerIn: parent
+                                                text: model.englishName
+                                                color: regionTableView.currentIndex === index ? "#ffffff" : "#B2FFFFFF"
+                                                font.pixelSize: 16
+                                                elide: Text.ElideRight
+                                                width: parent.width - 4
+                                                horizontalAlignment: Text.AlignHCenter
+                                            }
+                                        }
+
+                                        // 度
+                                        Rectangle {
+                                            width: tableColumn.colDegreeWidth
+                                            height: parent.height
+                                            color: "transparent"
+                                            Label {
+                                                anchors.centerIn: parent
+                                                text: model.degree
+                                                color: regionTableView.currentIndex === index ? "#ffffff" : "#B2FFFFFF"
+                                                font.pixelSize: 16
+                                            }
+                                        }
+
+                                        // 聚类
+                                        Rectangle {
+                                            width: tableColumn.colClusteringWidth
+                                            height: parent.height
+                                            color: "transparent"
+                                            Label {
+                                                anchors.centerIn: parent
+                                                text: model.clustering
+                                                color: regionTableView.currentIndex === index ? "#ffffff" : "#B2FFFFFF"
+                                                font.pixelSize: 16
+                                            }
+                                        }
+
+                                        // 局部效率
+                                        Rectangle {
+                                            width: tableColumn.width - tableColumn.colIndexWidth - tableColumn.colChineseWidth - tableColumn.colEnglishWidth - tableColumn.colDegreeWidth - tableColumn.colClusteringWidth - 10
+                                            height: parent.height
+                                            color: "transparent"
+                                            Label {
+                                                anchors.centerIn: parent
+                                                text: model.localEfficiency
+                                                color: regionTableView.currentIndex === index ? "#ffffff" : "#B2FFFFFF"
+                                                font.pixelSize: 16
+                                            }
+                                        }
+                                    }
+                                    // 分割线
+                                    Rectangle {
+                                        width: parent.width
+                                        height: 1
+                                        color: "#484849"
+                                        anchors.bottom: parent.bottom
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        onClicked: {
+                                            regionTableView.currentIndex = index
+                                            $MainViewController.selectBrainRegion(index)
+                                        }
                                     }
                                 }
                             }
