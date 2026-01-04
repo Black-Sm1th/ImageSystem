@@ -32,6 +32,14 @@ Rectangle {
     // 右侧面板展开状态
     property bool rightPanelExpanded: true
     
+    // PDF 生成状态管理
+    property int pdfGenerationState: 0  // 0: 默认, 1: 生成中, 2: 完成
+    
+    // 监听 currentIndex 变化，重置 PDF 状态
+    onCurrentIndexChanged: {
+        pdfGenerationState = 0
+    }
+    
     function resetBatchProgress() {
         batchProcessing = true
         preprocessDone = false
@@ -965,11 +973,39 @@ Rectangle {
                             }
                         }
                         CustomButton{
+                            id: generatePdfButton
                             width: parent.width
                             height: 48
                             buttonRadius: 4
-                            iconSource: "qrc:/image/generateReport.png"
-                            text: qsTr("生成pdf分析报告")
+                            
+                            // 根据状态动态设置属性
+                            iconSource: {
+                                if (pdfGenerationState === 0) {
+                                    return "qrc:/image/generateReport.png"
+                                } else if (pdfGenerationState === 1) {
+                                    return ""  // 生成中不显示图标
+                                } else {
+                                    return "qrc:/image/successReport.png"
+                                }
+                            }
+                            
+                            text: {
+                                if (pdfGenerationState === 0) {
+                                    return qsTr("生成pdf分析报告")
+                                } else if (pdfGenerationState === 1) {
+                                    return qsTr("正在生成中...")
+                                } else {
+                                    return qsTr("报告生成完成")
+                                }
+                            }
+                            
+                            useGradient: pdfGenerationState === 1
+                            gradientStartColor: "#3C7EFF"
+                            gradientEndColor: "#572499"
+                            animateGradient: pdfGenerationState === 1
+                            
+                            enabled: pdfGenerationState !== 1  // 生成中禁用按钮
+                            
                             onClicked: {
                                 if(reportSavePath.text === ""){
                                     if (messageManager) {
@@ -978,10 +1014,25 @@ Rectangle {
                                     return
                                 }
 
-                                $MainViewController.generatePdfReport(reportSavePath.text)
-
-                                if (messageManager) {
-                                    messageManager.success(qsTr("PDF 报告生成成功！"), 2000)
+                                // 设置为生成中状态
+                                pdfGenerationState = 1
+                                
+                                // 使用 Timer 模拟异步执行
+                                pdfGenerationTimer.start()
+                            }
+                            
+                            // 异步生成 PDF 的定时器
+                            Timer {
+                                id: pdfGenerationTimer
+                                interval: 100
+                                repeat: false
+                                onTriggered: {
+                                    // 调用 C++ 函数生成 PDF
+                                    $MainViewController.generatePdfReport(reportSavePath.text)
+                                    pdfGenerationState = 2
+                                    if (messageManager) {
+                                        messageManager.success(qsTr("PDF 报告生成成功！"), 2000)
+                                    }
                                 }
                             }
                         }
@@ -1004,6 +1055,11 @@ Rectangle {
                             height: 48
                             inputRadius: 4
                             backgroundColor: "#14FFFFFF"
+                            
+                            // 监听文本变化，重置 PDF 生成状态
+                            onTextChanged: {
+                                pdfGenerationState = 0
+                            }
                         }
                         CustomButton{
                             width: 135
