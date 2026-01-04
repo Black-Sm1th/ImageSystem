@@ -24,6 +24,9 @@ class DicomDataModel : public QObject
         Q_PROPERTY(int dimX READ dimX NOTIFY dataLoaded)
         Q_PROPERTY(int dimY READ dimY NOTIFY dataLoaded)
         Q_PROPERTY(int dimZ READ dimZ NOTIFY dataLoaded)
+        Q_PROPERTY(double spacingX READ spacingX NOTIFY dataLoaded)
+        Q_PROPERTY(double spacingY READ spacingY NOTIFY dataLoaded)
+        Q_PROPERTY(double spacingZ READ spacingZ NOTIFY dataLoaded)
         // SegData独立的切片属性
         Q_PROPERTY(int segAxialSlice READ segAxialSlice WRITE setSegAxialSlice NOTIFY segAxialSliceChanged)
         Q_PROPERTY(int segSagittalSlice READ segSagittalSlice WRITE setSegSagittalSlice NOTIFY segSagittalSliceChanged)
@@ -52,6 +55,9 @@ public:
     int dimX() const;
     int dimY() const;
     int dimZ() const;
+    double spacingX() const;
+    double spacingY() const;
+    double spacingZ() const;
     
     // SegData的切片
     int segAxialSlice() const;
@@ -129,6 +135,8 @@ private:
     BrainSegmentationTableModel* m_segmentationTableModel;
     int m_dims[3] = {1, 1, 1};
     int m_segDims[3] = {1, 1, 1};
+    double m_spacing[3] = {1.0, 1.0, 1.0};
+    double m_segSpacing[3] = {1.0, 1.0, 1.0};
     int m_axialSlice = 0;
     int m_sagittalSlice = 0;
     int m_coronalSlice = 0;

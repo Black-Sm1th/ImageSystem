@@ -1,4 +1,6 @@
 ﻿#include "MainViewController.h"
+#include <algorithm>
+#include <vtkTransform.h>
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDebug>
@@ -819,7 +821,7 @@ void SliceVtkItemBase::applyParallelScale(vtkImageSlice* imageSlice, vtkRenderer
     }
 
     // 让切片占用视口 80%（可按需调整）
-    const double targetFill = 0.8;
+    const double targetFill = 0.95;
     cam->SetParallelScale(0.5 * std::max(w, h) / targetFill);
 }
 
