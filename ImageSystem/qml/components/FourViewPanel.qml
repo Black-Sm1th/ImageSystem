@@ -29,11 +29,46 @@ Item {
     readonly property real spacingX: $DicomDataModel.spacingX
     readonly property real spacingY: $DicomDataModel.spacingY
     readonly property real spacingZ: $DicomDataModel.spacingZ
+    // 是否为分割数据模式
+    readonly property bool isSegDataMode: $DicomDataModel.isSegDataMode
     // VTK视图填充比例（与C++端applyParallelScale保持一致）
     readonly property real targetFill: 0.95
 
     function clamp(v, minv, maxv) {
         return Math.max(minv, Math.min(maxv, v));
+    }
+    
+    // 根据模式设置切片
+    function setAxialSlice(val) {
+        if (isSegDataMode) {
+            $DicomDataModel.segAxialSlice = val;
+        } else {
+            $DicomDataModel.axialSlice = val;
+        }
+    }
+    function setSagittalSlice(val) {
+        if (isSegDataMode) {
+            $DicomDataModel.segSagittalSlice = val;
+        } else {
+            $DicomDataModel.sagittalSlice = val;
+        }
+    }
+    function setCoronalSlice(val) {
+        if (isSegDataMode) {
+            $DicomDataModel.segCoronalSlice = val;
+        } else {
+            $DicomDataModel.coronalSlice = val;
+        }
+    }
+    // 根据模式获取切片
+    function getAxialSlice() {
+        return isSegDataMode ? $DicomDataModel.segAxialSlice : $DicomDataModel.axialSlice;
+    }
+    function getSagittalSlice() {
+        return isSegDataMode ? $DicomDataModel.segSagittalSlice : $DicomDataModel.sagittalSlice;
+    }
+    function getCoronalSlice() {
+        return isSegDataMode ? $DicomDataModel.segCoronalSlice : $DicomDataModel.coronalSlice;
     }
 
     // 计算图像在视图中的实际显示区域（考虑宽高比和填充比例）
@@ -146,9 +181,9 @@ Item {
                     var bounds = calcImageBounds(width, height, physW, physH);
                     var voxel = viewToVoxel(mouse.x, mouse.y, width, height, bounds, root.dimX, root.dimY);
                     if (voxel) {
-                        $DicomDataModel.sagittalSlice = voxel.i
-                        $DicomDataModel.coronalSlice = voxel.j
-                        updateCrosshairFromVoxel(voxel.i, voxel.j, $DicomDataModel.axialSlice)
+                        root.setSagittalSlice(voxel.i)
+                        root.setCoronalSlice(voxel.j)
+                        updateCrosshairFromVoxel(voxel.i, voxel.j, root.getAxialSlice())
                     }
                 }
                 onPositionChanged: {
@@ -158,9 +193,9 @@ Item {
                         var bounds = calcImageBounds(width, height, physW, physH);
                         var voxel = viewToVoxel(mouse.x, mouse.y, width, height, bounds, root.dimX, root.dimY);
                         if (voxel) {
-                            $DicomDataModel.sagittalSlice = voxel.i
-                            $DicomDataModel.coronalSlice = voxel.j
-                            updateCrosshairFromVoxel(voxel.i, voxel.j, $DicomDataModel.axialSlice)
+                            root.setSagittalSlice(voxel.i)
+                            root.setCoronalSlice(voxel.j)
+                            updateCrosshairFromVoxel(voxel.i, voxel.j, root.getAxialSlice())
                         }
                     }
                 }
@@ -375,9 +410,9 @@ Item {
                     var bounds = calcImageBounds(width, height, physW, physH);
                     var voxel = viewToVoxel(mouse.x, mouse.y, width, height, bounds, root.dimY, root.dimZ);
                     if (voxel) {
-                        $DicomDataModel.coronalSlice = voxel.i
-                        $DicomDataModel.axialSlice = voxel.j
-                        updateCrosshairFromVoxel($DicomDataModel.sagittalSlice, voxel.i, voxel.j)
+                        root.setCoronalSlice(voxel.i)
+                        root.setAxialSlice(voxel.j)
+                        updateCrosshairFromVoxel(root.getSagittalSlice(), voxel.i, voxel.j)
                     }
                 }
                 onPositionChanged: {
@@ -387,9 +422,9 @@ Item {
                         var bounds = calcImageBounds(width, height, physW, physH);
                         var voxel = viewToVoxel(mouse.x, mouse.y, width, height, bounds, root.dimY, root.dimZ);
                         if (voxel) {
-                            $DicomDataModel.coronalSlice = voxel.i
-                            $DicomDataModel.axialSlice = voxel.j
-                            updateCrosshairFromVoxel($DicomDataModel.sagittalSlice, voxel.i, voxel.j)
+                            root.setCoronalSlice(voxel.i)
+                            root.setAxialSlice(voxel.j)
+                            updateCrosshairFromVoxel(root.getSagittalSlice(), voxel.i, voxel.j)
                         }
                     }
                 }
@@ -591,9 +626,9 @@ Item {
                     var bounds = calcImageBounds(width, height, physW, physH);
                     var voxel = viewToVoxel(mouse.x, mouse.y, width, height, bounds, root.dimX, root.dimZ);
                     if (voxel) {
-                        $DicomDataModel.sagittalSlice = voxel.i
-                        $DicomDataModel.axialSlice = voxel.j
-                        updateCrosshairFromVoxel(voxel.i, $DicomDataModel.coronalSlice, voxel.j)
+                        root.setSagittalSlice(voxel.i)
+                        root.setAxialSlice(voxel.j)
+                        updateCrosshairFromVoxel(voxel.i, root.getCoronalSlice(), voxel.j)
                     }
                 }
                 onPositionChanged: {
@@ -603,9 +638,9 @@ Item {
                         var bounds = calcImageBounds(width, height, physW, physH);
                         var voxel = viewToVoxel(mouse.x, mouse.y, width, height, bounds, root.dimX, root.dimZ);
                         if (voxel) {
-                            $DicomDataModel.sagittalSlice = voxel.i
-                            $DicomDataModel.axialSlice = voxel.j
-                            updateCrosshairFromVoxel(voxel.i, $DicomDataModel.coronalSlice, voxel.j)
+                            root.setSagittalSlice(voxel.i)
+                            root.setAxialSlice(voxel.j)
+                            updateCrosshairFromVoxel(voxel.i, root.getCoronalSlice(), voxel.j)
                         }
                     }
                 }

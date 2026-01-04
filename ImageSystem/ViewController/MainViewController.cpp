@@ -150,6 +150,10 @@ void SliceInteractorStyle::OnLeftButtonUp()
 
 void SliceInteractorStyle::OnRightButtonDown()
 {
+    // 十字线启用时禁止缩放（因为十字线位置会失效）
+    if (m_dataModel->crosshairEnabled()) {
+        return;
+    }
     // 右键始终缩放（不受当前左键 toolMode 影响）
     BeginInteraction(ToolMode::Zoom);
 }
@@ -161,6 +165,10 @@ void SliceInteractorStyle::OnRightButtonUp()
 
 void SliceInteractorStyle::OnMiddleButtonDown()
 {
+    // 十字线启用时禁止平移（因为十字线位置会失效）
+    if (m_dataModel->crosshairEnabled()) {
+        return;
+    }
     // 中键始终平移（不受当前左键 toolMode 影响）
     BeginInteraction(ToolMode::Pan);
 }
@@ -474,6 +482,8 @@ QQuickVTKItem::vtkUserData SliceVtkItemBase::initializeVTK(vtkRenderWindow* rend
         this, &SliceVtkItemBase::onWindowChanged);
     connect(m_dataModel, &DicomDataModel::interactionResetRequested,
         this, &SliceVtkItemBase::onInteractionResetRequested);
+    connect(m_dataModel, &DicomDataModel::crosshairEnabledChanged,
+        this, &SliceVtkItemBase::onCrosshairEnabledChanged);
 
     // 在渲染线程初始化VTK对象
     vtkSmartPointer<vtkImageData> imageData = m_dataModel->getImageData();
@@ -490,6 +500,27 @@ void SliceVtkItemBase::onInteractionResetRequested()
         if (userData) {
             SliceViewData* data = static_cast<SliceViewData*>(userData.GetPointer());
             resetViewState(rw, data);
+        }
+    });
+    scheduleRender();
+}
+
+void SliceVtkItemBase::onCrosshairEnabledChanged(bool enabled)
+{
+    if (!enabled) {
+        return;  // 关闭十字线时不需要重置相机
+    }
+    
+    // 开启十字线时，重置相机到0.95填充比例
+    dispatch_async([this](vtkRenderWindow* rw, vtkUserData userData) {
+        Q_UNUSED(rw);
+        if (userData) {
+            SliceViewData* data = static_cast<SliceViewData*>(userData.GetPointer());
+            if (data->renderer && data->imageSlice) {
+                setupCamera(data->renderer);
+                applyParallelScale(data->imageSlice, data->renderer);
+                data->renderer->ResetCameraClippingRange();
+            }
         }
     });
     scheduleRender();
@@ -762,7 +793,6 @@ void SliceVtkItemBase::setMapperOrientation(vtkImageSliceMapper* mapper)
 
 void SliceVtkItemBase::setupCamera(vtkRenderer* renderer)
 {
-    renderer->ResetCamera();
     vtkCamera* camera = renderer->GetActiveCamera();
 
     switch (m_orientation) {
@@ -782,7 +812,41 @@ void SliceVtkItemBase::setupCamera(vtkRenderer* renderer)
         camera->SetFocalPoint(0, 0, 0);
         break;
     }
-    renderer->ResetCamera();
+    
+    // 只根据图像边界重置相机，忽略测量工具等其他actor
+    // 在分割模式下使用分割数据的边界
+    vtkImageData* imageData = nullptr;
+    if (m_dataModel->isSegDataMode()) {
+        // 从分割视图获取图像数据
+        vtkSmartPointer<vtkImageSlice> segSlice;
+        switch (m_orientation) {
+        case SliceOrientation::Axial:
+            segSlice = m_dataModel->getSegImageData(0);
+            break;
+        case SliceOrientation::Sagittal:
+            segSlice = m_dataModel->getSegImageData(2);
+            break;
+        case SliceOrientation::Coronal:
+            segSlice = m_dataModel->getSegImageData(1);
+            break;
+        }
+        if (segSlice && segSlice->GetMapper()) {
+            auto* mapper = vtkImageSliceMapper::SafeDownCast(segSlice->GetMapper());
+            if (mapper) {
+                imageData = vtkImageData::SafeDownCast(mapper->GetInput());
+            }
+        }
+    } else {
+        imageData = m_dataModel->getImageData();
+    }
+    
+    if (imageData) {
+        double bounds[6];
+        imageData->GetBounds(bounds);
+        renderer->ResetCamera(bounds);
+    } else {
+        renderer->ResetCamera();
+    }
 }
 
 void SliceVtkItemBase::applyParallelScale(vtkImageSlice* imageSlice, vtkRenderer* renderer)

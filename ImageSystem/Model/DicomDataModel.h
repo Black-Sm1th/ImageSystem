@@ -21,12 +21,12 @@ class DicomDataModel : public QObject
         Q_PROPERTY(int maxAxialSlice READ maxAxialSlice NOTIFY dataLoaded)
         Q_PROPERTY(int maxSagittalSlice READ maxSagittalSlice NOTIFY dataLoaded)
         Q_PROPERTY(int maxCoronalSlice READ maxCoronalSlice NOTIFY dataLoaded)
-        Q_PROPERTY(int dimX READ dimX NOTIFY dataLoaded)
-        Q_PROPERTY(int dimY READ dimY NOTIFY dataLoaded)
-        Q_PROPERTY(int dimZ READ dimZ NOTIFY dataLoaded)
-        Q_PROPERTY(double spacingX READ spacingX NOTIFY dataLoaded)
-        Q_PROPERTY(double spacingY READ spacingY NOTIFY dataLoaded)
-        Q_PROPERTY(double spacingZ READ spacingZ NOTIFY dataLoaded)
+        Q_PROPERTY(int dimX READ dimX NOTIFY dimensionsChanged)
+        Q_PROPERTY(int dimY READ dimY NOTIFY dimensionsChanged)
+        Q_PROPERTY(int dimZ READ dimZ NOTIFY dimensionsChanged)
+        Q_PROPERTY(double spacingX READ spacingX NOTIFY dimensionsChanged)
+        Q_PROPERTY(double spacingY READ spacingY NOTIFY dimensionsChanged)
+        Q_PROPERTY(double spacingZ READ spacingZ NOTIFY dimensionsChanged)
         // SegData独立的切片属性
         Q_PROPERTY(int segAxialSlice READ segAxialSlice WRITE setSegAxialSlice NOTIFY segAxialSliceChanged)
         Q_PROPERTY(int segSagittalSlice READ segSagittalSlice WRITE setSegSagittalSlice NOTIFY segSagittalSliceChanged)
@@ -125,6 +125,7 @@ signals:
     void segLoadingFinished(bool success, const QString& message);
     void segRefreshRenderer();
     void interactionResetRequested();
+    void dimensionsChanged();
 
 private:
     void finalizeSegDataLoad(std::unique_ptr<BrainRegionVisualizer> region);

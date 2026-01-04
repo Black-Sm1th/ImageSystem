@@ -126,6 +126,7 @@ private slots:
     void onSegSliceChanged(int slice);
     void onWindowChanged();
     void onInteractionResetRequested();
+    void onCrosshairEnabledChanged(bool enabled);
 
 private:
     void setupView(vtkRenderWindow* renderWindow, SliceViewData* data, vtkImageData* imageData);

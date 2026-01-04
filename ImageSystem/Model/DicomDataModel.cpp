@@ -168,6 +168,7 @@ void DicomDataModel::setSegDataMode(bool enabled)
     if (m_isSegDataMode != enabled) {
         m_isSegDataMode = enabled;
         emit segDataModeChanged();
+        emit dimensionsChanged();  // 通知 QML 重新读取 dimX/Y/Z 和 spacingX/Y/Z
     }
 }
 
@@ -233,6 +234,7 @@ bool DicomDataModel::loadDicomDirectory(const QString& path) {
     setSegDataMode(false);
     
     emit dataLoaded();
+    emit dimensionsChanged();  // 通知 QML 重新读取 dimX/Y/Z 和 spacingX/Y/Z
     // 设置默认切片为中间位置
     setAxialSlice(m_dims[2] / 2);
     setSagittalSlice(m_dims[0] / 2);
