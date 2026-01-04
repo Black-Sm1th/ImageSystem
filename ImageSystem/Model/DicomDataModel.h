@@ -85,8 +85,8 @@ public:
 
     void setWindowWidth(double width);
     void setWindowLevel(double level);
-    void setToolMode(int mode);
-    void setCrosshairEnabled(bool enabled);
+    Q_INVOKABLE void setToolMode(int mode);
+    Q_INVOKABLE void setCrosshairEnabled(bool enabled);
 
     // Key_7: reset 所有交互状态（WW/WL、相机平移/缩放、测量等）
     Q_INVOKABLE void resetAllInteractions();
