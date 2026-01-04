@@ -5,13 +5,14 @@ Rectangle {
     id: customButton
     
     // 可配置属性
-    property int buttonWidth: buttonText.width + 20
+    property int buttonWidth: contentRow.width + 20
     property int buttonHeight: 40
     property color borderColor: "#E0E0E0"
     property color textColor: "#E5FFFFFF"
     property color backgroundColor: "#3C7EFF"
     property int fontSize: 16
     property string text: qsTr("按钮")
+    property string iconSource: ""  // 图标路径，为空则不显示图标
     property int borderWidth: 0
     property int buttonRadius: 8
     property bool containsMouse: mouseArea.containsMouse
@@ -56,22 +57,35 @@ Rectangle {
     border.width: borderWidth
     radius: buttonRadius
     
-    // 按钮文字
-    Text {
-        id: buttonText
-        text: customButton.text
-        font.pixelSize: fontSize
-        color: {
-            if (mouseArea.pressed) {
-                return pressedTextColor
-            } else if (mouseArea.containsMouse) {
-                return hoverTextColor
-            } else {
-                return textColor
-            }
-        }
+    // 按钮内容（图标+文字）
+    Row {
+        id: contentRow
         anchors.centerIn: parent
-        font.family: "Alibaba PuHuiTi 3.0"
+        spacing: iconSource !== "" ? 8 : 0
+        
+        Image {
+            id: buttonIcon
+            source: iconSource
+            visible: iconSource !== ""
+            anchors.verticalCenter: parent.verticalCenter
+        }
+        
+        Text {
+            id: buttonText
+            text: customButton.text
+            font.pixelSize: fontSize
+            color: {
+                if (mouseArea.pressed) {
+                    return pressedTextColor
+                } else if (mouseArea.containsMouse) {
+                    return hoverTextColor
+                } else {
+                    return textColor
+                }
+            }
+            anchors.verticalCenter: parent.verticalCenter
+            font.family: "Alibaba PuHuiTi 3.0"
+        }
     }
     
     // 鼠标交互区域

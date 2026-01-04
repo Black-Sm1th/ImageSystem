@@ -375,11 +375,14 @@ ApplicationWindow {
         
         Rectangle {
             id: rightExpandButton
-            width: analysisPanelIndex == 2 && (brainpanel.currentIndex === 2 || brainpanel.currentIndex === 3) ? 500 : 400
+            width: (analysisPanelIndex === 2 && (brainpanel.currentIndex === 4 || brainpanel.currentIndex === 5)) ? 0 : (analysisPanelIndex === 2 && (brainpanel.currentIndex === 2 || brainpanel.currentIndex === 3) ? 500 : 400)
             height: parent.height
+            visible: brainpanel.currentIndex !== 4 && brainpanel.currentIndex !== 5 || analysisPanelIndex !== 2
             color: "#171717"
             anchors.right: parent.right
-            
+            Behavior on width {
+                NumberAnimation { duration: 300; easing.type: Easing.InOutQuad }
+            }
             Image{
                 id: rightArrowImage
                 source: {
@@ -416,9 +419,113 @@ ApplicationWindow {
         color: "#CC303338"
         visible: width > 0
         clip: true
-        
         Behavior on width {
             NumberAnimation { duration: 300; easing.type: Easing.InOutQuad }
+        }
+        Column{
+            id: leftToolColumn
+            anchors.fill: parent
+            leftPadding: 12
+            rightPadding: 12
+            topPadding: 16
+            bottomPadding: 16
+            spacing: 16
+            
+            property int selectedToolIndex: -1
+            
+            LeftToolButton {
+                id: moveToolBtn
+                iconSource: "qrc:/image/toolMove.png"
+                isSelected: leftToolColumn.selectedToolIndex === 0
+                onClicked: {
+                    leftToolColumn.selectedToolIndex = (leftToolColumn.selectedToolIndex === 0) ? -1 : 0
+                    if(moveToolBtn.isSelected){
+                        $DicomDataModel.setToolMode(0)
+                        $DicomDataModel.setCrosshairEnabled(false)
+                    }else{
+                        $DicomDataModel.setToolMode(1)
+                    }
+                }
+            }
+            LeftToolButton {
+                id: vectorToolBtn
+                iconSource: "qrc:/image/toolVector.png"
+                isSelected: leftToolColumn.selectedToolIndex === 1
+                onClicked: {
+                    leftToolColumn.selectedToolIndex = (leftToolColumn.selectedToolIndex === 1) ? -1 : 1
+                    if(vectorToolBtn.isSelected){
+                        $DicomDataModel.setToolMode(3)
+                        $DicomDataModel.setCrosshairEnabled(false)
+                    }else{
+                        $DicomDataModel.setToolMode(1)
+                    }
+                }
+            }
+            LeftToolButton {
+                id: largeToolBtn
+                iconSource: "qrc:/image/toolLarge.png"
+                isSelected: leftToolColumn.selectedToolIndex === 2
+                onClicked: {
+                    leftToolColumn.selectedToolIndex = (leftToolColumn.selectedToolIndex === 2) ? -1 : 2
+                    if(largeToolBtn.isSelected){
+                        $DicomDataModel.setToolMode(4)
+                        $DicomDataModel.setCrosshairEnabled(false)
+                    }else{
+                        $DicomDataModel.setToolMode(1)
+                    }
+                }
+            }
+            LeftToolButton {
+                id: measureDistanceToolBtn
+                iconSource: ""
+                isSelected: leftToolColumn.selectedToolIndex === 3
+                onClicked: {
+                    leftToolColumn.selectedToolIndex = (leftToolColumn.selectedToolIndex === 3) ? -1 : 3
+                    if(measureDistanceToolBtn.isSelected){
+                        $DicomDataModel.setToolMode(5)
+                        $DicomDataModel.setCrosshairEnabled(false)
+                    }else{
+                        $DicomDataModel.setToolMode(1)
+                    }
+                }
+            }
+            LeftToolButton {
+                id: measureAngleToolBtn
+                iconSource: ""
+                isSelected: leftToolColumn.selectedToolIndex === 4
+                onClicked: {
+                    leftToolColumn.selectedToolIndex = (leftToolColumn.selectedToolIndex === 4) ? -1 : 4
+                    if(measureAngleToolBtn.isSelected){
+                        $DicomDataModel.setToolMode(6)
+                        $DicomDataModel.setCrosshairEnabled(false)
+                    }else{
+                        $DicomDataModel.setToolMode(1)
+                    }
+                }
+            }
+            LeftToolButton {
+                id: lineToolBtn
+                iconSource: "qrc:/image/toolLine.png"
+                isSelected: leftToolColumn.selectedToolIndex === 5
+                onClicked: {
+                    leftToolColumn.selectedToolIndex = (leftToolColumn.selectedToolIndex === 5) ? -1 : 5
+                    if(lineToolBtn.isSelected){
+                        $DicomDataModel.setToolMode(1)
+                        $DicomDataModel.setCrosshairEnabled(true)
+                    }else{
+                        $DicomDataModel.setToolMode(1)
+                        $DicomDataModel.setCrosshairEnabled(false)
+                    }
+                }
+            }
+            LeftToolButton {
+                id: resetToolBtn
+                iconSource: "qrc:/image/toolReset.png"
+                onClicked: {
+                    leftToolColumn.selectedToolIndex = -1
+                    $DicomDataModel.resetAllInteractions()
+                }
+            }
         }
     }
 

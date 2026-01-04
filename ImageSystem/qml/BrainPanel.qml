@@ -739,12 +739,7 @@ Rectangle {
                     }
                 }
             }
-            Item {
-                id: brainSegmentationContainer
-                width: parent.width
-                height: midPanel.height - 16 - 60
-                visible: currentIndex === 2 || currentIndex === 4 || currentIndex === 5
-            }
+
             Rectangle{
                 width: parent.width
                 height: midPanel.height - 16 - 60
@@ -758,6 +753,12 @@ Rectangle {
                     anchors.margins: 1
                     backgroundColor: "#000000"
                 }
+            }
+            Item {
+                id: brainSegmentationContainer
+                width: parent.width
+                height: midPanel.height - 16 - 60
+                visible: currentIndex === 2
             }
             Rectangle{
                 id: networkMain
@@ -826,6 +827,197 @@ Rectangle {
                     }
                 }
             }
+            Rectangle{
+                id: generateReportContainer
+                width: parent.width
+                height: midPanel.height - 16 - 60
+                visible: currentIndex === 5
+                color: "transparent"
+                Rectangle{
+                    height: parent.height * 0.75
+                    width: parent.width * 0.45
+                    anchors.centerIn: parent
+                    color: "transparent"
+                    Label {
+                        text: qsTr("生成分析报告")
+                        color: "#FFFFFF"
+                        font.pixelSize: 36
+                        font.weight: Font.Medium
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.top: parent.top
+                    }
+                    Column{
+                        width: parent.width * 0.75
+                        spacing: 52
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        y: parent.height * 0.13
+                        Column{
+                            width: parent.width
+                            spacing: 32
+                            Label {
+                                text: qsTr("报告将包含以下内容:")
+                                color: "#FFFFFF"
+                                font.pixelSize: 18
+                            }
+                            Grid {
+                                width: parent.width
+                                columns: 2
+                                columnSpacing: parent.width * 0.2
+                                rowSpacing: 20
+                                Row{
+                                    height: 24
+                                    spacing: 8
+                                    Image{
+                                        source: "qrc:/image/reportIcon.png"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                    Label{
+                                        text: qsTr("脑测量综合评估结果")
+                                        color: "#E5FFFFFF"
+                                        font.pixelSize: 18
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                }
+                                Row{
+                                    height: 24
+                                    spacing: 8
+                                    Image{
+                                        source: "qrc:/image/reportIcon.png"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                    Label{
+                                        text: qsTr("异常建议措施及建议措施")
+                                        color: "#E5FFFFFF"
+                                        font.pixelSize: 18
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                }
+                                Row{
+                                    height: 24
+                                    spacing: 8
+                                    Image{
+                                        source: "qrc:/image/reportIcon.png"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                    Label{
+                                        text: qsTr("脑测量数据纵览")
+                                        color: "#E5FFFFFF"
+                                        font.pixelSize: 18
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                }
+                                Row{
+                                    height: 24
+                                    spacing: 8
+                                    Image{
+                                        source: "qrc:/image/reportIcon.png"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                    Label{
+                                        text: qsTr("脑测量详细数据表格")
+                                        color: "#E5FFFFFF"
+                                        font.pixelSize: 18
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                }
+                                Row{
+                                    height: 24
+                                    spacing: 8
+                                    Image{
+                                        source: "qrc:/image/reportIcon.png"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                    Label{
+                                        text: qsTr("脑网络分析纵览")
+                                        color: "#E5FFFFFF"
+                                        font.pixelSize: 18
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                }
+                                Row{
+                                    height: 24
+                                    spacing: 8
+                                    Image{
+                                        source: "qrc:/image/reportIcon.png"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                    Label{
+                                        text: qsTr("脑网络区域详细数据表格")
+                                        color: "#E5FFFFFF"
+                                        font.pixelSize: 18
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                }
+                                Row{
+                                    height: 24
+                                    spacing: 8
+                                    Image{
+                                        source: "qrc:/image/reportIcon.png"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                    Label{
+                                        text: qsTr("AI脑龄预测分析")
+                                        color: "#E5FFFFFF"
+                                        font.pixelSize: 18
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                }
+                            }
+                        }
+                        CustomButton{
+                            width: parent.width
+                            height: 48
+                            buttonRadius: 4
+                            iconSource: "qrc:/image/generateReport.png"
+                            text: qsTr("生成pdf分析报告")
+                            onClicked: {
+                                if(reportSavePath.text === ""){
+                                    if (messageManager) {
+                                        messageManager.warning(qsTr("请先选择报告保存路径！"), 2000)
+                                    }
+                                    return
+                                }
+
+                                $MainViewController.generatePdfReport(reportSavePath.text)
+
+                                if (messageManager) {
+                                    messageManager.success(qsTr("PDF 报告生成成功！"), 2000)
+                                }
+                            }
+                        }
+                    }
+                    Row{
+                        height: 48
+                        width: parent.width
+                        spacing: 20
+                        anchors.bottom: parent.bottom
+                        Label {
+                            id: savePathLabel
+                            text: qsTr("选择报告保存路径:")
+                            color: "#80FFFFFF"
+                            font.pixelSize: 16
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        SingleLineTextInput{
+                            id: reportSavePath
+                            width: parent.width - savePathLabel.width - 40 - 135
+                            height: 48
+                            inputRadius: 4
+                            backgroundColor: "#14FFFFFF"
+                        }
+                        CustomButton{
+                            width: 135
+                            height: 48
+                            buttonRadius: 4
+                            text: qsTr("选择保存路径")
+                            anchors.verticalCenter: parent.verticalCenter
+                            onClicked: {
+                                pdfSaveDialog.open()
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -834,7 +1026,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.top: parent.top
-        width: rightPanelExpanded ? ((currentIndex === 2 || currentIndex === 3) ? 500 : 400) : 0
+        width: (rightPanelExpanded && (currentIndex !== 4 && currentIndex !== 5)) ? ((currentIndex === 2 || currentIndex === 3) ? 500 : 400) : 0
         visible: width > 0
         Behavior on width {
             NumberAnimation { duration: 300; easing.type: Easing.InOutQuad }
@@ -2976,125 +3168,5 @@ Rectangle {
                 }
             }
         }
-        Rectangle{
-            id: reportAnalysis
-            anchors.fill: parent
-            color: "transparent"
-            visible: currentIndex === 5
-            clip: true
-            Column {
-                padding: 10
-                width: parent.width
-                spacing: 20
-
-                Label{
-                    text: qsTr("生成分析报告")
-                    color: "#ffffff"
-                    font.pixelSize: 18
-                    font.bold: true
-                }
-
-                Label{
-                    text: qsTr("将脑网络和脑区分割的数据生成为PDF报告")
-                    color: "#cccccc"
-                    font.pixelSize: 14
-                    width: parent.width - 20
-                    wrapMode: Text.WordWrap
-                }
-
-                Rectangle {
-                    width: parent.width - 20
-                    height: 1
-                    color: "#404040"
-                }
-
-                Label{
-                    text: qsTr("选择报告保存路径：")
-                    color: "#ffffff"
-                    font.pixelSize: 14
-                }
-
-                SingleLineTextInput{
-                    id: reportSavePath
-                    width: parent.width - 20
-                    placeholderText: qsTr("点击下方按钮选择保存路径...")
-                }
-
-                CustomButton{
-                    width: parent.width - 20
-                    height: 40
-                    text: qsTr("选择保存路径")
-                    backgroundColor: "#004578"
-                    onClicked: {
-                        pdfSaveDialog.open()
-                    }
-                }
-
-                Rectangle {
-                    width: parent.width - 20
-                    height: 1
-                    color: "#404040"
-                }
-
-                Label{
-                    text: qsTr("报告将包含以下内容：")
-                    color: "#ffffff"
-                    font.pixelSize: 14
-                }
-
-                Column {
-                    width: parent.width - 40
-                    spacing: 10
-                    x: 20
-
-                    Label{
-                        text: qsTr("• 脑网络统计信息")
-                        color: "#cccccc"
-                        font.pixelSize: 12
-                    }
-                    Label{
-                        text: qsTr("• 脑网络区域详细数据表格")
-                        color: "#cccccc"
-                        font.pixelSize: 12
-                    }
-                    Label{
-                        text: qsTr("• 脑区分割详细数据表格")
-                        color: "#cccccc"
-                        font.pixelSize: 12
-                    }
-                }
-
-                CustomButton{
-                    width: parent.width - 20
-                    height: 50
-                    text: qsTr("生成 PDF 报告")
-                    backgroundColor: "#00875A"
-                    fontSize: 16
-                    onClicked: {
-                        if(reportSavePath.text === ""){
-                            if (messageManager) {
-                                messageManager.warning(qsTr("请先选择报告保存路径！"), 2000)
-                            }
-                            return
-                        }
-
-                        $MainViewController.generatePdfReport(reportSavePath.text)
-
-                        if (messageManager) {
-                            messageManager.success(qsTr("PDF 报告生成成功！"), 2000)
-                        }
-                    }
-                }
-
-                Label{
-                    text: qsTr("提示：生成报告前请确保已完成脑网络分析和脑区分割")
-                    color: "#888888"
-                    font.pixelSize: 11
-                    width: parent.width - 20
-                    wrapMode: Text.WordWrap
-                }
-            }
-        }
     }
-
 }

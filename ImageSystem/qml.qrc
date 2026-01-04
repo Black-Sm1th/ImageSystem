@@ -3,6 +3,7 @@
         <file>qml/components/CustomButton.qml</file>
         <file>qml/components/CustomComboBox.qml</file>
         <file>qml/components/FourViewPanel.qml</file>
+        <file>qml/components/LeftToolButton.qml</file>
         <file>qml/main.qml</file>
         <file>fonts/AlibabaPuHuiTi-3-55-Regular.ttf</file>
         <file>fonts/AlibabaPuHuiTi-3-65-Medium.ttf</file>
@@ -56,5 +57,16 @@
         <file>image/preBtnBackground.png</file>
         <file>image/preBtnBackgroundSelected.png</file>
         <file>image/richClub.png</file>
+        <file>image/leftToolBtn.png</file>
+        <file>image/leftToolBtnSelected.png</file>
+        <file>image/toolLarge.png</file>
+        <file>image/toolLine.png</file>
+        <file>image/toolMove.png</file>
+        <file>image/toolReset.png</file>
+        <file>image/toolVector.png</file>
+        <file>image/toolWindow.png</file>
+        <file>image/reportIcon.png</file>
+        <file>image/generateReport.png</file>
+        <file>image/successReport.png</file>
     </qresource>
 </RCC>
