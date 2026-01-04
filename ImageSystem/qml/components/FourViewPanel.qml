@@ -130,13 +130,6 @@ Item {
             property real crossY: height/2
             property real crossAngle: 0
             property real lastAngle: 0
-            onCrossAngleChanged: {
-                var delta = crossAngle - lastAngle;
-                if (Math.abs(delta) > 0.01) {
-                    $DicomDataModel.rotateFromView(0, delta);  // VIEW_AXIAL = 0
-                    lastAngle = crossAngle;
-                }
-            }
         }
         // 叠加层，放在 VTK 之上捕获鼠标并绘制十字线
         Item {
@@ -367,10 +360,6 @@ Item {
             property real crossY: height/2
             property real crossAngle: 0
             onCrossAngleChanged: $DicomDataModel.sagittalAngle = crossAngle
-            Connections {
-                target: $DicomDataModel
-                function onSagittalAngleChanged(angle) { sagittalView.crossAngle = angle }
-            }
         }
         Item {
             anchors.fill: parent
@@ -587,10 +576,6 @@ Item {
             property real crossY: height/2
             property real crossAngle: 0
             onCrossAngleChanged: $DicomDataModel.coronalAngle = crossAngle
-            Connections {
-                target: $DicomDataModel
-                function onCoronalAngleChanged(angle) { coronalView.crossAngle = angle }
-            }
         }
         Item {
             anchors.fill: parent
