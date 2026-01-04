@@ -25,26 +25,89 @@ Item {
     readonly property int dimX: $DicomDataModel.dimX
     readonly property int dimY: $DicomDataModel.dimY
     readonly property int dimZ: $DicomDataModel.dimZ
+    // 图像spacing（由 C++ 暴露）
+    readonly property real spacingX: $DicomDataModel.spacingX
+    readonly property real spacingY: $DicomDataModel.spacingY
+    readonly property real spacingZ: $DicomDataModel.spacingZ
+    // VTK视图填充比例（与C++端applyParallelScale保持一致）
+    readonly property real targetFill: 0.95
 
     function clamp(v, minv, maxv) {
         return Math.max(minv, Math.min(maxv, v));
     }
 
-    // 根据体素坐标，更新三视图十字线（以当前视图尺寸映射）
+    // 计算图像在视图中的实际显示区域（考虑宽高比和填充比例）
+    // 返回 {x, y, w, h} 表示图像在视图中的位置和大小
+    function calcImageBounds(viewW, viewH, imgPhysicalW, imgPhysicalH) {
+        if (viewW <= 0 || viewH <= 0 || imgPhysicalW <= 0 || imgPhysicalH <= 0)
+            return { x: 0, y: 0, w: viewW, h: viewH };
+
+        // VTK使用parallelScale，使图像的最大边占视口的targetFill比例
+        var maxPhysical = Math.max(imgPhysicalW, imgPhysicalH);
+        // parallelScale = 0.5 * maxPhysical / targetFill
+        // 可见世界高度 = 2 * parallelScale = maxPhysical / targetFill
+        var visibleHeight = maxPhysical / targetFill;
+        var visibleWidth = visibleHeight * viewW / viewH;
+
+        // 图像在可见区域中的比例
+        var scaleX = imgPhysicalW / visibleWidth;
+        var scaleY = imgPhysicalH / visibleHeight;
+
+        // 转换为视图像素
+        var imgW = scaleX * viewW;
+        var imgH = scaleY * viewH;
+        var imgX = (viewW - imgW) / 2;
+        var imgY = (viewH - imgH) / 2;
+
+        return { x: imgX, y: imgY, w: imgW, h: imgH };
+    }
+
+    // 将视图像素坐标转换为体素坐标，如果在图像外返回 null
+    function viewToVoxel(mouseX, mouseY, viewW, viewH, imgBounds, voxelCountX, voxelCountY) {
+        // 检查是否在图像区域内
+        if (mouseX < imgBounds.x || mouseX > imgBounds.x + imgBounds.w ||
+            mouseY < imgBounds.y || mouseY > imgBounds.y + imgBounds.h) {
+            return null;
+        }
+
+        // 转换为图像内的相对坐标 [0, 1]
+        var relX = (mouseX - imgBounds.x) / imgBounds.w;
+        var relY = (mouseY - imgBounds.y) / imgBounds.h;
+
+        // 转换为体素坐标
+        var voxelX = clamp(Math.round(relX * (voxelCountX - 1)), 0, voxelCountX - 1);
+        var voxelY = clamp(Math.round(relY * (voxelCountY - 1)), 0, voxelCountY - 1);
+
+        return { i: voxelX, j: voxelY };
+    }
+
+    // 根据体素坐标，更新三视图十字线（考虑图像的实际显示区域）
     function updateCrosshairFromVoxel(i, j, k) {
+        // 轴向视图 (X-Y平面)
         if (dimX > 1 && dimY > 1) {
-            axialView.crossX = (i / (dimX - 1)) * axialView.width;
-            axialView.crossY = (j / (dimY - 1)) * axialView.height;
+            var axialPhysW = dimX * spacingX;
+            var axialPhysH = dimY * spacingY;
+            var axialBounds = calcImageBounds(axialView.width, axialView.height, axialPhysW, axialPhysH);
+            axialView.crossX = axialBounds.x + (i / (dimX - 1)) * axialBounds.w;
+            axialView.crossY = axialBounds.y + (j / (dimY - 1)) * axialBounds.h;
             canvasAxial.requestPaint();
         }
+        // 矢状视图 (Y-Z平面)
         if (dimY > 1 && dimZ > 1) {
-            sagittalView.crossX = (j / (dimY - 1)) * sagittalView.width;
-            sagittalView.crossY = (k / (dimZ - 1)) * sagittalView.height;
+            var sagPhysW = dimY * spacingY;
+            var sagPhysH = dimZ * spacingZ;
+            var sagBounds = calcImageBounds(sagittalView.width, sagittalView.height, sagPhysW, sagPhysH);
+            sagittalView.crossX = sagBounds.x + (j / (dimY - 1)) * sagBounds.w;
+            sagittalView.crossY = sagBounds.y + (k / (dimZ - 1)) * sagBounds.h;
             canvasSag.requestPaint();
         }
+        // 冠状视图 (X-Z平面)
         if (dimX > 1 && dimZ > 1) {
-            coronalView.crossX = (i / (dimX - 1)) * coronalView.width;
-            coronalView.crossY = (k / (dimZ - 1)) * coronalView.height;
+            var corPhysW = dimX * spacingX;
+            var corPhysH = dimZ * spacingZ;
+            var corBounds = calcImageBounds(coronalView.width, coronalView.height, corPhysW, corPhysH);
+            coronalView.crossX = corBounds.x + (i / (dimX - 1)) * corBounds.w;
+            coronalView.crossY = corBounds.y + (k / (dimZ - 1)) * corBounds.h;
             canvasCor.requestPaint();
         }
     }
@@ -66,6 +129,14 @@ Item {
             property real crossX: width/2
             property real crossY: height/2
             property real crossAngle: 0
+            property real lastAngle: 0
+            onCrossAngleChanged: {
+                var delta = crossAngle - lastAngle;
+                if (Math.abs(delta) > 0.01) {
+                    $DicomDataModel.rotateFromView(0, delta);  // VIEW_AXIAL = 0
+                    lastAngle = crossAngle;
+                }
+            }
         }
         // 叠加层，放在 VTK 之上捕获鼠标并绘制十字线
         Item {
@@ -77,19 +148,27 @@ Item {
                 enabled: root.crosshairEnabled
                 hoverEnabled: true
                 onPressed: {
-                    var i = clamp(Math.round(mouse.x / width * (root.dimX - 1)), 0, root.dimX - 1)
-                    var j = clamp(Math.round(mouse.y / height * (root.dimY - 1)), 0, root.dimY - 1)
-                    $DicomDataModel.sagittalSlice = i
-                    $DicomDataModel.coronalSlice = j
-                    updateCrosshairFromVoxel(i, j, $DicomDataModel.axialSlice)
+                    var physW = root.dimX * root.spacingX;
+                    var physH = root.dimY * root.spacingY;
+                    var bounds = calcImageBounds(width, height, physW, physH);
+                    var voxel = viewToVoxel(mouse.x, mouse.y, width, height, bounds, root.dimX, root.dimY);
+                    if (voxel) {
+                        $DicomDataModel.sagittalSlice = voxel.i
+                        $DicomDataModel.coronalSlice = voxel.j
+                        updateCrosshairFromVoxel(voxel.i, voxel.j, $DicomDataModel.axialSlice)
+                    }
                 }
                 onPositionChanged: {
                     if (pressed) {
-                        var i = clamp(Math.round(mouse.x / width * (root.dimX - 1)), 0, root.dimX - 1)
-                        var j = clamp(Math.round(mouse.y / height * (root.dimY - 1)), 0, root.dimY - 1)
-                        $DicomDataModel.sagittalSlice = i
-                        $DicomDataModel.coronalSlice = j
-                        updateCrosshairFromVoxel(i, j, $DicomDataModel.axialSlice)
+                        var physW = root.dimX * root.spacingX;
+                        var physH = root.dimY * root.spacingY;
+                        var bounds = calcImageBounds(width, height, physW, physH);
+                        var voxel = viewToVoxel(mouse.x, mouse.y, width, height, bounds, root.dimX, root.dimY);
+                        if (voxel) {
+                            $DicomDataModel.sagittalSlice = voxel.i
+                            $DicomDataModel.coronalSlice = voxel.j
+                            updateCrosshairFromVoxel(voxel.i, voxel.j, $DicomDataModel.axialSlice)
+                        }
                     }
                 }
             }
@@ -287,6 +366,11 @@ Item {
             property real crossX: width/2
             property real crossY: height/2
             property real crossAngle: 0
+            onCrossAngleChanged: $DicomDataModel.sagittalAngle = crossAngle
+            Connections {
+                target: $DicomDataModel
+                function onSagittalAngleChanged(angle) { sagittalView.crossAngle = angle }
+            }
         }
         Item {
             anchors.fill: parent
@@ -297,19 +381,27 @@ Item {
                 enabled: root.crosshairEnabled
                 hoverEnabled: true
                 onPressed: {
-                    var j = clamp(Math.round(mouse.x / width * (root.dimY - 1)), 0, root.dimY - 1)
-                    var k = clamp(Math.round(mouse.y / height * (root.dimZ - 1)), 0, root.dimZ - 1)
-                    $DicomDataModel.coronalSlice = j
-                    $DicomDataModel.axialSlice = k
-                    updateCrosshairFromVoxel($DicomDataModel.sagittalSlice, j, k)
+                    var physW = root.dimY * root.spacingY;
+                    var physH = root.dimZ * root.spacingZ;
+                    var bounds = calcImageBounds(width, height, physW, physH);
+                    var voxel = viewToVoxel(mouse.x, mouse.y, width, height, bounds, root.dimY, root.dimZ);
+                    if (voxel) {
+                        $DicomDataModel.coronalSlice = voxel.i
+                        $DicomDataModel.axialSlice = voxel.j
+                        updateCrosshairFromVoxel($DicomDataModel.sagittalSlice, voxel.i, voxel.j)
+                    }
                 }
                 onPositionChanged: {
                     if (pressed) {
-                        var j = clamp(Math.round(mouse.x / width * (root.dimY - 1)), 0, root.dimY - 1)
-                        var k = clamp(Math.round(mouse.y / height * (root.dimZ - 1)), 0, root.dimZ - 1)
-                        $DicomDataModel.coronalSlice = j
-                        $DicomDataModel.axialSlice = k
-                        updateCrosshairFromVoxel($DicomDataModel.sagittalSlice, j, k)
+                        var physW = root.dimY * root.spacingY;
+                        var physH = root.dimZ * root.spacingZ;
+                        var bounds = calcImageBounds(width, height, physW, physH);
+                        var voxel = viewToVoxel(mouse.x, mouse.y, width, height, bounds, root.dimY, root.dimZ);
+                        if (voxel) {
+                            $DicomDataModel.coronalSlice = voxel.i
+                            $DicomDataModel.axialSlice = voxel.j
+                            updateCrosshairFromVoxel($DicomDataModel.sagittalSlice, voxel.i, voxel.j)
+                        }
                     }
                 }
             }
@@ -494,6 +586,11 @@ Item {
             property real crossX: width/2
             property real crossY: height/2
             property real crossAngle: 0
+            onCrossAngleChanged: $DicomDataModel.coronalAngle = crossAngle
+            Connections {
+                target: $DicomDataModel
+                function onCoronalAngleChanged(angle) { coronalView.crossAngle = angle }
+            }
         }
         Item {
             anchors.fill: parent
@@ -504,19 +601,27 @@ Item {
                 enabled: root.crosshairEnabled
                 hoverEnabled: true
                 onPressed: {
-                    var i = clamp(Math.round(mouse.x / width * (root.dimX - 1)), 0, root.dimX - 1)
-                    var k = clamp(Math.round(mouse.y / height * (root.dimZ - 1)), 0, root.dimZ - 1)
-                    $DicomDataModel.sagittalSlice = i
-                    $DicomDataModel.axialSlice = k
-                    updateCrosshairFromVoxel(i, $DicomDataModel.coronalSlice, k)
+                    var physW = root.dimX * root.spacingX;
+                    var physH = root.dimZ * root.spacingZ;
+                    var bounds = calcImageBounds(width, height, physW, physH);
+                    var voxel = viewToVoxel(mouse.x, mouse.y, width, height, bounds, root.dimX, root.dimZ);
+                    if (voxel) {
+                        $DicomDataModel.sagittalSlice = voxel.i
+                        $DicomDataModel.axialSlice = voxel.j
+                        updateCrosshairFromVoxel(voxel.i, $DicomDataModel.coronalSlice, voxel.j)
+                    }
                 }
                 onPositionChanged: {
                     if (pressed) {
-                        var i = clamp(Math.round(mouse.x / width * (root.dimX - 1)), 0, root.dimX - 1)
-                        var k = clamp(Math.round(mouse.y / height * (root.dimZ - 1)), 0, root.dimZ - 1)
-                        $DicomDataModel.sagittalSlice = i
-                        $DicomDataModel.axialSlice = k
-                        updateCrosshairFromVoxel(i, $DicomDataModel.coronalSlice, k)
+                        var physW = root.dimX * root.spacingX;
+                        var physH = root.dimZ * root.spacingZ;
+                        var bounds = calcImageBounds(width, height, physW, physH);
+                        var voxel = viewToVoxel(mouse.x, mouse.y, width, height, bounds, root.dimX, root.dimZ);
+                        if (voxel) {
+                            $DicomDataModel.sagittalSlice = voxel.i
+                            $DicomDataModel.axialSlice = voxel.j
+                            updateCrosshairFromVoxel(voxel.i, $DicomDataModel.coronalSlice, voxel.j)
+                        }
                     }
                 }
             }

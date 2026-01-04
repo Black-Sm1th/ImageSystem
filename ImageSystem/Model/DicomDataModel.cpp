@@ -17,6 +17,9 @@ int DicomDataModel::maxCoronalSlice() const { return m_dims[1] - 1; }
 int DicomDataModel::dimX() const { return m_isSegDataMode ? m_segDims[0] : m_dims[0]; }
 int DicomDataModel::dimY() const { return m_isSegDataMode ? m_segDims[1] : m_dims[1]; }
 int DicomDataModel::dimZ() const { return m_isSegDataMode ? m_segDims[2] : m_dims[2]; }
+double DicomDataModel::spacingX() const { return m_isSegDataMode ? m_segSpacing[0] : m_spacing[0]; }
+double DicomDataModel::spacingY() const { return m_isSegDataMode ? m_segSpacing[1] : m_spacing[1]; }
+double DicomDataModel::spacingZ() const { return m_isSegDataMode ? m_segSpacing[2] : m_spacing[2]; }
 
 int DicomDataModel::segAxialSlice() const { return m_segAxialSlice; }
 int DicomDataModel::segSagittalSlice() const { return m_segSagittalSlice; }
@@ -213,6 +216,11 @@ bool DicomDataModel::loadDicomDirectory(const QString& path) {
     // 获取DICOM信息
     double* spacing = m_imageData->GetSpacing();
     double* origin = m_imageData->GetOrigin();
+    
+    // 保存spacing
+    m_spacing[0] = spacing[0];
+    m_spacing[1] = spacing[1];
+    m_spacing[2] = spacing[2];
 
     m_dicomInfo = QString("Dimensions: %1 x %2 x %3\n"
         "Spacing: %4 x %5 x %6 mm\n"
@@ -417,7 +425,12 @@ void DicomDataModel::finalizeSegDataLoad(std::unique_ptr<BrainRegionVisualizer> 
         vtkImageSliceMapper* mapper = vtkImageSliceMapper::SafeDownCast(axialSlice->GetMapper());
         if (mapper && mapper->GetInput()) {
             mapper->GetInput()->GetDimensions(m_segDims);
+            double* segSpacing = mapper->GetInput()->GetSpacing();
+            m_segSpacing[0] = segSpacing[0];
+            m_segSpacing[1] = segSpacing[1];
+            m_segSpacing[2] = segSpacing[2];
             qDebug() << "SegData dimensions:" << m_segDims[0] << "x" << m_segDims[1] << "x" << m_segDims[2];
+            qDebug() << "SegData spacing:" << m_segSpacing[0] << "x" << m_segSpacing[1] << "x" << m_segSpacing[2];
         }
     }
 
