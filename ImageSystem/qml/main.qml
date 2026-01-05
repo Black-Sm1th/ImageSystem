@@ -832,7 +832,7 @@ ApplicationWindow {
                             anchors.verticalCenter: parent.verticalCenter
                         }
                         Label {
-                            text: qsTr("宽窗窗位")
+                            text: qsTr("窗宽窗位")
                             color: "#E5FFFFFF"
                             font.pixelSize: 18
                             font.weight: Font.Medium
@@ -847,7 +847,7 @@ ApplicationWindow {
                             height: 24
                             color: "transparent"
                             Label {
-                                text: qsTr("宽窗(Width)")
+                                text: qsTr("窗宽(Width)")
                                 color: "#E5FFFFFF"
                                 font.pixelSize: 16
                                 anchors.verticalCenter: parent.verticalCenter

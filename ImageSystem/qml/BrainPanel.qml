@@ -836,6 +836,29 @@ Rectangle {
                 }
             }
             Rectangle{
+                id: aiAnalysisContainer
+                width: parent.width
+                height: midPanel.height - 16 - 60
+                visible: currentIndex === 4
+                color: "transparent"
+                Rectangle{
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.right: aiRightOperatePanel.left
+                    color: "#030D1F"
+                    radius: 12
+                }
+                Rectangle{
+                    id: aiRightOperatePanel
+                    width: 420
+                    color: "transparent"
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.right: parent.right
+                }
+            }
+            Rectangle{
                 id: generateReportContainer
                 width: parent.width
                 height: midPanel.height - 16 - 60
@@ -1357,6 +1380,7 @@ Rectangle {
                         function animateToTab(tabIndex) {
                             if (currentTab === tabIndex) return
                             targetTab = tabIndex
+                            preAnalysis.currentTabIndex = tabIndex
                             slideAnimation.start()
                         }
 
@@ -1380,8 +1404,6 @@ Rectangle {
                                     easing.type: Easing.InQuad
                                 }
                             }
-
-                            // 第二步：平移到目标tab的中间
                             NumberAnimation {
                                 target: tabIndicator
                                 property: "x"
@@ -1389,8 +1411,6 @@ Rectangle {
                                 duration: 200
                                 easing.type: Easing.InOutQuad
                             }
-
-                            // 第三步：从中间向两边伸展到88px
                             ParallelAnimation {
                                 NumberAnimation {
                                     target: tabIndicator
@@ -1408,10 +1428,8 @@ Rectangle {
                                 }
                             }
 
-                            // 动画结束后更新状态
                             ScriptAction {
                                 script: {
-                                    preAnalysis.currentTabIndex = tabIndicator.targetTab
                                     tabIndicator.currentTab = tabIndicator.targetTab
                                 }
                             }
