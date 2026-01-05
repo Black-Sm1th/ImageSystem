@@ -8,6 +8,8 @@ Item {
     
     // 十字线功能总开关（Key_8 可切换）
     property bool crosshairEnabled: $DicomDataModel.crosshairEnabled
+    // 悬停显示十字线圆球开关（默认关闭）
+    property bool crosshairHandlesHoverEnabled: false
 
     // 十字线样式
     readonly property int crossThicknessThin: 1
@@ -37,7 +39,7 @@ Item {
     function clamp(v, minv, maxv) {
         return Math.max(minv, Math.min(maxv, v));
     }
-    
+
     // 根据模式设置切片
     function setAxialSlice(val) {
         if (isSegDataMode) {
@@ -261,7 +263,7 @@ Item {
                 // 圆球显示控制
                 property bool showHandles: false
                 property bool isDragging: false
-                readonly property bool handlesVisible: showHandles || isDragging
+                readonly property bool handlesVisible: (root.crosshairHandlesHoverEnabled && showHandles) || isDragging
 
                 // 角度弧度
                 readonly property real angleRad: axialView.crossAngle * Math.PI / 180
@@ -488,7 +490,7 @@ Item {
                 // 圆球显示控制
                 property bool showHandles: false
                 property bool isDragging: false
-                readonly property bool handlesVisible: showHandles || isDragging
+                readonly property bool handlesVisible: (root.crosshairHandlesHoverEnabled && showHandles) || isDragging
 
                 readonly property real angleRad: sagittalView.crossAngle * Math.PI / 180
                 readonly property real vAngle: angleRad - Math.PI / 2
@@ -704,7 +706,7 @@ Item {
                 // 圆球显示控制
                 property bool showHandles: false
                 property bool isDragging: false
-                readonly property bool handlesVisible: showHandles || isDragging
+                readonly property bool handlesVisible: (root.crosshairHandlesHoverEnabled && showHandles) || isDragging
 
                 readonly property real angleRad: coronalView.crossAngle * Math.PI / 180
                 readonly property real vAngle: angleRad - Math.PI / 2
