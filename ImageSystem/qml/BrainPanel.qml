@@ -747,7 +747,6 @@ Rectangle {
                     }
                 }
             }
-
             Rectangle{
                 width: parent.width
                 height: midPanel.height - 16 - 60
@@ -848,6 +847,64 @@ Rectangle {
                     anchors.right: aiRightOperatePanel.left
                     color: "#030D1F"
                     radius: 12
+                    Column{
+                        width: Math.max(uploadPicture.width, aiButtonGroup.width)
+                        spacing: 48
+                        anchors.centerIn: parent
+                        Image{
+                            id: uploadPicture
+                            width: 306
+                            height: 306
+                            source: "qrc:/image/uploadGif/000.png"
+                            anchors.horizontalCenter: parent.horizontalCenter
+                        }
+                        Label{
+                            id:brainAgePath
+                            text: qsTr("")
+                            color: "#ffffff"
+                            font.pixelSize: 16
+                            visible: text !== ""
+                            width: parent.width - 20
+                            elide: Text.ElideMiddle
+                            onTextChanged: {
+                                // 当重新导入文件时，重置分析结果
+                                if(text !== "") {
+                                    $MainViewController.predictedBrainAge = 0.0
+                                }
+                            }
+                        }
+                        Row{
+                            id: aiButtonGroup
+                            height: 48
+                            spacing: 10
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            CustomButton{
+                                fontSize: 18
+                                text: qsTr("导入nii.gz")
+                                radius: 4
+                                iconSource: "qrc:/image/picture.png"
+                                width: 188
+                                height: 48
+                                onClicked: {
+                                    niiGzDialog.open()
+                                }
+                            }
+                            CustomButton{
+                                fontSize: 16
+                                text: qsTr("导入dcm文件夹")
+                                radius: 4
+                                backgroundColor: "#293C7EFF"
+                                borderColor: "#3C7EFF"
+                                borderWidth: 1
+                                iconSource: "qrc:/image/fold.png"
+                                width: 188
+                                height: 48
+                                onClicked: {
+                                    dcmFolderDialog.open()
+                                }
+                            }
+                        }
+                    }
                 }
                 Rectangle{
                     id: aiRightOperatePanel
@@ -856,6 +913,139 @@ Rectangle {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     anchors.right: parent.right
+                    Column{
+                        width: parent.width
+                        spacing: 32
+                        anchors.centerIn: parent
+                        Image{
+                            id: analyzePicture
+                            width: 320
+                            height: 320
+                            source: "qrc:/image/brainAgeAnalyze/" + (brainAgeAnimationIndex < 10 ? "00" : brainAgeAnimationIndex < 100 ? "0" : "") + brainAgeAnimationIndex + ".png"
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            
+                            property int brainAgeAnimationIndex: 0
+                            
+                            Timer {
+                                id: brainAgeAnimationTimer
+                                interval: 50
+                                running: $MainViewController.brainAgeProcessing
+                                repeat: true
+                                onTriggered: {
+                                    analyzePicture.brainAgeAnimationIndex = (analyzePicture.brainAgeAnimationIndex + 1) % 150
+                                }
+                            }
+                            
+                            Image{
+                                id: startAnalyzeBtn
+                                anchors.centerIn: parent
+                                source: "qrc:/image/startAnalyzeBtn.png"
+                                visible: !$MainViewController.brainAgeProcessing && $MainViewController.predictedBrainAge <= 0
+                                MouseArea{
+                                    id: analyzeArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onPressed: parent.scale = 0.95
+                                    onReleased: parent.scale = 1
+                                    onEntered: parent.scale = 1.05
+                                    onExited: parent.scale = 1
+                                    onClicked: {
+                                        if(brainAgePath.text !== ""){
+                                            $MainViewController.startAnalysisBrainAge(brainAgePath.text, preprocessCheckBox.checked)
+                                        }else{
+                                            messageManager.error("请先选择文件！")
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // 分析结果显示
+                            Column {
+                                anchors.centerIn: parent
+                                visible: $MainViewController.predictedBrainAge > 0
+                                spacing: 2
+                                Label {
+                                    text: qsTr("预测年龄")
+                                    color: "#ffffff"
+                                    font.pixelSize: 18
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                }
+                                Label {
+                                    text: $MainViewController.predictedBrainAge.toFixed() + " 岁"
+                                    color: "#FFFFFF"
+                                    font.pixelSize: 40
+                                    font.weight: Font.Bold
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                }
+                            }
+                        }
+                        Column{
+                            width: parent.width
+                            height: aiInfoRow1.height + aiInfoRow2.height + 10
+                            spacing: 10
+                            Row{
+                                id: aiInfoRow1
+                                height: 30
+                                spacing: 5
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                CheckBox {
+                                    id: preprocessCheckBox
+                                    checked: true
+                                    width: 16
+                                    height: 16
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    indicator: Rectangle {
+                                        implicitWidth: 16
+                                        implicitHeight: 16
+                                        radius: 4
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        border.color: preprocessCheckBox.checked ? "#006BFF" : "#40000000"
+                                        border.width: 1
+                                        color: preprocessCheckBox.checked ? "#006BFF" : "#ffffff"
+
+                                        Image{
+                                            source: "qrc:/image/vector.png"
+                                            anchors.centerIn: parent
+                                            visible: preprocessCheckBox.checked
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: preprocessCheckBox.checked = !preprocessCheckBox.checked
+                                        }
+                                    }
+                                }
+                                Label{
+                                    text: qsTr("去颅骨+与标准空间对齐")
+                                    color: "#ffffff"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: preprocessCheckBox.checked = !preprocessCheckBox.checked
+                                    }
+                                }
+                            }
+                            Row{
+                                id: aiInfoRow2
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                height: 16
+                                spacing: 4
+                                visible: !preprocessCheckBox.checked
+                                Image{
+                                    source: "qrc:/image/warning.png"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                                Label{
+                                    text: qsTr("不进行预处理的数据可能会导致模型预测结果误差过大！")
+                                    color: "#B2FFFFFF"
+                                    font.pixelSize: 14
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+                        }
+                    }
                 }
             }
             Rectangle{
@@ -3099,146 +3289,6 @@ Rectangle {
                             }
                         }
                     }
-                }
-            }
-        }
-        Rectangle{
-            id: aiAnalysis
-            anchors.fill: parent
-            color: "transparent"
-            visible: currentIndex === 4
-            clip: true
-            Column {
-                padding: 10
-                width: parent.width
-                spacing: 10
-                Label{
-                    text: qsTr("导入数据（nii.gz或dicom文件夹）：")
-                    color: "#ffffff"
-                    font.pixelSize: 16
-                }
-                Label{
-                    id:brainAgePath
-                    text: qsTr("")
-                    color: "#ffffff"
-                    font.pixelSize: 16
-                    visible: text !== ""
-                    width: parent.width - 20
-                    elide: Text.ElideMiddle
-                }
-                Row {
-                    spacing: 5
-                    height: 40
-                    CustomButton {
-                        width: (aiAnalysis.width - 25) / 2
-                        height: 40
-                        text: "导入nii.gz"
-                        backgroundColor: "#004578"
-                        onClicked: {
-                            niiGzDialog.open()
-                        }
-                    }
-                    CustomButton {
-                        width: (aiAnalysis.width - 25) / 2
-                        height: 40
-                        text: "导入dcm文件夹"
-                        backgroundColor: "#004578"
-                        onClicked: {
-                            dcmFolderDialog.open()
-                        }
-                    }
-                }
-                Row{
-                    height: 30
-                    spacing: 5
-                    CheckBox {
-                        id: preprocessCheckBox
-                        checked: true
-                        width: 16
-                        height: 16
-                        anchors.verticalCenter: parent.verticalCenter
-                        indicator: Rectangle {
-                            implicitWidth: 16
-                            implicitHeight: 16
-                            radius: 4
-                            anchors.verticalCenter: parent.verticalCenter
-                            border.color: preprocessCheckBox.checked ? "#006BFF" : "#40000000"
-                            border.width: 1
-                            color: preprocessCheckBox.checked ? "#006BFF" : "#ffffff"
-
-                            Image{
-                                source: "qrc:/image/vector.png"
-                                anchors.centerIn: parent
-                                visible: preprocessCheckBox.checked
-                            }
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: preprocessCheckBox.checked = !preprocessCheckBox.checked
-                            }
-                        }
-                    }
-                    Label{
-                        text: qsTr("去颅骨+与标准空间对齐")
-                        color: "#ffffff"
-                        anchors.verticalCenter: parent.verticalCenter
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: preprocessCheckBox.checked = !preprocessCheckBox.checked
-                        }
-                    }
-                }
-                Label{
-                    text: qsTr("注：不进行预处理的数据可能会导致模型预测结果误差过大！")
-                    color: "#ffffff"
-                    font.pixelSize: 16
-                    visible: !preprocessCheckBox.checked
-                    width: parent.width - 20
-                    wrapMode: Text.WordWrap
-                }
-                CustomButton {
-                    width: parent.width - 20
-                    height: 40
-                    text: "开始分析"
-                    backgroundColor: "#004578"
-                    onClicked: {
-                        if(brainAgePath.text !== ""){
-                            $MainViewController.startAnalysisBrainAge(brainAgePath.text, preprocessCheckBox.checked)
-                        }else{
-                            messageManager.error("请先选择文件！")
-                        }
-                    }
-                }
-                Row{
-                    width: parent.width - 20
-                    height: 32
-                    spacing: 8
-                    visible: $MainViewController.brainAgeProcessing
-                    AnimatedImage {
-                        id: loadingIcon
-                        width: 16
-                        height: 16
-                        source: "qrc:/image/loading.gif"
-                        playing: $MainViewController.brainAgeProcessing
-                        fillMode: Image.PreserveAspectFit
-                        smooth: true
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                    Label{
-                        text: qsTr("正在分析中...")
-                        color: "#ffffff"
-                        font.pixelSize: 16
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
-                Label{
-                    width: parent.width - 20
-                    text: $MainViewController.predictedBrainAge > 0 ? qsTr("预测年龄：") + $MainViewController.predictedBrainAge.toFixed(2) : ""
-                    color: "#ffffff"
-                    font.pixelSize: 18
-                    visible: $MainViewController.predictedBrainAge > 0
-                    wrapMode: Text.WrapAnywhere
                 }
             }
         }
