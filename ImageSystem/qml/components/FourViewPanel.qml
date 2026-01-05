@@ -146,6 +146,41 @@ Item {
             canvasCor.requestPaint();
         }
     }
+    
+    // 监听切片变化信号，滚轮切片时更新十字线位置
+    Connections {
+        target: $DicomDataModel
+        function onAxialSliceChanged(slice) {
+            if (root.crosshairEnabled && !root.isSegDataMode) {
+                updateCrosshairFromVoxel(getSagittalSlice(), getCoronalSlice(), slice);
+            }
+        }
+        function onSagittalSliceChanged(slice) {
+            if (root.crosshairEnabled && !root.isSegDataMode) {
+                updateCrosshairFromVoxel(slice, getCoronalSlice(), getAxialSlice());
+            }
+        }
+        function onCoronalSliceChanged(slice) {
+            if (root.crosshairEnabled && !root.isSegDataMode) {
+                updateCrosshairFromVoxel(getSagittalSlice(), slice, getAxialSlice());
+            }
+        }
+        function onSegAxialSliceChanged(slice) {
+            if (root.crosshairEnabled && root.isSegDataMode) {
+                updateCrosshairFromVoxel(getSagittalSlice(), getCoronalSlice(), slice);
+            }
+        }
+        function onSegSagittalSliceChanged(slice) {
+            if (root.crosshairEnabled && root.isSegDataMode) {
+                updateCrosshairFromVoxel(slice, getCoronalSlice(), getAxialSlice());
+            }
+        }
+        function onSegCoronalSliceChanged(slice) {
+            if (root.crosshairEnabled && root.isSegDataMode) {
+                updateCrosshairFromVoxel(getSagittalSlice(), slice, getAxialSlice());
+            }
+        }
+    }
 
     // 左上：轴向视图
     Rectangle {
