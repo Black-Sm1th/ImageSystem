@@ -10,6 +10,7 @@
   </PropertyGroup>
   <PropertyGroup Label="QtSettings" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <QtLastBackgroundBuild>2025-12-08T04:08:33.9850258Z</QtLastBackgroundBuild>
-    <QtTouchProperty> </QtTouchProperty>
+    <QtTouchProperty>
+    </QtTouchProperty>
   </PropertyGroup>
 </Project>
