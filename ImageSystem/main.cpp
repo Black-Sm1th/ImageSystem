@@ -41,12 +41,28 @@ protected:
         case Qt::Key_7:
             GET_SINGLETON(DicomDataModel)->resetAllInteractions();
             qDebug() << "[GlobalKey] resetAllInteractions (7)";
-            return false;
+            return true;  // 吞掉事件
         case Qt::Key_8: {
             auto* m = GET_SINGLETON(DicomDataModel);
             m->setCrosshairEnabled(!m->crosshairEnabled());
             qDebug() << "[GlobalKey] crosshairEnabled =" << m->crosshairEnabled() << "(8)";
-            return false;
+            return true;  // 吞掉事件
+        }
+        case Qt::Key_9: {
+            // 切换分割图像显示模式: 0=叠加 -> 1=仅原图 -> 2=仅分割 -> 0=叠加
+            auto* m = GET_SINGLETON(DicomDataModel);
+            if (m->isSegDataMode()) {
+                int currentMode = m->segDisplayMode();
+                int nextMode = (currentMode + 1) % 3;
+                // 如果没有原始图像，跳过"仅原图"模式
+                if (nextMode == 1 && !m->hasRawImage()) {
+                    nextMode = 2;
+                }
+                m->setSegDisplayMode(nextMode);
+                static const char* modeNames[] = { "Overlay", "OriginalOnly", "SegmentOnly" };
+                qDebug() << "[GlobalKey] segDisplayMode =" << modeNames[nextMode] << "(9)";
+            }
+            return true;  // 吞掉事件，阻止多次触发
         }
         default: break;
         }

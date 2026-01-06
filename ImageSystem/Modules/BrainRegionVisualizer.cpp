@@ -944,6 +944,143 @@ bool BrainRegionVisualizer::SetActorVisible(int label, bool visible)
     return true;
 }
 
+void BrainRegionVisualizer::SetSegDisplayMode(SegDisplayMode mode)
+{
+    if (segDisplayMode_ == mode)
+    {
+        return;
+    }
+    segDisplayMode_ = mode;
+    UpdateSliceInput();
+    Update3DDisplayMode();
+}
+
+void BrainRegionVisualizer::SetSegOverlayOpacity(double opacity)
+{
+    // clamp to [0, 1]
+    if (opacity < 0.0) opacity = 0.0;
+    if (opacity > 1.0) opacity = 1.0;
+
+    segOverlayOpacity_ = opacity;
+
+    if (blendImage_)
+    {
+        blendImage_->SetOpacity(1, segOverlayOpacity_);
+        blendImage_->Update();
+    }
+}
+
+void BrainRegionVisualizer::UpdateSliceInput()
+{
+    vtkAlgorithmOutput* sliceInput = nullptr;
+
+    switch (segDisplayMode_)
+    {
+    case SegDisplayMode::OriginalOnly:
+        // 仅显示原始灰度图
+        if (grayMap_)
+        {
+            sliceInput = grayMap_->GetOutputPort();
+        }
+        else
+        {
+            // 如果没有原始图，fallback 到分割图
+            sliceInput = colorMap_->GetOutputPort();
+        }
+        break;
+
+    case SegDisplayMode::SegmentOnly:
+        // 仅显示分割彩色图
+        sliceInput = colorMap_->GetOutputPort();
+        break;
+
+    case SegDisplayMode::Overlay:
+    default:
+        // 叠加显示
+        if (blendImage_)
+        {
+            sliceInput = blendImage_->GetOutputPort();
+        }
+        else
+        {
+            // 如果没有 blend（没有原始图），fallback 到分割图
+            sliceInput = colorMap_->GetOutputPort();
+        }
+        break;
+    }
+
+    if (sliceInput)
+    {
+        if (axialMapper_)
+        {
+            axialMapper_->SetInputConnection(sliceInput);
+        }
+        if (coronalMapper_)
+        {
+            coronalMapper_->SetInputConnection(sliceInput);
+        }
+        if (sagittalMapper_)
+        {
+            sagittalMapper_->SetInputConnection(sliceInput);
+        }
+    }
+}
+
+void BrainRegionVisualizer::Update3DDisplayMode()
+{
+    // 根据显示模式设置 3D 视图中 volume（原图体渲染）和 actors（分割表面）的可见性
+    switch (segDisplayMode_)
+    {
+    case SegDisplayMode::OriginalOnly:
+        // 仅显示原始体渲染，隐藏分割表面
+        if (volume_)
+        {
+            volume_->SetVisibility(1);
+        }
+        for (auto& region : regions_)
+        {
+            if (region.actor)
+            {
+                region.actor->SetVisibility(0);
+            }
+        }
+        break;
+
+    case SegDisplayMode::SegmentOnly:
+        // 仅显示分割表面，隐藏原始体渲染
+        if (volume_)
+        {
+            volume_->SetVisibility(0);
+        }
+        for (auto& region : regions_)
+        {
+            if (region.actor)
+            {
+                // 恢复原来的可见性状态（baseOpacity > 0 表示可见）
+                region.actor->SetVisibility(region.baseOpacity > 0 ? 1 : 0);
+            }
+        }
+        break;
+
+    case SegDisplayMode::Overlay:
+    default:
+        // 叠加显示：原始体渲染 + 分割表面
+        if (volume_)
+        {
+            volume_->SetVisibility(1);
+        }
+        for (auto& region : regions_)
+        {
+            if (region.actor)
+            {
+                // 恢复原来的可见性状态
+                region.actor->SetVisibility(region.baseOpacity > 0 ? 1 : 0);
+            }
+        }
+        break;
+    }
+}
+
 std::string Trim(const std::string& s)
 {
     const auto first = s.find_first_not_of(" \t\r\n\"");

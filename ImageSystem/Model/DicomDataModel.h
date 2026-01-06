@@ -35,6 +35,12 @@ class DicomDataModel : public QObject
         Q_PROPERTY(int maxSegSagittalSlice READ maxSegSagittalSlice NOTIFY segDataLoaded)
         Q_PROPERTY(int maxSegCoronalSlice READ maxSegCoronalSlice NOTIFY segDataLoaded)
         Q_PROPERTY(bool isSegDataMode READ isSegDataMode NOTIFY segDataModeChanged)
+        // 分割视图显示模式: 0=叠加, 1=仅原图, 2=仅分割
+        Q_PROPERTY(int segDisplayMode READ segDisplayMode WRITE setSegDisplayMode NOTIFY segDisplayModeChanged)
+        // 分割图叠加透明度 (0.0 - 1.0)
+        Q_PROPERTY(double segOverlayOpacity READ segOverlayOpacity WRITE setSegOverlayOpacity NOTIFY segOverlayOpacityChanged)
+        // 是否有原始图像可用
+        Q_PROPERTY(bool hasRawImage READ hasRawImage NOTIFY segDataLoaded)
         Q_PROPERTY(double windowWidth READ windowWidth WRITE setWindowWidth NOTIFY windowWidthChanged)
         Q_PROPERTY(double windowLevel READ windowLevel WRITE setWindowLevel NOTIFY windowLevelChanged)
         // 当前交互模式（键盘/工具栏切换用），与 ViewController/InteractionState.h 的 ToolMode 数值保持一致
@@ -68,6 +74,11 @@ public:
     int maxSegCoronalSlice() const;
     
     bool isSegDataMode() const;
+    
+    // 分割视图显示模式相关
+    int segDisplayMode() const;
+    double segOverlayOpacity() const;
+    bool hasRawImage() const;
     
     double windowWidth() const;
     double windowLevel() const;
@@ -104,6 +115,10 @@ public:
     Q_INVOKABLE void setRegionVisible(int row, bool visible);
     
     Q_INVOKABLE void setSegDataMode(bool enabled);
+    
+    // 分割视图显示模式设置
+    Q_INVOKABLE void setSegDisplayMode(int mode);
+    Q_INVOKABLE void setSegOverlayOpacity(double opacity);
 
     void generateSegDataPNGs(const QString& path, QString& axialMidPngPath, QString& coronalMidPngPath, QString& sagittalMidPngPath, QString& seg3dPngPath);
 signals:
@@ -120,10 +135,13 @@ signals:
     void dataLoaded();
     void segDataLoaded();
     void segDataModeChanged();
+    void segDisplayModeChanged();
+    void segOverlayOpacityChanged();
     void segLoadingStarted();
     void segLoadingProgress(int percent, const QString& message);
     void segLoadingFinished(bool success, const QString& message);
     void segRefreshRenderer();
+    void segSliceRefreshRequested();  // 仅刷新2D切片视图
     void interactionResetRequested();
     void dimensionsChanged();
 
@@ -145,6 +163,8 @@ private:
     int m_segSagittalSlice = 0;
     int m_segCoronalSlice = 0;
     bool m_isSegDataMode = false;
+    int m_segDisplayMode = 0;       // 0=叠加, 1=仅原图, 2=仅分割
+    double m_segOverlayOpacity = 0.6;
     double m_windowWidth = 2000;
     double m_windowLevel = 0;
     int m_toolMode = 1; // 默认 WindowLevel

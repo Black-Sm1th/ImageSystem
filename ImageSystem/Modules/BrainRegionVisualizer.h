@@ -107,11 +107,29 @@ class BrainRegionVisualizer
 public:
     using ProgressCallback = std::function<void(int, const std::string&)>;
 
+    // 分割视图显示模式枚举
+    enum class SegDisplayMode {
+        Overlay = 0,      // 叠加显示（原图+分割，默认）
+        OriginalOnly = 1, // 仅原始图像
+        SegmentOnly = 2   // 仅分割彩色图
+    };
+
     BrainRegionVisualizer(const std::string& niftiPath, const std::string& tsvPath, const std::string& rawPath = "");
     ~BrainRegionVisualizer(); // 如果需要，可以添加析构函数
 
     bool Initialize();
     void SetProgressCallback(ProgressCallback cb);
+
+    // 分割视图显示模式控制
+    void SetSegDisplayMode(SegDisplayMode mode);
+    SegDisplayMode GetSegDisplayMode() const { return segDisplayMode_; }
+
+    // 分割图叠加透明度 (0.0 - 1.0)
+    void SetSegOverlayOpacity(double opacity);
+    double GetSegOverlayOpacity() const { return segOverlayOpacity_; }
+
+    // 是否有原始图像可用
+    bool HasRawImage() const { return rawImageData_ != nullptr; }
 
     vtkSmartPointer<vtkRenderer> Get3DRenderer() const { return renderer3D_; }
     vtkSmartPointer<vtkImageSlice> GetAxialSlice() const { return axialSlice_; }
@@ -145,6 +163,15 @@ public:
     bool SetActorVisible(int label, bool visible);
 
 private:
+    // 根据显示模式更新切片输入源
+    void UpdateSliceInput();
+    // 根据显示模式更新3D视图
+    void Update3DDisplayMode();
+
+    // 显示模式相关
+    SegDisplayMode segDisplayMode_ = SegDisplayMode::Overlay;
+    double segOverlayOpacity_ = 0.6;
+
     vtkSmartPointer<vtkImageData> ReorientToRAS(vtkImageData* input);
     bool LoadImage();
     bool LoadColorData();

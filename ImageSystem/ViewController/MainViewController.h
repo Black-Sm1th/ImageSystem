@@ -122,6 +122,7 @@ public:
 private slots:
     void onDataLoaded();
     void onSegDataLoaded();
+    void onSegRefreshRenderer();  // 分割视图刷新
     void onSliceChanged(int slice);
     void onSegSliceChanged(int slice);
     void onWindowChanged();

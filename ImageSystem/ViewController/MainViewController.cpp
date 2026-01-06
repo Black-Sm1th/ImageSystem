@@ -463,6 +463,10 @@ QQuickVTKItem::vtkUserData SliceVtkItemBase::initializeVTK(vtkRenderWindow* rend
         this, &SliceVtkItemBase::onDataLoaded);
     connect(m_dataModel, &DicomDataModel::segDataLoaded,
         this, &SliceVtkItemBase::onSegDataLoaded);
+    connect(m_dataModel, &DicomDataModel::segRefreshRenderer,
+        this, &SliceVtkItemBase::onSegRefreshRenderer);
+    connect(m_dataModel, &DicomDataModel::segSliceRefreshRequested,
+        this, &SliceVtkItemBase::onSegRefreshRenderer);
     connect(m_dataModel, &DicomDataModel::axialSliceChanged,
         this, &SliceVtkItemBase::onSliceChanged);
     connect(m_dataModel, &DicomDataModel::sagittalSliceChanged,
@@ -607,6 +611,12 @@ void SliceVtkItemBase::onSegDataLoaded()
             style->rescaleAxisActor();
         }
     });
+    scheduleRender();
+}
+
+void SliceVtkItemBase::onSegRefreshRenderer()
+{
+    // 分割视图显示模式改变时，需要刷新渲染
     scheduleRender();
 }
 

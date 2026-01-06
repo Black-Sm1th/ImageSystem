@@ -30,6 +30,15 @@ int DicomDataModel::maxSegCoronalSlice() const { return m_segDims[1] - 1; }
 
 bool DicomDataModel::isSegDataMode() const { return m_isSegDataMode; }
 
+int DicomDataModel::segDisplayMode() const { return m_segDisplayMode; }
+
+double DicomDataModel::segOverlayOpacity() const { return m_segOverlayOpacity; }
+
+bool DicomDataModel::hasRawImage() const 
+{
+    return m_region ? m_region->HasRawImage() : false;
+}
+
 double DicomDataModel::windowWidth() const { return m_windowWidth; }
 double DicomDataModel::windowLevel() const { return m_windowLevel; }
 int DicomDataModel::toolMode() const { return m_toolMode; }
@@ -170,6 +179,44 @@ void DicomDataModel::setSegDataMode(bool enabled)
         emit segDataModeChanged();
         emit dimensionsChanged();  // 通知 QML 重新读取 dimX/Y/Z 和 spacingX/Y/Z
     }
+}
+
+void DicomDataModel::setSegDisplayMode(int mode)
+{
+    // 限制 mode 在 0-2 范围内
+    if (mode < 0) mode = 0;
+    if (mode > 2) mode = 2;
+    
+    if (m_segDisplayMode != mode) {
+        m_segDisplayMode = mode;
+        
+        if (m_region) {
+            m_region->SetSegDisplayMode(static_cast<BrainRegionVisualizer::SegDisplayMode>(mode));
+        }
+        
+        emit segDisplayModeChanged();
+        emit segRefreshRenderer();  // 刷新所有视图（2D + 3D）
+    }
+}
+
+void DicomDataModel::setSegOverlayOpacity(double opacity)
+{
+    // clamp to [0, 1]
+    if (opacity < 0.0) opacity = 0.0;
+    if (opacity > 1.0) opacity = 1.0;
+    
+    if (qFuzzyCompare(m_segOverlayOpacity, opacity)) {
+        return;
+    }
+    
+    m_segOverlayOpacity = opacity;
+    
+    if (m_region) {
+        m_region->SetSegOverlayOpacity(opacity);
+    }
+    
+    emit segOverlayOpacityChanged();
+    emit segRefreshRenderer();  // 刷新所有视图
 }
 
 void DicomDataModel::generateSegDataPNGs(const QString& path, QString& axialMidPngPath, QString& coronalMidPngPath, QString& sagittalMidPngPath, QString& seg3dPngPath)
