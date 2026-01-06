@@ -477,7 +477,7 @@ ApplicationWindow {
             }
             LeftToolButton {
                 id: measureDistanceToolBtn
-                iconSource: ""
+                iconSource: "qrc:/image/toolDistance.png"
                 isSelected: leftToolColumn.selectedToolIndex === 3
                 onClicked: {
                     leftToolColumn.selectedToolIndex = (leftToolColumn.selectedToolIndex === 3) ? -1 : 3
@@ -491,7 +491,7 @@ ApplicationWindow {
             }
             LeftToolButton {
                 id: measureAngleToolBtn
-                iconSource: ""
+                iconSource: "qrc:/image/toolAngle.png"
                 isSelected: leftToolColumn.selectedToolIndex === 4
                 onClicked: {
                     leftToolColumn.selectedToolIndex = (leftToolColumn.selectedToolIndex === 4) ? -1 : 4

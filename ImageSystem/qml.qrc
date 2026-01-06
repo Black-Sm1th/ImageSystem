@@ -330,5 +330,7 @@
         <file>image/brainAgeAnalyze/149.png</file>
         <file>image/startAnalyzeBtn.png</file>
         <file>image/warning.png</file>
+        <file>image/toolAngle.png</file>
+        <file>image/toolDistance.png</file>
     </qresource>
 </RCC>
