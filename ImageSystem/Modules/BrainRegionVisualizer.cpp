@@ -936,11 +936,34 @@ bool BrainRegionVisualizer::SetActorVisible(int label, bool visible)
         return false;
     }
     auto& region = regions_[it->second];
-    if (!region.actor)
+    
+    // 1. 更新 3D actor 可见性
+    if (region.actor)
     {
-        return false;
+        region.actor->SetVisibility(visible ? 1 : 0);
     }
-    region.actor->SetVisibility(visible ? 1 : 0);
+    
+    // 2. 更新 2D 切片视图的 LUT 透明度
+    if (lut_ && label > 0)
+    {
+        double rgba[4];
+        lut_->GetTableValue(label, rgba);
+        // 隐藏时 alpha=0，显示时恢复原始 alpha
+        rgba[3] = visible ? region.colorA : 0.0;
+        lut_->SetTableValue(label, rgba[0], rgba[1], rgba[2], rgba[3]);
+        lut_->Modified();
+        
+        // 触发颜色映射更新
+        if (colorMap_)
+        {
+            colorMap_->Update();
+        }
+        if (blendImage_)
+        {
+            blendImage_->Update();
+        }
+    }
+    
     return true;
 }
 
