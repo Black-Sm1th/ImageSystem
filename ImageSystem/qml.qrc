@@ -332,5 +332,10 @@
         <file>image/warning.png</file>
         <file>image/toolAngle.png</file>
         <file>image/toolDistance.png</file>
+        <file>image/aiPanelBackground.png</file>
+        <file>image/aiStar.png</file>
+        <file>image/close.png</file>
+        <file>image/sendBtn.png</file>
+        <file>image/linkBtn.png</file>
     </qresource>
 </RCC>

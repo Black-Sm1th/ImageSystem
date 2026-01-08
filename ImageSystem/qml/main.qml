@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Window 2.2
 import QtQuick.Dialogs 1.3
 import com.vtk.dicom 1.0
+import QtGraphicalEffects 1.0
 import "./components"
 ApplicationWindow {
     id: win
@@ -363,7 +364,7 @@ ApplicationWindow {
                     }
 
                     onClicked: {
-                        win.showAIPanel = true
+                        // win.showAIPanel = true
                     }
                 }
             }
@@ -1210,7 +1211,177 @@ ApplicationWindow {
         messageManager: dialogMessageBox
         rightPanelExpanded: topExpandBar.brainRightExpanded
     }
-    // Rectangle{
+    DropShadow {
+        id:aiPanelShaow
+        anchors.fill: aiPanel
+        source: aiPanel
+        horizontalOffset: 0
+        verticalOffset: 0
+        radius: 16
+        color: "#66072662"
+        samples: 32
+        visible: win.showAIPanel
+    }
+    Rectangle{
+        id: aiPanel
+        visible: win.showAIPanel
+        height: parent.height * 0.86
+        width: 450
+        color: "#111217"
+        border.width: 1
+        border.color: "#20252D"
+        radius: 12
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.right: parent.right
+        anchors.rightMargin: 20
+        Image {
+            anchors.fill: parent
+            source: "qrc:/image/aiPanelBackground.png"
+        }
+        Column{
+            anchors.fill: parent
+            padding: 20
+            spacing: 20
+            Rectangle{
+                width: parent.width - 40
+                height: 28
+                color: "transparent"
+                Row{
+                    height: parent.height
+                    anchors.left: parent.left
+                    spacing: 8
+                    Image{
+                        source: "qrc:/image/aiStar.png"
+                    }
+                    Label{
+                        text: qsTr("AI助手")
+                        color: "#FFFFFF"
+                        font.pixelSize: 18
+                        font.weight: Font.Medium
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+                Image{
+                    source: "qrc:/image/close.png"
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
 
-    // }
+                    MouseArea{
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onEntered: {
+                            parent.opacity = 0.8
+                            parent.scale = 1.05
+                        }
+
+                        onExited: {
+                            parent.opacity = 1.0
+                            parent.scale = 1.0
+                        }
+
+                        onPressed: {
+                            parent.scale = 0.95
+                        }
+
+                        onReleased: {
+                            parent.scale = containsMouse ? 1.05 : 1.0
+                        }
+                        onClicked: {
+                            win.showAIPanel = false
+                        }
+                    }
+                }
+            }
+            Rectangle{
+                width: parent.width - 40
+                height: parent.height - 28 - 40 - 20
+                color: "transparent"
+                Rectangle{
+                    color: "#33FFFFFF"
+                    border.width: 1
+                    border.color: "#FFFFFF"
+                    height: 56
+                    radius: 60
+                    width: parent.width
+                    anchors.bottom: parent.bottom
+                    Image {
+                        id: linkBtn
+                        source: "qrc:/image/linkBtn.png"
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        MouseArea{
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onEntered: {
+                                parent.opacity = 0.8
+                                parent.scale = 1.05
+                            }
+
+                            onExited: {
+                                parent.opacity = 1.0
+                                parent.scale = 1.0
+                            }
+
+                            onPressed: {
+                                parent.scale = 0.95
+                            }
+
+                            onReleased: {
+                                parent.scale = containsMouse ? 1.05 : 1.0
+                            }
+                            onClicked: {
+
+                            }
+                        }
+                    }
+                    SingleLineTextInput{
+                        anchors.left: linkBtn.right
+                        anchors.leftMargin: 8
+                        backgroundColor: "transparent"
+                        textColor: "#E5FFFFFF"
+                        anchors.right: sendBtn.left
+                        anchors.rightMargin: 25
+                        inputHeight: 28
+                        borderWidth: 0
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Image{
+                        id: sendBtn
+                        source: "qrc:/image/sendBtn.png"
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.right: parent.right
+                        anchors.rightMargin: 12
+                        MouseArea{
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onEntered: {
+                                parent.opacity = 0.8
+                                parent.scale = 1.05
+                            }
+
+                            onExited: {
+                                parent.opacity = 1.0
+                                parent.scale = 1.0
+                            }
+
+                            onPressed: {
+                                parent.scale = 0.95
+                            }
+
+                            onReleased: {
+                                parent.scale = containsMouse ? 1.05 : 1.0
+                            }
+                            onClicked: {
+
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
