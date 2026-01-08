@@ -256,8 +256,8 @@ Item {
                 }
                 readonly property real armLength: maxCornerDistance(axialView.crossX, axialView.crossY, width, height) + 10
                 readonly property real handleOffset: root.crossHandleOffsetFixed
-                readonly property color vColor: root.crossGreen
-                readonly property color hColor: root.crossYellow
+                readonly property color vColor: root.crossYellow   // 垂直线控制 Sagittal
+                readonly property color hColor: root.crossGreen    // 水平线控制 Coronal
                 property real rotateOffsetDeg: 0
 
                 // 圆球显示控制
@@ -699,8 +699,8 @@ Item {
                 }
                 readonly property real armLength: maxCornerDistance(coronalView.crossX, coronalView.crossY, width, height) + 10
                 readonly property real handleOffset: root.crossHandleOffsetFixed
-                readonly property color vColor: root.crossRed
-                readonly property color hColor: root.crossYellow
+                readonly property color vColor: root.crossYellow   // 垂直线控制 Sagittal
+                readonly property color hColor: root.crossRed      // 水平线控制 Axial
                 property real rotateOffsetDeg: 0
 
                 // 圆球显示控制
