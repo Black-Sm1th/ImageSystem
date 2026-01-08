@@ -163,7 +163,7 @@ void DicomDataModel::resetAllInteractions()
     setWindowLevel(0);
 
     // 2) 切回窗宽窗位模式，便于继续调节
-    setToolMode(1); // ToolMode::WindowLevel
+    setToolMode(0); // ToolMode::WindowLevel
 
     // 3) 通知各个 VTK 视图在渲染线程里重置相机/测量等
     emit interactionResetRequested();
@@ -235,6 +235,7 @@ void DicomDataModel::generateSegDataPNGs(const QString& path, QString& axialMidP
 DicomDataModel::DicomDataModel(QObject* parent)
     : QObject(parent) {
     m_segmentationTableModel = new BrainSegmentationTableModel(this);
+    setshowOriginal(true);
 }
 
 bool DicomDataModel::loadDicomDirectory(const QString& path) {
@@ -286,6 +287,7 @@ bool DicomDataModel::loadDicomDirectory(const QString& path) {
     setAxialSlice(m_dims[2] / 2);
     setSagittalSlice(m_dims[0] / 2);
     setCoronalSlice(m_dims[1] / 2);
+    resetAllInteractions();
     return true;
 }
 
@@ -548,8 +550,9 @@ void DicomDataModel::finalizeSegDataLoad(std::unique_ptr<BrainRegionVisualizer> 
     // 先切换到SegData模式，再设置切片
     // 这样可以避免切片信号触发时模式还未切换导致的问题
     setSegDataMode(true);
-
-
+    setshowOriginal(true);
+    m_segDisplayMode = 0;
+    resetAllInteractions();
     emit segDataLoaded();
     // 设置SegData的默认切片为中间位置
     setSegAxialSlice(m_segDims[2] / 2);

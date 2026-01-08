@@ -2496,10 +2496,33 @@ Rectangle {
                     font.pixelSize: 16
                     wrapMode: Text.WrapAnywhere
                 }
-
+                Row{
+                    height: 20
+                    Label{
+                        id: originLabel
+                        text: qsTr("原始图像：")
+                        color: "#ffffff"
+                        font.weight: Font.Medium
+                        font.pixelSize: 16
+                        wrapMode: Text.WrapAnywhere
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Image{
+                        source: $DicomDataModel.showOriginal ? "qrc:/image/eye.png" : "qrc:/image/eyeSlash.png"
+                        anchors.verticalCenter: parent.verticalCenter
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                $DicomDataModel.showOriginal = !$DicomDataModel.showOriginal
+                                $DicomDataModel.setSegDisplayMode($DicomDataModel.showOriginal ? 0 : 2)
+                            }
+                        }
+                    }
+                }
                 Rectangle {
                     width: parent.width
-                    height: segmentationAnalysis.height - segLabel.height - 24
+                    height: segmentationAnalysis.height - segLabel.height - 48 - 20
                     color: "#14FFFFFF"
 
                     Column {

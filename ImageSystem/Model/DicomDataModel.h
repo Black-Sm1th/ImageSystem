@@ -14,7 +14,10 @@
 class DicomDataModel : public QObject
 {
     SINGLETON_CLASS(DicomDataModel)
-    Q_OBJECT
+        Q_OBJECT
+
+        QUICK_PROPERTY(bool, showOriginal)
+
         Q_PROPERTY(int axialSlice READ axialSlice WRITE setAxialSlice NOTIFY axialSliceChanged)
         Q_PROPERTY(int sagittalSlice READ sagittalSlice WRITE setSagittalSlice NOTIFY sagittalSliceChanged)
         Q_PROPERTY(int coronalSlice READ coronalSlice WRITE setCoronalSlice NOTIFY coronalSliceChanged)
@@ -49,7 +52,7 @@ class DicomDataModel : public QObject
         Q_PROPERTY(bool crosshairEnabled READ crosshairEnabled WRITE setCrosshairEnabled NOTIFY crosshairEnabledChanged)
         Q_PROPERTY(QString dicomInfo READ dicomInfo NOTIFY dataLoaded)
         Q_PROPERTY(bool hasData READ hasData NOTIFY dataLoaded)
-
+        
 public:
     // 普通数据的切片
     int axialSlice() const;
@@ -167,7 +170,7 @@ private:
     double m_segOverlayOpacity = 0.6;
     double m_windowWidth = 2000;
     double m_windowLevel = 0;
-    int m_toolMode = 1; // 默认 WindowLevel
+    int m_toolMode = 0; // 默认 WindowLevel
     bool m_crosshairEnabled = false;
     QString m_dicomInfo;
     bool m_segLoadingInProgress = false;
