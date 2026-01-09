@@ -2061,22 +2061,22 @@ Rectangle {
                         height: 8
                     }
                     Label {
-                        text: qsTr("Structural Phase")
+                        text: qsTr("结构相")
                         font.pixelSize: 18
                         color: "#ffffff"
                     }
-                    Item{
+                    Rectangle{
                         id: segmentationBtn
                         width: btnText0.width + 40
                         height: 36
-                        
+                        radius: 24
+                        color: "transparent"
                         property bool isHovered: false
                         
                         Image {
                             id: btnImg0
                             anchors.fill: parent
                             source: preShowResultIndex === 0 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
-                            fillMode: Image.Stretch
                             opacity: segmentationBtn.isHovered ? 0.8 : 1.0
                             
                             Behavior on opacity {
@@ -2087,7 +2087,7 @@ Rectangle {
                         Text {
                             id: btnText0
                             anchors.centerIn: parent
-                            text: qsTr("Segmentation")
+                            text: qsTr("分割")
                             color: "#B2FFFFFF"
                             font.pixelSize: 14
                             font.family: "Alibaba PuHuiTi 3.0"
@@ -2113,18 +2113,18 @@ Rectangle {
                             }
                         }
                     }
-                    Item{
+                    Rectangle{
                         id: regBtn
                         width: btnText1.width + 40
                         height: 36
-                        
+                        radius: 24
+                        color: "transparent"
                         property bool isHovered: false
                         
                         Image {
                             id: btnImg1
                             anchors.fill: parent
                             source: preShowResultIndex === 1 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
-                            fillMode: Image.Stretch
                             opacity: regBtn.isHovered ? 0.8 : 1.0
                             
                             Behavior on opacity {
@@ -2135,7 +2135,7 @@ Rectangle {
                         Text {
                             id: btnText1
                             anchors.centerIn: parent
-                            text: qsTr("Registration")
+                            text: qsTr("配准")
                             color: "#B2FFFFFF"
                             font.pixelSize: 14
                             font.family: "Alibaba PuHuiTi 3.0"
@@ -2166,22 +2166,22 @@ Rectangle {
                         height: 8
                     }
                     Label {
-                        text: qsTr("Standard Space")
+                        text: qsTr("标准空间")
                         font.pixelSize: 18
                         color: "#ffffff"
                     }
-                    Item{
+                    Rectangle{
                         id: mniBtn
                         width: btnText2.width + 40
                         height: 36
-                        
+                        radius: 24
+                        color: "transparent"
                         property bool isHovered: false
                         
                         Image {
                             id: btnImg2
                             anchors.fill: parent
                             source: preShowResultIndex === 2 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
-                            fillMode: Image.Stretch
                             opacity: mniBtn.isHovered ? 0.8 : 1.0
                             
                             Behavior on opacity {
@@ -2223,22 +2223,22 @@ Rectangle {
                         height: 8
                     }
                     Label {
-                        text: qsTr("Functional Phase")
+                        text: qsTr("功能相")
                         font.pixelSize: 18
                         color: "#ffffff"
                     }
-                    Item{
+                    Rectangle{
                         id: t1FunBtn
                         width: btnText3.width + 40
                         height: 36
-                        
+                        radius: 24
+                        color: "transparent"
                         property bool isHovered: false
                         
                         Image {
                             id: btnImg3
                             anchors.fill: parent
                             source: preShowResultIndex === 3 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
-                            fillMode: Image.Stretch
                             opacity: t1FunBtn.isHovered ? 0.8 : 1.0
                             
                             Behavior on opacity {
@@ -2274,18 +2274,18 @@ Rectangle {
                             }
                         }
                     }
-                    Item{
+                    Rectangle{
                         id: boldBtn
                         width: btnText4.width + 40
                         height: 36
-                        
+                        radius: 24
+                        color: "transparent"
                         property bool isHovered: false
                         
                         Image {
                             id: btnImg4
                             anchors.fill: parent
                             source: preShowResultIndex === 4 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
-                            fillMode: Image.Stretch
                             opacity: boldBtn.isHovered ? 0.8 : 1.0
                             
                             Behavior on opacity {
@@ -2296,7 +2296,7 @@ Rectangle {
                         Text {
                             id: btnText4
                             anchors.centerIn: parent
-                            text: qsTr("BOLD summary")
+                            text: qsTr("BOLD总结")
                             color: "#B2FFFFFF"
                             font.pixelSize: 14
                             font.family: "Alibaba PuHuiTi 3.0"
@@ -2327,22 +2327,22 @@ Rectangle {
                         height: 8
                     }
                     Label {
-                        text: isDeepprepOutput ? qsTr("DeepPrep Outputs") : qsTr("QC quality control")
+                        text: isDeepprepOutput ? qsTr("DeepPrep输出") : qsTr("质量控制")
                         font.pixelSize: 18
                         color: "#ffffff"
                     }
-                    Item{
+                    Rectangle{
                         id: corticalBtn
                         width: btnText5.width + 40
                         height: 36
-                        
+                        radius: 24
+                        color: "transparent"
                         property bool isHovered: false
                         
                         Image {
                             id: btnImg5
                             anchors.fill: parent
                             source: preShowResultIndex === 5 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
-                            fillMode: Image.Stretch
                             opacity: corticalBtn.isHovered ? 0.8 : 1.0
                             
                             Behavior on opacity {
@@ -2353,7 +2353,7 @@ Rectangle {
                         Text {
                             id: btnText5
                             anchors.centerIn: parent
-                            text: isDeepprepOutput ? qsTr("Cortical surface") : qsTr("CompCor ROIs")
+                            text: isDeepprepOutput ? qsTr("皮层表面") : qsTr("CompCor脑区")
                             color: "#B2FFFFFF"
                             font.pixelSize: 14
                             font.family: "Alibaba PuHuiTi 3.0"
@@ -2378,18 +2378,18 @@ Rectangle {
                             }
                         }
                     }
-                    Item{
+                    Rectangle{
                         id: tsnrBtn
                         width: btnText6.width + 40
                         height: 36
-                        
+                        radius: 24
+                        color: "transparent"
                         property bool isHovered: false
                         
                         Image {
                             id: btnImg6
                             anchors.fill: parent
                             source: preShowResultIndex === 6 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
-                            fillMode: Image.Stretch
                             opacity: tsnrBtn.isHovered ? 0.8 : 1.0
                             
                             Behavior on opacity {
@@ -2400,7 +2400,7 @@ Rectangle {
                         Text {
                             id: btnText6
                             anchors.centerIn: parent
-                            text: isDeepprepOutput ? qsTr("tSNR") : qsTr("Variance")
+                            text: isDeepprepOutput ? qsTr("时间信噪比") : qsTr("方差")
                             color: "#B2FFFFFF"
                             font.pixelSize: 14
                             font.family: "Alibaba PuHuiTi 3.0"
@@ -2425,20 +2425,19 @@ Rectangle {
                             }
                         }
                     }
-                    Item{
+                    Rectangle{
                         id: surfaceBtn
                         width: btnText7.width + 40
                         height: 36
-                        
+                        radius: 24
+                        color: "transparent"
                         property bool isHovered: false
                         
                         Image {
                             id: btnImg7
                             anchors.fill: parent
                             source: preShowResultIndex === 7 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
-                            fillMode: Image.Stretch
                             opacity: surfaceBtn.isHovered ? 0.8 : 1.0
-                            
                             Behavior on opacity {
                                 NumberAnimation { duration: 200 }
                             }
@@ -2447,7 +2446,7 @@ Rectangle {
                         Text {
                             id: btnText7
                             anchors.centerIn: parent
-                            text: isDeepprepOutput ? qsTr("Surface reconstruction") : qsTr("nuisance regressors Correlations")
+                            text: isDeepprepOutput ? qsTr("表面重建") : qsTr("干扰回归变量相关性")
                             color: "#B2FFFFFF"
                             font.pixelSize: 14
                             font.family: "Alibaba PuHuiTi 3.0"
