@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
     QGuiApplication app(argc, argv);
 
     // 安装全局键盘监听（不依赖焦点）
-    app.installEventFilter(new GlobalKeyFilter(&app));
+    //app.installEventFilter(new GlobalKeyFilter(&app));
 
     // 注册四个视图类型
     qmlRegisterType<AxialVtkItem>("com.vtk.dicom", 1, 0, "AxialView");
