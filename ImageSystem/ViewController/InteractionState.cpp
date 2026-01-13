@@ -512,6 +512,63 @@ public:
     }
 };
 
+// ===== Annotation Rectangle（标注 - 矩形）=====
+class AnnotationRectangle final : public IInteractionState
+{
+public:
+    void OnEnter(InteractionContext& ctx, int x, int y) override
+    {
+    }
+
+    void OnMove(InteractionContext& ctx, int x, int y) override
+    {
+    }
+
+    void OnExit(InteractionContext& ctx, int x, int y) override
+    {
+    }
+};
+
+// ===== Annotation Rectangle（标注 - 圆形）=====
+class AnnotationCircle final : public IInteractionState
+{
+public:
+    void OnEnter(InteractionContext& ctx, int x, int y) override
+    {
+
+    }
+
+    void OnMove(InteractionContext& ctx, int x, int y) override
+    {
+
+    }
+
+    void OnExit(InteractionContext& ctx, int x, int y) override
+    {
+
+    }
+};
+
+// ===== Annotation Rectangle（标注 - 画笔）=====
+class AnnotationPen final : public IInteractionState
+{
+public:
+    void OnEnter(InteractionContext& ctx, int x, int y) override
+    {
+
+    }
+
+    void OnMove(InteractionContext& ctx, int x, int y) override
+    {
+
+    }
+
+    void OnExit(InteractionContext& ctx, int x, int y) override
+    {
+
+    }
+};
+
 std::unique_ptr<IInteractionState> CreateState(ToolMode mode)
 {
     switch (mode)
@@ -522,6 +579,9 @@ std::unique_ptr<IInteractionState> CreateState(ToolMode mode)
     case ToolMode::Zoom:            return std::make_unique<ZoomState>();
     case ToolMode::MeasureDistance: return std::make_unique<MeasureDistanceState>();
     case ToolMode::MeasureAngle:    return std::make_unique<MeasureAngleState>();
+    case ToolMode::AnnotationRectangle:    return std::make_unique<AnnotationRectangle>();
+    case ToolMode::AnnotationCircle:    return std::make_unique<AnnotationCircle>();
+    case ToolMode::AnnotationPen:    return std::make_unique<AnnotationPen>();
     default:                        return nullptr;
     }
 }

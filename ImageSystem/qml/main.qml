@@ -560,6 +560,19 @@ ApplicationWindow {
                     $DicomDataModel.resetAllInteractions()
                 }
             }
+            // LeftToolButton {
+            //     id: annotationRecToolBtn
+            //     iconSource: ""
+            //     isSelected: $DicomDataModel.toolMode === 7
+            //     onClicked: {
+            //         if(!annotationRecToolBtn.isSelected){
+            //             $DicomDataModel.setToolMode(7)
+            //             $DicomDataModel.setCrosshairEnabled(false)
+            //         }else{
+            //             $DicomDataModel.setToolMode(0)
+            //         }
+            //     }
+            // }
         }
     }
 

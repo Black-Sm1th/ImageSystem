@@ -25,7 +25,10 @@ enum class ToolMode
     Pan,              // 平移
     Zoom,             // 缩放（平行投影 scale）
     MeasureDistance,  // 距离测量
-    MeasureAngle      // 角度测量
+    MeasureAngle,     // 角度测量
+    AnnotationRectangle, //标注 - 矩形
+    AnnotationCircle,    //标注 - 圆形
+    AnnotationPen,       //标注 - 画笔
 };
 
 // 一次交互所需上下文（由 SliceInteractorStyle 组装）
@@ -72,7 +75,7 @@ struct InteractionContext
     std::vector<std::array<double, 3>> pendingPoints;
     ToolMode pendingMode{ ToolMode::None };
 
-    // 未完成测量的“点”预览（每次点击就显示一个点）
+    // 未完成测量的"点"预览（每次点击就显示一个点）
     bool pendingSegMode{ false };
     int pendingSliceNumber{ 0 };
     std::vector<vtkSmartPointer<vtkActor>> pendingPointActors;
