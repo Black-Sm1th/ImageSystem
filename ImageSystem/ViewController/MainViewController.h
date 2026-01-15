@@ -69,13 +69,19 @@ public:
     void UpdateMeasurementVisibility(int sliceNumber, bool segMode);
 
     // 设置标注完成回调
-    void SetAnnotationCallback(std::function<void(double screenX, double screenY, int annotationIndex, SliceOrientation orientation)> callback);
+    void SetAnnotationCallback(std::function<void(double screenX, double screenY, int annotationIndex, SliceOrientation orientation, int annotationType)> callback);
 
     // 更新标注文字
     void UpdateAnnotationText(int index, const std::string& text);
 
     // 删除标注
     void DeleteAnnotation(int index);
+
+    // 更新圆形标注文字
+    void UpdateCircleAnnotationText(int index, const std::string& text);
+
+    // 删除圆形标注
+    void DeleteCircleAnnotation(int index);
 
 protected:
     SliceInteractorStyle();
@@ -271,6 +277,8 @@ public:
     Q_INVOKABLE bool isDeepprepOutput(const QString& outputPath);
     Q_INVOKABLE void updateAnnotationText(int orientation, int index, const QString& text);
     Q_INVOKABLE void deleteAnnotation(int orientation, int index);
+    Q_INVOKABLE void updateCircleAnnotationText(int orientation, int index, const QString& text);
+    Q_INVOKABLE void deleteCircleAnnotation(int orientation, int index);
     Q_PROPERTY(QString fmriprepLog READ fmriprepLog NOTIFY fmriprepLogUpdated)
     QString fmriprepLog() const { return m_fmriprepLog; }
     Q_PROPERTY(QString deepprepLog READ deepprepLog NOTIFY deepprepLogUpdated)
@@ -285,7 +293,7 @@ signals:
     void networkTableIndexChanged(int index);
     void fmriprepLogUpdated();
     void deepprepLogUpdated();
-    void annotationCreated(double screenX, double screenY, int annotationIndex, int orientation);
+    void annotationCreated(double screenX, double screenY, int annotationIndex, int orientation, int annotationType);
     
 private:
     bool loadOutputData(const QString& path);

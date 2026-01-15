@@ -106,8 +106,29 @@ struct InteractionContext
     // 已完成的矩形标注集合
     std::vector<AnnotationRectItem> annotations;
 
+    // ===== 圆形标注（可多个，按切片显示/隐藏）=====
+    struct AnnotationCircleItem
+    {
+        bool segMode{ false };           // 创建时是否在 segDataMode
+        int sliceNumber{ 0 };            // 创建时所在切片号
+        double centerWorld[3]{ 0,0,0 };  // 圆心（世界坐标）
+        double radius{ 0.0 };            // 半径
+        std::string labelText;           // 标注文字
+        std::vector<vtkSmartPointer<vtkActor>> actors;  // 圆形边框
+        vtkSmartPointer<vtkBillboardTextActor3D> textActor;  // 标注文本
+    };
+
+    // 圆形标注拖动过程中的临时数据
+    vtkSmartPointer<vtkActor> pendingCircleActor;
+    double pendingCircleCenter[3]{ 0,0,0 };
+    double pendingCircleRadius{ 0.0 };
+
+    // 已完成的圆形标注集合
+    std::vector<AnnotationCircleItem> circleAnnotations;
+
     // 标注完成后的回调（通知QML层显示输入框）
-    std::function<void(double screenX, double screenY, int annotationIndex)> onAnnotationCreated;
+    // annotationType: 0=矩形, 1=圆形, 2=画笔
+    std::function<void(double screenX, double screenY, int annotationIndex, int annotationType)> onAnnotationCreated;
 };
 
 class IInteractionState

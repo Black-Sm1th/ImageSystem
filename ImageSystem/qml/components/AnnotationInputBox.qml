@@ -8,6 +8,7 @@ Item {
     // 公开属性
     property int annotationIndex: -1
     property int orientation: 0  // 0=Axial, 1=Sagittal, 2=Coronal
+    property int annotationType: 0  // 0=矩形, 1=圆形, 2=画笔
     property alias text: textInput.text
     
     // 信号
@@ -83,9 +84,10 @@ Item {
     }
     
     // 公开方法
-    function show(screenX, screenY, annIndex, orient, targetContainer) {
+    function show(screenX, screenY, annIndex, orient, annType, targetContainer) {
         annotationIndex = annIndex
         orientation = orient
+        annotationType = annType
         
         // 每次都重新设置parent为对应的视图容器
         if (targetContainer) {

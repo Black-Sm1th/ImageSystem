@@ -560,19 +560,32 @@ ApplicationWindow {
                     $DicomDataModel.resetAllInteractions()
                 }
             }
-            // LeftToolButton {
-            //     id: annotationRecToolBtn
-            //     iconSource: ""
-            //     isSelected: $DicomDataModel.toolMode === 7
-            //     onClicked: {
-            //         if(!annotationRecToolBtn.isSelected){
-            //             $DicomDataModel.setToolMode(7)
-            //             $DicomDataModel.setCrosshairEnabled(false)
-            //         }else{
-            //             $DicomDataModel.setToolMode(0)
-            //         }
-            //     }
-            // }
+            LeftToolButton {
+                id: annotationRecToolBtn
+                iconSource: ""
+                isSelected: $DicomDataModel.toolMode === 7
+                onClicked: {
+                    if(!annotationRecToolBtn.isSelected){
+                        $DicomDataModel.setToolMode(7)
+                        $DicomDataModel.setCrosshairEnabled(false)
+                    }else{
+                        $DicomDataModel.setToolMode(0)
+                    }
+                }
+            }
+            LeftToolButton {
+                id: annotationCircleToolBtn
+                iconSource: ""
+                isSelected: $DicomDataModel.toolMode === 8
+                onClicked: {
+                    if(!annotationCircleToolBtn.isSelected){
+                        $DicomDataModel.setToolMode(8)
+                        $DicomDataModel.setCrosshairEnabled(false)
+                    }else{
+                        $DicomDataModel.setToolMode(0)
+                    }
+                }
+            }
         }
     }
 
@@ -1404,13 +1417,25 @@ ApplicationWindow {
         parent: win.contentItem
         
         onTextConfirmed: {
-            // 将文字更新到对应的标注
-            $MainViewController.updateAnnotationText(orientation, annotationIndex, text)
+            // 根据标注类型调用不同的更新方法
+            if (annotationType === 0) {
+                // 矩形标注
+                $MainViewController.updateAnnotationText(orientation, annotationIndex, text)
+            } else if (annotationType === 1) {
+                // 圆形标注
+                $MainViewController.updateCircleAnnotationText(orientation, annotationIndex, text)
+            }
         }
         
         onCancelled: {
-            // 用户取消输入，删除这个标注
-            $MainViewController.deleteAnnotation(orientation, annotationIndex)
+            // 根据标注类型调用不同的删除方法
+            if (annotationType === 0) {
+                // 矩形标注
+                $MainViewController.deleteAnnotation(orientation, annotationIndex)
+            } else if (annotationType === 1) {
+                // 圆形标注
+                $MainViewController.deleteCircleAnnotation(orientation, annotationIndex)
+            }
         }
     }
 
@@ -1418,7 +1443,7 @@ ApplicationWindow {
     Connections {
         target: $MainViewController
         
-        function onAnnotationCreated(screenX, screenY, annotationIndex, orientation) {
+        function onAnnotationCreated(screenX, screenY, annotationIndex, orientation, annotationType) {
             // 根据orientation选择对应的视图容器
             var targetContainer = null
             if (orientation === 0) {
@@ -1434,7 +1459,7 @@ ApplicationWindow {
             
             // 显示输入框，传入targetContainer让show方法内部设置parent
             if (targetContainer) {
-                annotationInputBox.show(screenX, screenY, annotationIndex, orientation, targetContainer)
+                annotationInputBox.show(screenX, screenY, annotationIndex, orientation, annotationType, targetContainer)
             }
         }
     }

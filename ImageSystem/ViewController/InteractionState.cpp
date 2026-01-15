@@ -9,6 +9,7 @@
 #include <vtkPolyDataMapper.h>
 #include <vtkPropPicker.h>
 #include <vtkSphereSource.h>
+#include <vtkRegularPolygonSource.h>
 #include <cmath>
 #include <algorithm>
 
@@ -114,6 +115,40 @@ namespace
     std::array<double, 3> MidPoint(const std::array<double, 3>& a, const std::array<double, 3>& b)
     {
         return { (a[0] + b[0]) * 0.5, (a[1] + b[1]) * 0.5, (a[2] + b[2]) * 0.5 };
+    }
+
+    // 创建圆形（在指定平面上）
+    vtkSmartPointer<vtkActor> CreateWorldCircle(const double center[3], double radius,
+                                                SliceOrientation orientation, const double rgb[3], double lineWidth = 2.5)
+    {
+        auto circle = vtkSmartPointer<vtkRegularPolygonSource>::New();
+        circle->SetNumberOfSides(64);  // 64边形近似圆
+        circle->SetRadius(radius);
+        circle->SetCenter(center[0], center[1], center[2]);  // 直接在目标位置生成
+        circle->GeneratePolygonOff();  // 只要边框，不要填充
+
+        // 设置法线方向，决定圆所在的平面
+        switch (orientation) {
+        case static_cast<SliceOrientation>(0):  // Axial - XY平面
+            circle->SetNormal(0, 0, 1);  // 法线向Z轴，圆在XY平面
+            break;
+        case static_cast<SliceOrientation>(1):  // Sagittal - YZ平面
+            circle->SetNormal(1, 0, 0);  // 法线向X轴，圆在YZ平面
+            break;
+        case static_cast<SliceOrientation>(2):  // Coronal - XZ平面
+            circle->SetNormal(0, 1, 0);  // 法线向Y轴，圆在XZ平面
+            break;
+        }
+
+        auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+        mapper->SetInputConnection(circle->GetOutputPort());
+
+        auto actor = vtkSmartPointer<vtkActor>::New();
+        actor->SetMapper(mapper);
+        actor->GetProperty()->SetColor(rgb[0], rgb[1], rgb[2]);
+        actor->GetProperty()->SetLineWidth(lineWidth);
+        actor->PickableOff();
+        return actor;
     }
 }
 
@@ -789,7 +824,8 @@ public:
             ctx.renderer->GetDisplayPoint(display);
             
             // 触发回调，通知QML显示输入框
-            ctx.onAnnotationCreated(display[0], display[1], annotationIndex);
+            // annotationType: 0=矩形
+            ctx.onAnnotationCreated(display[0], display[1], annotationIndex, 0);
         }
 
         if (ctx.requestRender) ctx.requestRender();
@@ -797,27 +833,192 @@ public:
     }
 };
 
-// ===== Annotation Rectangle（标注 - 圆形）=====
+// ===== Annotation Circle（标注 - 圆形）=====
 class AnnotationCircle final : public IInteractionState
 {
+private:
+    double startWorld[3]{ 0,0,0 };
+
 public:
     void OnEnter(InteractionContext& ctx, int x, int y) override
     {
+        if (!ctx.interactor) return;
+        ctx.renderer = ResolveRenderer(ctx.interactor, ctx.renderer);
+        if (!ctx.renderer) return;
 
+        ctx.startX = x;
+        ctx.startY = y;
+
+        // 获取起始点的世界坐标
+        if (!PickOnSlice(ctx, x, y, startWorld)) {
+            return;
+        }
+
+        ctx.pendingCircleRadius = 0.0;
+        ctx.pendingCircleCenter[0] = startWorld[0];
+        ctx.pendingCircleCenter[1] = startWorld[1];
+        ctx.pendingCircleCenter[2] = startWorld[2];
+
+        // 清空之前的临时圆形
+        if (ctx.pendingCircleActor) {
+            ctx.renderer->RemoveActor(ctx.pendingCircleActor);
+            ctx.pendingCircleActor = nullptr;
+        }
     }
 
     void OnMove(InteractionContext& ctx, int x, int y) override
     {
+        if (!ctx.interactor || !ctx.renderer) return;
 
+        // 获取当前鼠标位置的世界坐标
+        double endWorld[3];
+        if (!PickOnSlice(ctx, x, y, endWorld)) {
+            return;
+        }
+
+        // 计算圆心和半径
+        // 圆心 = 起始点和当前点的中点（在对应平面上）
+        // 半径 = 圆心到起始点的距离
+        double dx, dy, dz;
+        
+        switch (ctx.orientation) {
+        case static_cast<SliceOrientation>(0): // Axial - XY平面
+            ctx.pendingCircleCenter[0] = (startWorld[0] + endWorld[0]) * 0.5;
+            ctx.pendingCircleCenter[1] = (startWorld[1] + endWorld[1]) * 0.5;
+            ctx.pendingCircleCenter[2] = startWorld[2];  // Z固定
+            
+            dx = ctx.pendingCircleCenter[0] - startWorld[0];
+            dy = ctx.pendingCircleCenter[1] - startWorld[1];
+            ctx.pendingCircleRadius = std::sqrt(dx*dx + dy*dy);
+            break;
+            
+        case static_cast<SliceOrientation>(1): // Sagittal - YZ平面
+            ctx.pendingCircleCenter[0] = startWorld[0];  // X固定
+            ctx.pendingCircleCenter[1] = (startWorld[1] + endWorld[1]) * 0.5;
+            ctx.pendingCircleCenter[2] = (startWorld[2] + endWorld[2]) * 0.5;
+            
+            dy = ctx.pendingCircleCenter[1] - startWorld[1];
+            dz = ctx.pendingCircleCenter[2] - startWorld[2];
+            ctx.pendingCircleRadius = std::sqrt(dy*dy + dz*dz);
+            break;
+            
+        case static_cast<SliceOrientation>(2): // Coronal - XZ平面
+            ctx.pendingCircleCenter[0] = (startWorld[0] + endWorld[0]) * 0.5;
+            ctx.pendingCircleCenter[1] = startWorld[1];  // Y固定
+            ctx.pendingCircleCenter[2] = (startWorld[2] + endWorld[2]) * 0.5;
+            
+            dx = ctx.pendingCircleCenter[0] - startWorld[0];
+            dz = ctx.pendingCircleCenter[2] - startWorld[2];
+            ctx.pendingCircleRadius = std::sqrt(dx*dx + dz*dz);
+            break;
+            
+        default:
+            ctx.pendingCircleCenter[0] = (startWorld[0] + endWorld[0]) * 0.5;
+            ctx.pendingCircleCenter[1] = (startWorld[1] + endWorld[1]) * 0.5;
+            ctx.pendingCircleCenter[2] = (startWorld[2] + endWorld[2]) * 0.5;
+            dx = ctx.pendingCircleCenter[0] - startWorld[0];
+            dy = ctx.pendingCircleCenter[1] - startWorld[1];
+            ctx.pendingCircleRadius = std::sqrt(dx*dx + dy*dy);
+            break;
+        }
+
+        // 移除旧的临时圆形
+        if (ctx.pendingCircleActor) {
+            ctx.renderer->RemoveActor(ctx.pendingCircleActor);
+            ctx.pendingCircleActor = nullptr;
+        }
+
+        // 只有半径足够大时才创建预览圆形
+        if (ctx.pendingCircleRadius > 0.5) {
+            // 创建新的临时圆形（橙色）
+            const double rgb[3]{ 1.0, 0.5, 0.0 };
+            ctx.pendingCircleActor = CreateWorldCircle(ctx.pendingCircleCenter, ctx.pendingCircleRadius,
+                                                       ctx.orientation, rgb, 2.5);
+            ctx.renderer->AddActor(ctx.pendingCircleActor);
+        }
+
+        if (ctx.requestRender) ctx.requestRender();
+        else if (ctx.interactor) ctx.interactor->Render();
     }
 
     void OnExit(InteractionContext& ctx, int x, int y) override
     {
+        if (!ctx.renderer) return;
 
+        // 检查是否有效（半径不能太小）
+        if (ctx.pendingCircleRadius < 1.0) {
+            if (ctx.pendingCircleActor) {
+                ctx.renderer->RemoveActor(ctx.pendingCircleActor);
+                ctx.pendingCircleActor = nullptr;
+            }
+            if (ctx.requestRender) ctx.requestRender();
+            return;
+        }
+
+        // 创建正式的圆形标注项
+        InteractionContext::AnnotationCircleItem item;
+        item.segMode = ctx.model ? ctx.model->isSegDataMode() : false;
+        item.sliceNumber = CurrentSliceNumber(ctx);
+        item.centerWorld[0] = ctx.pendingCircleCenter[0];
+        item.centerWorld[1] = ctx.pendingCircleCenter[1];
+        item.centerWorld[2] = ctx.pendingCircleCenter[2];
+        item.radius = ctx.pendingCircleRadius;
+        item.labelText = "";
+
+        // 将临时actor移入正式item
+        if (ctx.pendingCircleActor) {
+            item.actors.push_back(ctx.pendingCircleActor);
+            ctx.pendingCircleActor = nullptr;
+        }
+
+        // 添加到标注集合
+        ctx.circleAnnotations.push_back(item);
+        const int annotationIndex = static_cast<int>(ctx.circleAnnotations.size()) - 1;
+
+        // 计算文本位置（圆的正上方）
+        if (ctx.renderer && ctx.onAnnotationCreated) {
+            double textPos[3];
+            const double textOffset = 4.0;
+
+            switch (ctx.orientation) {
+            case static_cast<SliceOrientation>(0): // Axial
+                textPos[0] = ctx.pendingCircleCenter[0];
+                textPos[1] = ctx.pendingCircleCenter[1] + item.radius + textOffset;
+                textPos[2] = ctx.pendingCircleCenter[2];
+                break;
+            case static_cast<SliceOrientation>(1): // Sagittal
+                textPos[0] = ctx.pendingCircleCenter[0];
+                textPos[1] = ctx.pendingCircleCenter[1];
+                textPos[2] = ctx.pendingCircleCenter[2] - item.radius - textOffset;
+                break;
+            case static_cast<SliceOrientation>(2): // Coronal
+                textPos[0] = ctx.pendingCircleCenter[0];
+                textPos[1] = ctx.pendingCircleCenter[1];
+                textPos[2] = ctx.pendingCircleCenter[2] - item.radius - textOffset;
+                break;
+            default:
+                textPos[0] = ctx.pendingCircleCenter[0];
+                textPos[1] = ctx.pendingCircleCenter[1] + item.radius + textOffset;
+                textPos[2] = ctx.pendingCircleCenter[2];
+                break;
+            }
+
+            double display[3];
+            ctx.renderer->SetWorldPoint(textPos[0], textPos[1], textPos[2], 1.0);
+            ctx.renderer->WorldToDisplay();
+            ctx.renderer->GetDisplayPoint(display);
+
+            // 触发回调，通知QML显示输入框
+            // annotationType: 1=圆形
+            ctx.onAnnotationCreated(display[0], display[1], annotationIndex, 1);
+        }
+
+        if (ctx.requestRender) ctx.requestRender();
+        else if (ctx.interactor) ctx.interactor->Render();
     }
 };
 
-// ===== Annotation Rectangle（标注 - 画笔）=====
+// ===== Annotation Pen（标注 - 画笔）=====
 class AnnotationPen final : public IInteractionState
 {
 public:

@@ -353,9 +353,24 @@ void SliceInteractorStyle::ResetInteractionState()
                 m_ctx.pendingRectActors[i] = nullptr;
             }
         }
+        // 清除圆形标注
+        for (auto& it : m_ctx.circleAnnotations) {
+            for (auto& a : it.actors) {
+                if (a) m_ctx.renderer->RemoveViewProp(a);
+            }
+            if (it.textActor) {
+                m_ctx.renderer->RemoveViewProp(it.textActor);
+            }
+        }
+        // 清除临时圆形
+        if (m_ctx.pendingCircleActor) {
+            m_ctx.renderer->RemoveViewProp(m_ctx.pendingCircleActor);
+            m_ctx.pendingCircleActor = nullptr;
+        }
     }
     m_ctx.measurements.clear();
     m_ctx.annotations.clear();
+    m_ctx.circleAnnotations.clear();
     m_ctx.pendingPoints.clear();
     m_ctx.pendingMode = ToolMode::None;
     m_ctx.pendingPointActors.clear();
@@ -392,6 +407,15 @@ void SliceInteractorStyle::UpdateMeasurementVisibility(int sliceNumber, bool seg
         if (it.textActor) it.textActor->SetVisibility(visible ? 1 : 0);
     }
 
+    // 圆形标注也要跟着切片显示/隐藏
+    for (auto& it : m_ctx.circleAnnotations) {
+        const bool visible = (it.segMode == segMode) && (it.sliceNumber == sliceNumber);
+        for (auto& a : it.actors) {
+            if (a) a->SetVisibility(visible ? 1 : 0);
+        }
+        if (it.textActor) it.textActor->SetVisibility(visible ? 1 : 0);
+    }
+
     // 未完成测量的"点"预览也要跟着切片显示/隐藏
     const bool pendingVisible =
         (m_ctx.pendingMode == ToolMode::MeasureDistance || m_ctx.pendingMode == ToolMode::MeasureAngle) &&
@@ -405,12 +429,12 @@ void SliceInteractorStyle::UpdateMeasurementVisibility(int sliceNumber, bool seg
     }
 }
 
-void SliceInteractorStyle::SetAnnotationCallback(std::function<void(double screenX, double screenY, int annotationIndex, SliceOrientation orientation)> callback)
+void SliceInteractorStyle::SetAnnotationCallback(std::function<void(double screenX, double screenY, int annotationIndex, SliceOrientation orientation, int annotationType)> callback)
 {
-    // 包装回调，添加orientation参数
-    m_ctx.onAnnotationCreated = [callback, this](double screenX, double screenY, int annotationIndex) {
+    // 包装回调，添加orientation和annotationType参数
+    m_ctx.onAnnotationCreated = [callback, this](double screenX, double screenY, int annotationIndex, int annotationType) {
         if (callback) {
-            callback(screenX, screenY, annotationIndex, m_orientation);
+            callback(screenX, screenY, annotationIndex, m_orientation, annotationType);
         }
     };
 }
@@ -446,7 +470,7 @@ void SliceInteractorStyle::UpdateAnnotationText(int index, const std::string& te
         double midY = (minY + maxY) * 0.5;
         
         // 文本向上偏移量（世界坐标单位，通常是mm）
-        const double textOffset = 4.0;  // 增加偏移量，使文字更靠上
+        const double textOffset = 3.0;  // 增加偏移量，使文字更靠上
         
         switch (m_orientation) {
         case SliceOrientation::Axial: // XY平面
@@ -530,6 +554,107 @@ void SliceInteractorStyle::DeleteAnnotation(int index)
 
     // 从向量中删除该标注
     m_ctx.annotations.erase(m_ctx.annotations.begin() + index);
+
+    // 刷新渲染
+    if (m_ctx.requestRender) {
+        m_ctx.requestRender();
+    }
+    else if (this->Interactor) {
+        this->Interactor->Render();
+    }
+}
+
+void SliceInteractorStyle::UpdateCircleAnnotationText(int index, const std::string& text)
+{
+    if (index < 0 || index >= static_cast<int>(m_ctx.circleAnnotations.size())) {
+        return;
+    }
+
+    auto& item = m_ctx.circleAnnotations[index];
+    item.labelText = text;
+
+    // 移除旧的文本actor
+    if (item.textActor && m_ctx.renderer) {
+        m_ctx.renderer->RemoveActor(item.textActor);
+    }
+
+    // 如果文本不为空，创建新的文本actor
+    if (!text.empty()) {
+        const double rgb[3]{ 1.0, 0.5, 0.0 };  // 橙色
+        const double textOffset = 3.0;
+        double textPos[3];
+
+        switch (m_orientation) {
+        case SliceOrientation::Axial:
+            textPos[0] = item.centerWorld[0];
+            textPos[1] = item.centerWorld[1] + item.radius + textOffset;
+            textPos[2] = item.centerWorld[2];
+            break;
+        case SliceOrientation::Sagittal:
+            textPos[0] = item.centerWorld[0];
+            textPos[1] = item.centerWorld[1];
+            textPos[2] = item.centerWorld[2] - item.radius - textOffset;
+            break;
+        case SliceOrientation::Coronal:
+            textPos[0] = item.centerWorld[0];
+            textPos[1] = item.centerWorld[1];
+            textPos[2] = item.centerWorld[2] - item.radius - textOffset;
+            break;
+        default:
+            textPos[0] = item.centerWorld[0];
+            textPos[1] = item.centerWorld[1] + item.radius + textOffset;
+            textPos[2] = item.centerWorld[2];
+            break;
+        }
+
+        auto textActor = vtkSmartPointer<vtkBillboardTextActor3D>::New();
+        textActor->SetPosition(textPos[0], textPos[1], textPos[2]);
+        textActor->SetInput(text.c_str());
+        auto textProp = textActor->GetTextProperty();
+        textProp->SetColor(rgb[0], rgb[1], rgb[2]);
+        textProp->SetFontSize(16);
+        textProp->SetBold(1);
+        textProp->SetJustificationToCentered();
+        textProp->SetVerticalJustificationToCentered();
+        textActor->PickableOff();
+
+        item.textActor = textActor;
+        if (m_ctx.renderer) {
+            m_ctx.renderer->AddActor(textActor);
+        }
+    }
+
+    // 刷新渲染
+    if (m_ctx.requestRender) {
+        m_ctx.requestRender();
+    }
+    else if (this->Interactor) {
+        this->Interactor->Render();
+    }
+}
+
+void SliceInteractorStyle::DeleteCircleAnnotation(int index)
+{
+    if (index < 0 || index >= static_cast<int>(m_ctx.circleAnnotations.size())) {
+        return;
+    }
+
+    auto& item = m_ctx.circleAnnotations[index];
+
+    // 从renderer中移除所有actors
+    if (m_ctx.renderer) {
+        for (auto& actor : item.actors) {
+            if (actor) {
+                m_ctx.renderer->RemoveViewProp(actor);
+            }
+        }
+        if (item.textActor) {
+            m_ctx.renderer->RemoveViewProp(item.textActor);
+        }
+    }
+
+    // 从向量中删除该标注
+    m_ctx.circleAnnotations.erase(m_ctx.circleAnnotations.begin() + index);
 
     // 刷新渲染
     if (m_ctx.requestRender) {
@@ -932,9 +1057,9 @@ void SliceVtkItemBase::setupView(vtkRenderWindow* renderWindow, SliceViewData* d
 
     // 设置标注回调
     auto mainVC = GET_SINGLETON(MainViewController);
-    style->SetAnnotationCallback([mainVC](double screenX, double screenY, int annotationIndex, SliceOrientation orientation) {
+    style->SetAnnotationCallback([mainVC](double screenX, double screenY, int annotationIndex, SliceOrientation orientation, int annotationType) {
         if (mainVC) {
-            emit mainVC->annotationCreated(screenX, screenY, annotationIndex, static_cast<int>(orientation));
+            emit mainVC->annotationCreated(screenX, screenY, annotationIndex, static_cast<int>(orientation), annotationType);
         }
     });
 
@@ -3255,6 +3380,28 @@ void MainViewController::deleteAnnotation(int orientation, int index)
     SliceInteractorStyle* style = SliceVtkItemBase::GetInteractorStyle(static_cast<SliceOrientation>(orientation));
     if (style) {
         style->DeleteAnnotation(index);
+    }
+    emit GET_SINGLETON(DicomDataModel)->segRefreshRenderer();
+}
+
+void MainViewController::updateCircleAnnotationText(int orientation, int index, const QString& text)
+{
+    qDebug() << QStringLiteral("更新圆形标注文字 - 方向:") << orientation << QStringLiteral("索引:") << index << QStringLiteral("文字:") << text;
+    
+    SliceInteractorStyle* style = SliceVtkItemBase::GetInteractorStyle(static_cast<SliceOrientation>(orientation));
+    if (style) {
+        style->UpdateCircleAnnotationText(index, text.toStdString());
+    }
+    emit GET_SINGLETON(DicomDataModel)->segRefreshRenderer();
+}
+
+void MainViewController::deleteCircleAnnotation(int orientation, int index)
+{
+    qDebug() << QStringLiteral("删除圆形标注 - 方向:") << orientation << QStringLiteral("索引:") << index;
+    
+    SliceInteractorStyle* style = SliceVtkItemBase::GetInteractorStyle(static_cast<SliceOrientation>(orientation));
+    if (style) {
+        style->DeleteCircleAnnotation(index);
     }
     emit GET_SINGLETON(DicomDataModel)->segRefreshRenderer();
 }
