@@ -10,6 +10,7 @@
 #include <vtkPropPicker.h>
 #include <vtkSphereSource.h>
 #include <cmath>
+#include <algorithm>
 
 namespace
 {
@@ -79,9 +80,14 @@ namespace
         auto t = vtkSmartPointer<vtkBillboardTextActor3D>::New();
         t->SetPosition(pos[0], pos[1], pos[2]);
         t->SetInput(text.c_str());
-        t->GetTextProperty()->SetColor(rgb[0], rgb[1], rgb[2]);
-        t->GetTextProperty()->SetFontSize(16);
-        t->GetTextProperty()->SetBold(1);
+        auto textProp = t->GetTextProperty();
+        textProp->SetColor(rgb[0], rgb[1], rgb[2]);
+        textProp->SetFontSize(16);
+        textProp->SetBold(1);
+        // 设置文本水平居中对齐
+        textProp->SetJustificationToCentered();
+        // 设置文本垂直居中对齐（可选）
+        textProp->SetVerticalJustificationToCentered();
         t->PickableOff();
         return t;
     }
@@ -518,14 +524,276 @@ class AnnotationRectangle final : public IInteractionState
 public:
     void OnEnter(InteractionContext& ctx, int x, int y) override
     {
+        if (!ctx.interactor) return;
+        ctx.renderer = ResolveRenderer(ctx.interactor, ctx.renderer);
+        if (!ctx.renderer) return;
+
+        // 记录起始点
+        ctx.startX = x;
+        ctx.startY = y;
+
+        // 获取世界坐标
+        if (!PickOnSlice(ctx, x, y, ctx.pendingRectStart)) {
+            return;
+        }
+
+        // 初始化结束点为起始点
+        ctx.pendingRectEnd[0] = ctx.pendingRectStart[0];
+        ctx.pendingRectEnd[1] = ctx.pendingRectStart[1];
+        ctx.pendingRectEnd[2] = ctx.pendingRectStart[2];
+
+        // 清空之前的临时矩形（如果有）
+        for (int i = 0; i < 4; ++i) {
+            if (ctx.pendingRectActors[i]) {
+                ctx.renderer->RemoveActor(ctx.pendingRectActors[i]);
+                ctx.pendingRectActors[i] = nullptr;
+            }
+        }
     }
 
     void OnMove(InteractionContext& ctx, int x, int y) override
     {
+        if (!ctx.interactor || !ctx.renderer) return;
+
+        // 获取当前鼠标位置的世界坐标
+        if (!PickOnSlice(ctx, x, y, ctx.pendingRectEnd)) {
+            return;
+        }
+
+        // 移除旧的临时矩形
+        for (int i = 0; i < 4; ++i) {
+            if (ctx.pendingRectActors[i]) {
+                ctx.renderer->RemoveActor(ctx.pendingRectActors[i]);
+            }
+        }
+
+        // 创建矩形的四个角点
+        double p0[3], p1[3], p2[3], p3[3];
+        
+        // 根据当前视图方向确定矩形的四个角
+        // p0-p1-p2-p3 形成矩形
+        // Axial (0): XY平面，Z固定
+        // Sagittal (1): YZ平面，X固定
+        // Coronal (2): XZ平面，Y固定
+        
+        switch (ctx.orientation) {
+        case static_cast<SliceOrientation>(0): // Axial - XY平面
+            p0[0] = ctx.pendingRectStart[0];
+            p0[1] = ctx.pendingRectStart[1];
+            p0[2] = ctx.pendingRectStart[2];
+            
+            p1[0] = ctx.pendingRectEnd[0];
+            p1[1] = ctx.pendingRectStart[1];
+            p1[2] = ctx.pendingRectStart[2];
+            
+            p2[0] = ctx.pendingRectEnd[0];
+            p2[1] = ctx.pendingRectEnd[1];
+            p2[2] = ctx.pendingRectStart[2];  // Z固定
+            
+            p3[0] = ctx.pendingRectStart[0];
+            p3[1] = ctx.pendingRectEnd[1];
+            p3[2] = ctx.pendingRectStart[2];  // Z固定
+            break;
+            
+        case static_cast<SliceOrientation>(1): // Sagittal - YZ平面
+            p0[0] = ctx.pendingRectStart[0];
+            p0[1] = ctx.pendingRectStart[1];
+            p0[2] = ctx.pendingRectStart[2];
+            
+            p1[0] = ctx.pendingRectStart[0];  // X固定
+            p1[1] = ctx.pendingRectEnd[1];
+            p1[2] = ctx.pendingRectStart[2];
+            
+            p2[0] = ctx.pendingRectStart[0];  // X固定
+            p2[1] = ctx.pendingRectEnd[1];
+            p2[2] = ctx.pendingRectEnd[2];
+            
+            p3[0] = ctx.pendingRectStart[0];  // X固定
+            p3[1] = ctx.pendingRectStart[1];
+            p3[2] = ctx.pendingRectEnd[2];
+            break;
+            
+        case static_cast<SliceOrientation>(2): // Coronal - XZ平面
+            p0[0] = ctx.pendingRectStart[0];
+            p0[1] = ctx.pendingRectStart[1];
+            p0[2] = ctx.pendingRectStart[2];
+            
+            p1[0] = ctx.pendingRectEnd[0];
+            p1[1] = ctx.pendingRectStart[1];  // Y固定
+            p1[2] = ctx.pendingRectStart[2];
+            
+            p2[0] = ctx.pendingRectEnd[0];
+            p2[1] = ctx.pendingRectStart[1];  // Y固定
+            p2[2] = ctx.pendingRectEnd[2];
+            
+            p3[0] = ctx.pendingRectStart[0];
+            p3[1] = ctx.pendingRectStart[1];  // Y固定
+            p3[2] = ctx.pendingRectEnd[2];
+            break;
+            
+        default:
+            // 默认使用Axial逻辑
+            p0[0] = ctx.pendingRectStart[0];
+            p0[1] = ctx.pendingRectStart[1];
+            p0[2] = ctx.pendingRectStart[2];
+            
+            p1[0] = ctx.pendingRectEnd[0];
+            p1[1] = ctx.pendingRectStart[1];
+            p1[2] = ctx.pendingRectStart[2];
+            
+            p2[0] = ctx.pendingRectEnd[0];
+            p2[1] = ctx.pendingRectEnd[1];
+            p2[2] = ctx.pendingRectEnd[2];
+            
+            p3[0] = ctx.pendingRectStart[0];
+            p3[1] = ctx.pendingRectEnd[1];
+            p3[2] = ctx.pendingRectEnd[2];
+            break;
+        }
+
+        // 创建四条边（黄色）
+        const double rgb[3]{ 0.0, 1.0, 1.0 };  // 青色
+        ctx.pendingRectActors[0] = CreateWorldLine(p0, p1, rgb, 2.5);
+        ctx.pendingRectActors[1] = CreateWorldLine(p1, p2, rgb, 2.5);
+        ctx.pendingRectActors[2] = CreateWorldLine(p2, p3, rgb, 2.5);
+        ctx.pendingRectActors[3] = CreateWorldLine(p3, p0, rgb, 2.5);
+
+        // 添加到渲染器
+        for (int i = 0; i < 4; ++i) {
+            ctx.renderer->AddActor(ctx.pendingRectActors[i]);
+        }
+
+        if (ctx.requestRender) ctx.requestRender();
+        else if (ctx.interactor) ctx.interactor->Render();
     }
 
     void OnExit(InteractionContext& ctx, int x, int y) override
     {
+        if (!ctx.renderer) return;
+
+        // 检查是否有效（矩形面积不能太小）
+        // 只计算对应平面上的距离
+        double dist = 0.0;
+        const double dx = ctx.pendingRectEnd[0] - ctx.pendingRectStart[0];
+        const double dy = ctx.pendingRectEnd[1] - ctx.pendingRectStart[1];
+        const double dz = ctx.pendingRectEnd[2] - ctx.pendingRectStart[2];
+        
+        switch (ctx.orientation) {
+        case static_cast<SliceOrientation>(0): // Axial - XY平面
+            dist = std::sqrt(dx*dx + dy*dy);
+            break;
+        case static_cast<SliceOrientation>(1): // Sagittal - YZ平面
+            dist = std::sqrt(dy*dy + dz*dz);
+            break;
+        case static_cast<SliceOrientation>(2): // Coronal - XZ平面
+            dist = std::sqrt(dx*dx + dz*dz);
+            break;
+        default:
+            dist = std::sqrt(dx*dx + dy*dy + dz*dz);
+            break;
+        }
+        
+        if (dist < 1.0) {  // 太小的矩形忽略
+            // 清除临时矩形
+            for (int i = 0; i < 4; ++i) {
+                if (ctx.pendingRectActors[i]) {
+                    ctx.renderer->RemoveActor(ctx.pendingRectActors[i]);
+                    ctx.pendingRectActors[i] = nullptr;
+                }
+            }
+            if (ctx.requestRender) ctx.requestRender();
+            return;
+        }
+
+        // 创建正式的矩形标注项
+        InteractionContext::AnnotationRectItem item;
+        item.segMode = ctx.model ? ctx.model->isSegDataMode() : false;
+        item.sliceNumber = CurrentSliceNumber(ctx);
+        item.startWorld[0] = ctx.pendingRectStart[0];
+        item.startWorld[1] = ctx.pendingRectStart[1];
+        item.startWorld[2] = ctx.pendingRectStart[2];
+        item.endWorld[0] = ctx.pendingRectEnd[0];
+        item.endWorld[1] = ctx.pendingRectEnd[1];
+        item.endWorld[2] = ctx.pendingRectEnd[2];
+        item.labelText = "";  // 初始为空，等待用户输入
+
+        // 将临时actor移入正式item
+        for (int i = 0; i < 4; ++i) {
+            if (ctx.pendingRectActors[i]) {
+                item.actors.push_back(ctx.pendingRectActors[i]);
+                ctx.pendingRectActors[i] = nullptr;
+            }
+        }
+
+        // 添加到标注集合
+        ctx.annotations.push_back(item);
+        const int annotationIndex = static_cast<int>(ctx.annotations.size()) - 1;
+
+        // 将世界坐标转换为屏幕坐标（用于QML显示输入框）
+        if (ctx.renderer && ctx.onAnnotationCreated) {
+            // 根据视图方向选择合适的角点作为输入框位置
+            // 目标：在屏幕右上方显示输入框
+            double textPos[3];
+            
+            // 首先确定矩形的边界（最小值和最大值）
+            double minX = std::min(ctx.pendingRectStart[0], ctx.pendingRectEnd[0]);
+            double maxX = std::max(ctx.pendingRectStart[0], ctx.pendingRectEnd[0]);
+            double minY = std::min(ctx.pendingRectStart[1], ctx.pendingRectEnd[1]);
+            double maxY = std::max(ctx.pendingRectStart[1], ctx.pendingRectEnd[1]);
+            double minZ = std::min(ctx.pendingRectStart[2], ctx.pendingRectEnd[2]);
+            double maxZ = std::max(ctx.pendingRectStart[2], ctx.pendingRectEnd[2]);
+            
+            // 计算中点
+            double midX = (minX + maxX) * 0.5;
+            double midY = (minY + maxY) * 0.5;
+            
+            // 文本向上偏移量（世界坐标单位，通常是mm）
+            const double textOffset = 4.0;  // 增加偏移量，使文字更靠上
+            
+            switch (ctx.orientation) {
+            case static_cast<SliceOrientation>(0): // Axial - XY平面
+                // 相机ViewUp(0,1,0)：Y向上
+                // 矩形正上方 = 上边中间 + 向上偏移
+                textPos[0] = midX;
+                textPos[1] = maxY + textOffset;  // Y向上，增加Y值
+                textPos[2] = ctx.pendingRectStart[2];
+                break;
+                
+            case static_cast<SliceOrientation>(1): // Sagittal - YZ平面
+                // 相机ViewUp(0,0,-1)：-Z向上
+                // 矩形正上方 = 上边中间 + 向上偏移
+                textPos[0] = ctx.pendingRectStart[0];
+                textPos[1] = midY;
+                textPos[2] = minZ - textOffset;  // -Z向上，减小Z值
+                break;
+                
+            case static_cast<SliceOrientation>(2): // Coronal - XZ平面
+                // 相机ViewUp(0,0,-1)：-Z向上
+                // 矩形正上方 = 上边中间 + 向上偏移
+                textPos[0] = midX;
+                textPos[1] = ctx.pendingRectStart[1];
+                textPos[2] = minZ - textOffset;  // -Z向上，减小Z值
+                break;
+                
+            default:
+                textPos[0] = midX;
+                textPos[1] = maxY + textOffset;
+                textPos[2] = ctx.pendingRectEnd[2];
+                break;
+            }
+            
+            // 转换为屏幕坐标
+            double display[3];
+            ctx.renderer->SetWorldPoint(textPos[0], textPos[1], textPos[2], 1.0);
+            ctx.renderer->WorldToDisplay();
+            ctx.renderer->GetDisplayPoint(display);
+            
+            // 触发回调，通知QML显示输入框
+            ctx.onAnnotationCreated(display[0], display[1], annotationIndex);
+        }
+
+        if (ctx.requestRender) ctx.requestRender();
+        else if (ctx.interactor) ctx.interactor->Render();
     }
 };
 

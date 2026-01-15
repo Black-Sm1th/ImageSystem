@@ -29,6 +29,7 @@
 #include <vtkProperty2D.h>
 #include <memory>
 #include <optional>
+#include <map>
 
 // 枚举类型：切片方向
 enum class SliceOrientation : int {
@@ -66,6 +67,15 @@ public:
     // Reset：清除测量/取消当前 state（相机重置由视图层完成）
     void ResetInteractionState();
     void UpdateMeasurementVisibility(int sliceNumber, bool segMode);
+
+    // 设置标注完成回调
+    void SetAnnotationCallback(std::function<void(double screenX, double screenY, int annotationIndex, SliceOrientation orientation)> callback);
+
+    // 更新标注文字
+    void UpdateAnnotationText(int index, const std::string& text);
+
+    // 删除标注
+    void DeleteAnnotation(int index);
 
 protected:
     SliceInteractorStyle();
@@ -119,6 +129,9 @@ public:
 
     vtkUserData initializeVTK(vtkRenderWindow* renderWindow) override;
 
+    // 获取指定方向的interactor style
+    static SliceInteractorStyle* GetInteractorStyle(SliceOrientation orientation);
+
 private slots:
     void onDataLoaded();
     void onSegDataLoaded();
@@ -147,6 +160,8 @@ private:
     const char* m_viewName;
 	vtkSmartPointer<vtkAxisActor2D> m_axisActor;
 
+    // 静态映射：方向 -> interactor style
+    static std::map<SliceOrientation, vtkSmartPointer<SliceInteractorStyle>> s_interactorStyles;
 };
 
 // 轴向视图（Axial - XY平面）
@@ -254,6 +269,8 @@ public:
     Q_INVOKABLE void startAnalysisBrainAge(const QString& path, bool preprocess);
     Q_INVOKABLE void generatePdfReport(const QString& savePath);
     Q_INVOKABLE bool isDeepprepOutput(const QString& outputPath);
+    Q_INVOKABLE void updateAnnotationText(int orientation, int index, const QString& text);
+    Q_INVOKABLE void deleteAnnotation(int orientation, int index);
     Q_PROPERTY(QString fmriprepLog READ fmriprepLog NOTIFY fmriprepLogUpdated)
     QString fmriprepLog() const { return m_fmriprepLog; }
     Q_PROPERTY(QString deepprepLog READ deepprepLog NOTIFY deepprepLogUpdated)
@@ -268,6 +285,7 @@ signals:
     void networkTableIndexChanged(int index);
     void fmriprepLogUpdated();
     void deepprepLogUpdated();
+    void annotationCreated(double screenX, double screenY, int annotationIndex, int orientation);
     
 private:
     bool loadOutputData(const QString& path);

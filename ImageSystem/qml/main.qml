@@ -1397,4 +1397,45 @@ ApplicationWindow {
             }
         }
     }
+
+    // 标注输入框（全局，用于所有视图）
+    AnnotationInputBox {
+        id: annotationInputBox
+        parent: win.contentItem
+        
+        onTextConfirmed: {
+            // 将文字更新到对应的标注
+            $MainViewController.updateAnnotationText(orientation, annotationIndex, text)
+        }
+        
+        onCancelled: {
+            // 用户取消输入，删除这个标注
+            $MainViewController.deleteAnnotation(orientation, annotationIndex)
+        }
+    }
+
+    // 连接MainViewController的标注创建信号
+    Connections {
+        target: $MainViewController
+        
+        function onAnnotationCreated(screenX, screenY, annotationIndex, orientation) {
+            // 根据orientation选择对应的视图容器
+            var targetContainer = null
+            if (orientation === 0) {
+                // Axial - 轴向视图
+                targetContainer = fourViewPanel.axialViewContainer
+            } else if (orientation === 1) {
+                // Sagittal - 矢状视图
+                targetContainer = fourViewPanel.sagittalViewContainer
+            } else if (orientation === 2) {
+                // Coronal - 冠状视图
+                targetContainer = fourViewPanel.coronalViewContainer
+            }
+            
+            // 显示输入框，传入targetContainer让show方法内部设置parent
+            if (targetContainer) {
+                annotationInputBox.show(screenX, screenY, annotationIndex, orientation, targetContainer)
+            }
+        }
+    }
 }

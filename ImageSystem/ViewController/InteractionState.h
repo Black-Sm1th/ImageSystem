@@ -85,6 +85,29 @@ struct InteractionContext
 
     // 已完成的测量集合
     std::vector<MeasurementItem> measurements;
+
+    // ===== 矩形标注（可多个，按切片显示/隐藏）=====
+    struct AnnotationRectItem
+    {
+        bool segMode{ false };           // 创建时是否在 segDataMode
+        int sliceNumber{ 0 };            // 创建时所在切片号
+        double startWorld[3]{ 0,0,0 };   // 起始点（世界坐标）
+        double endWorld[3]{ 0,0,0 };     // 结束点（世界坐标） 
+        std::string labelText;           // 标注文字
+        std::vector<vtkSmartPointer<vtkActor>> actors;  // 矩形边框
+        vtkSmartPointer<vtkBillboardTextActor3D> textActor;  // 标注文本
+    };
+
+    // 矩形标注拖动过程中的临时actor（松手后移入AnnotationRectItem）
+    vtkSmartPointer<vtkActor> pendingRectActors[4];  // 四条边
+    double pendingRectStart[3]{ 0,0,0 };
+    double pendingRectEnd[3]{ 0,0,0 };
+
+    // 已完成的矩形标注集合
+    std::vector<AnnotationRectItem> annotations;
+
+    // 标注完成后的回调（通知QML层显示输入框）
+    std::function<void(double screenX, double screenY, int annotationIndex)> onAnnotationCreated;
 };
 
 class IInteractionState

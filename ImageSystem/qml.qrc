@@ -14,6 +14,7 @@
         <file>image/eye.png</file>
         <file>image/eyeSlash.png</file>
         <file>qml/components/SingleLineTextInput.qml</file>
+        <file>qml/components/AnnotationInputBox.qml</file>
         <file>image/vector.png</file>
         <file>qml/components/MessageBox.qml</file>
         <file>image/loading.gif</file>

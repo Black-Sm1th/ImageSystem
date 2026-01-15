@@ -35,7 +35,9 @@ Item {
     readonly property bool isSegDataMode: $DicomDataModel.isSegDataMode
     // VTK视图填充比例（与C++端applyParallelScale保持一致）
     readonly property real targetFill: 0.95
-
+    readonly property var axialViewContainer: axialViewContainer
+    readonly property var sagittalViewContainer: sagittalViewContainer
+    readonly property var coronalViewContainer: coronalViewContainer
     function clamp(v, minv, maxv) {
         return Math.max(minv, Math.min(maxv, v));
     }
@@ -186,6 +188,7 @@ Item {
 
     // 左上：轴向视图
     Rectangle {
+        id: axialViewContainer
         anchors.top: parent.top
         anchors.left: parent.left
         width: (parent.width - 10) / 2
@@ -416,6 +419,7 @@ Item {
 
     // 右上：矢状视图
     Rectangle {
+        id: sagittalViewContainer
         anchors.top: parent.top
         anchors.right: parent.right
         width: (parent.width - 10) / 2
@@ -632,6 +636,7 @@ Item {
 
     // 左下：冠状视图
     Rectangle {
+        id: coronalViewContainer
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         width: (parent.width - 10) / 2
