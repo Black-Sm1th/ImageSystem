@@ -12,6 +12,7 @@
 #include "Model/DicomDataModel.h"
 #include "Modules/Version.h"
 #include "Modules/DicomNetwork.h"
+#include "Modules/BatchMriScanner.h"
 
 // 全局键盘事件过滤：不依赖 QML focus，把 1-6 写入 DicomDataModel.toolMode
 class GlobalKeyFilter : public QObject
@@ -80,6 +81,56 @@ VTK_MODULE_INIT(vtkRenderingVolumeOpenGL2);
 // ============================================================================
 // DICOM 网络测试函数
 // ============================================================================
+// ============================================================================
+// 批量 MRI 扫描测试函数
+// ============================================================================
+void testBatchMriScan(const QString& rootPath)
+{
+    qDebug() << "\n========== Batch MRI Scan Test ==========";
+    qDebug() << "Scanning Directory:" << rootPath;
+    qDebug() << "==========================================\n";
+    
+    BatchMriScanner scanner;
+    
+    // Connect progress signals
+    QObject::connect(&scanner, &BatchMriScanner::progressUpdated, [](const ScanProgress& progress) {
+        static int lastPercent = -1;
+        int currentPercent = (int)(progress.percentage() * 100);
+        if (currentPercent != lastPercent && currentPercent % 5 == 0) {
+            lastPercent = currentPercent;
+            qDebug() << QStringLiteral("Progress: %1% (%2/%3) - T1: %4, BOLD: %5, Paired: %6")
+                        .arg(currentPercent)
+                        .arg(progress.scannedFolders)
+                        .arg(progress.totalFolders)
+                        .arg(progress.foundT1Count)
+                        .arg(progress.foundBoldCount)
+                        .arg(progress.pairedCount);
+            if (!progress.currentFolder.isEmpty()) {
+                qDebug() << "      " << progress.currentFolder;
+            }
+        }
+    });
+    
+    // Synchronous scan
+    QList<MriPairResult> results = scanner.scanSync(rootPath, 3);
+    
+    qDebug() << QStringLiteral("\n========== Scan Results Summary ==========");
+    qDebug() << QStringLiteral("Paired successfully: %1 pairs").arg(results.size());
+    
+    for (int i = 0; i < results.size(); ++i) {
+        const auto& pair = results[i];
+        qDebug() << QStringLiteral("\n[%1] Patient: %2 (ID: %3)")
+                    .arg(i + 1).arg(pair.patientName).arg(pair.patientId);
+        qDebug() << QStringLiteral("    Sex: %1  BirthDate: %2  StudyDate: %3")
+                    .arg(pair.patientSex).arg(pair.patientBirthDate).arg(pair.studyDate);
+        qDebug() << QStringLiteral("    T1W Series: %1 (%2 images)").arg(pair.t1SeriesDesc).arg(pair.t1ImageCount);
+        qDebug() << QStringLiteral("        Folder: %1").arg(pair.t1Path);
+        qDebug() << QStringLiteral("    BOLD Series: %1 (%2 images)").arg(pair.boldSeriesDesc).arg(pair.boldImageCount);
+        qDebug() << QStringLiteral("        Folder: %1").arg(pair.boldPath);
+    }
+    qDebug() << QStringLiteral("\n====================================\n");
+}
+
 //void testDicomCFind(const QString& patientId)
 //{
 //    qDebug() << "\n========== DICOM C-FIND 测试 ==========";
@@ -140,6 +191,7 @@ VTK_MODULE_INIT(vtkRenderingVolumeOpenGL2);
 
 int main(int argc, char* argv[])
 {
+    system("chcp 65001");
     QQuickVTKItem::setGraphicsApi();
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -155,8 +207,10 @@ int main(int argc, char* argv[])
     QtWebEngine::initialize();
     QGuiApplication app(argc, argv);
     
-    // ====== 检查命令行参数，执行 DICOM 测试 ======
-    //testDicomCFind("N12188674");
+
+
+    //testBatchMriScan("D:/brain_datasets");
+
 
 
     // 安装全局键盘监听（不依赖焦点）
