@@ -554,15 +554,8 @@ ApplicationWindow {
                 }
             }
             LeftToolButton {
-                id: resetToolBtn
-                iconSource: "qrc:/image/toolReset.png"
-                onClicked: {
-                    $DicomDataModel.resetAllInteractions()
-                }
-            }
-            LeftToolButton {
                 id: annotationRecToolBtn
-                iconSource: ""
+                iconSource: "qrc:/image/toolRectangle.png"
                 isSelected: $DicomDataModel.toolMode === 7
                 onClicked: {
                     if(!annotationRecToolBtn.isSelected){
@@ -575,7 +568,7 @@ ApplicationWindow {
             }
             LeftToolButton {
                 id: annotationCircleToolBtn
-                iconSource: ""
+                iconSource: "qrc:/image/toolCircle.png"
                 isSelected: $DicomDataModel.toolMode === 8
                 onClicked: {
                     if(!annotationCircleToolBtn.isSelected){
@@ -584,6 +577,26 @@ ApplicationWindow {
                     }else{
                         $DicomDataModel.setToolMode(0)
                     }
+                }
+            }
+            LeftToolButton {
+                id: annotationPenToolBtn
+                iconSource: "qrc:/image/toolPen.png"
+                isSelected: $DicomDataModel.toolMode === 9
+                onClicked: {
+                    if(!annotationPenToolBtn.isSelected){
+                        $DicomDataModel.setToolMode(9)
+                        $DicomDataModel.setCrosshairEnabled(false)
+                    }else{
+                        $DicomDataModel.setToolMode(0)
+                    }
+                }
+            }
+            LeftToolButton {
+                id: resetToolBtn
+                iconSource: "qrc:/image/toolReset.png"
+                onClicked: {
+                    $DicomDataModel.resetAllInteractions()
                 }
             }
         }
@@ -1424,6 +1437,9 @@ ApplicationWindow {
             } else if (annotationType === 1) {
                 // 圆形标注
                 $MainViewController.updateCircleAnnotationText(orientation, annotationIndex, text)
+            } else if (annotationType === 2) {
+                // 画笔标注
+                $MainViewController.updatePenAnnotationText(orientation, annotationIndex, text)
             }
         }
         
@@ -1435,6 +1451,9 @@ ApplicationWindow {
             } else if (annotationType === 1) {
                 // 圆形标注
                 $MainViewController.deleteCircleAnnotation(orientation, annotationIndex)
+            } else if (annotationType === 2) {
+                // 画笔标注
+                $MainViewController.deletePenAnnotation(orientation, annotationIndex)
             }
         }
     }

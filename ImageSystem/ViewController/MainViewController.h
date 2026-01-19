@@ -83,6 +83,12 @@ public:
     // 删除圆形标注
     void DeleteCircleAnnotation(int index);
 
+    // 更新画笔标注文字
+    void UpdatePenAnnotationText(int index, const std::string& text);
+
+    // 删除画笔标注
+    void DeletePenAnnotation(int index);
+
 protected:
     SliceInteractorStyle();
 
@@ -279,6 +285,8 @@ public:
     Q_INVOKABLE void deleteAnnotation(int orientation, int index);
     Q_INVOKABLE void updateCircleAnnotationText(int orientation, int index, const QString& text);
     Q_INVOKABLE void deleteCircleAnnotation(int orientation, int index);
+    Q_INVOKABLE void updatePenAnnotationText(int orientation, int index, const QString& text);
+    Q_INVOKABLE void deletePenAnnotation(int orientation, int index);
     Q_PROPERTY(QString fmriprepLog READ fmriprepLog NOTIFY fmriprepLogUpdated)
     QString fmriprepLog() const { return m_fmriprepLog; }
     Q_PROPERTY(QString deepprepLog READ deepprepLog NOTIFY deepprepLogUpdated)

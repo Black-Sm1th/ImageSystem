@@ -783,7 +783,7 @@ public:
             double midY = (minY + maxY) * 0.5;
             
             // 文本向上偏移量（世界坐标单位，通常是mm）
-            const double textOffset = 4.0;  // 增加偏移量，使文字更靠上
+            const double textOffset = 0.0;  // 增加偏移量，使文字更靠上
             
             switch (ctx.orientation) {
             case static_cast<SliceOrientation>(0): // Axial - XY平面
@@ -978,7 +978,7 @@ public:
         // 计算文本位置（圆的正上方）
         if (ctx.renderer && ctx.onAnnotationCreated) {
             double textPos[3];
-            const double textOffset = 4.0;
+            const double textOffset = 0.0;
 
             switch (ctx.orientation) {
             case static_cast<SliceOrientation>(0): // Axial
@@ -1024,17 +1024,146 @@ class AnnotationPen final : public IInteractionState
 public:
     void OnEnter(InteractionContext& ctx, int x, int y) override
     {
+        if (!ctx.interactor) return;
+        ctx.renderer = ResolveRenderer(ctx.interactor, ctx.renderer);
+        if (!ctx.renderer) return;
 
+        // 开始新的画笔路径
+        ctx.pendingPenPoints.clear();
+        ctx.pendingPenActors.clear();
+
+        // 获取起始点（初始化为0避免垃圾值）
+        double startWorld[3] = {0, 0, 0};
+        if (PickOnSlice(ctx, x, y, startWorld)) {
+            ctx.pendingPenPoints.push_back({ startWorld[0], startWorld[1], startWorld[2] });
+        }
     }
 
     void OnMove(InteractionContext& ctx, int x, int y) override
     {
+        if (!ctx.interactor || !ctx.renderer) return;
+        if (ctx.pendingPenPoints.empty()) return;
 
+        // 获取当前点
+        double currentWorld[3];
+        if (!PickOnSlice(ctx, x, y, currentWorld)) {
+            return;
+        }
+
+        // 先复制最后一个点的值（避免push_back后引用失效）
+        std::array<double, 3> lastPoint = ctx.pendingPenPoints.back();
+
+        // 检查距离，避免点太密集
+        const double dx = currentWorld[0] - lastPoint[0];
+        const double dy = currentWorld[1] - lastPoint[1];
+        const double dz = currentWorld[2] - lastPoint[2];
+        const double dist = std::sqrt(dx*dx + dy*dy + dz*dz);
+
+        if (dist < 0.5) return;  // 距离太小，跳过
+
+        // 添加新点
+        ctx.pendingPenPoints.push_back({ currentWorld[0], currentWorld[1], currentWorld[2] });
+
+        // 创建线段连接最后两个点（绿色）
+        const double rgb[3]{ 0.5, 1.0, 0.5 };
+        auto lineActor = CreateWorldLine(lastPoint.data(), currentWorld, rgb, 3.0);
+        ctx.pendingPenActors.push_back(lineActor);
+        ctx.renderer->AddActor(lineActor);
+
+        if (ctx.requestRender) ctx.requestRender();
+        else if (ctx.interactor) ctx.interactor->Render();
     }
 
     void OnExit(InteractionContext& ctx, int x, int y) override
     {
+        if (!ctx.renderer) return;
+        if (ctx.pendingPenPoints.size() < 2) {
+            // 路径太短，清除
+            for (auto& actor : ctx.pendingPenActors) {
+                if (actor) ctx.renderer->RemoveActor(actor);
+            }
+            ctx.pendingPenPoints.clear();
+            ctx.pendingPenActors.clear();
+            if (ctx.requestRender) ctx.requestRender();
+            return;
+        }
 
+        // 创建正式的画笔标注项
+        InteractionContext::AnnotationPenItem item;
+        item.segMode = ctx.model ? ctx.model->isSegDataMode() : false;
+        item.sliceNumber = CurrentSliceNumber(ctx);
+        item.pathPoints = ctx.pendingPenPoints;
+        item.labelText = "";
+
+        // 将临时actors移入正式item
+        for (auto& actor : ctx.pendingPenActors) {
+            if (actor) {
+                item.actors.push_back(actor);
+            }
+        }
+        ctx.pendingPenActors.clear();
+
+        // 添加到标注集合
+        ctx.penAnnotations.push_back(item);
+        const int annotationIndex = static_cast<int>(ctx.penAnnotations.size()) - 1;
+
+        // 计算文本位置（路径边界的正上方中间）
+        if (ctx.renderer && ctx.onAnnotationCreated && !item.pathPoints.empty()) {
+            // 计算路径边界
+            double minX = item.pathPoints[0][0], maxX = minX;
+            double minY = item.pathPoints[0][1], maxY = minY;
+            double minZ = item.pathPoints[0][2], maxZ = minZ;
+
+            for (const auto& pt : item.pathPoints) {
+                minX = std::min(minX, pt[0]);
+                maxX = std::max(maxX, pt[0]);
+                minY = std::min(minY, pt[1]);
+                maxY = std::max(maxY, pt[1]);
+                minZ = std::min(minZ, pt[2]);
+                maxZ = std::max(maxZ, pt[2]);
+            }
+
+            double midX = (minX + maxX) * 0.5;
+            double midY = (minY + maxY) * 0.5;
+            const double textOffset = 1.0;
+
+            double textPos[3];
+            switch (ctx.orientation) {
+            case static_cast<SliceOrientation>(0): // Axial
+                textPos[0] = midX;
+                textPos[1] = maxY + textOffset;
+                textPos[2] = item.pathPoints[0][2];
+                break;
+            case static_cast<SliceOrientation>(1): // Sagittal
+                textPos[0] = item.pathPoints[0][0];
+                textPos[1] = midY;
+                textPos[2] = minZ - textOffset;
+                break;
+            case static_cast<SliceOrientation>(2): // Coronal
+                textPos[0] = midX;
+                textPos[1] = item.pathPoints[0][1];
+                textPos[2] = minZ - textOffset;
+                break;
+            default:
+                textPos[0] = midX;
+                textPos[1] = maxY + textOffset;
+                textPos[2] = item.pathPoints[0][2];
+                break;
+            }
+
+            double display[3];
+            ctx.renderer->SetWorldPoint(textPos[0], textPos[1], textPos[2], 1.0);
+            ctx.renderer->WorldToDisplay();
+            ctx.renderer->GetDisplayPoint(display);
+
+            // 触发回调，通知QML显示输入框
+            // annotationType: 2=画笔
+            ctx.onAnnotationCreated(display[0], display[1], annotationIndex, 2);
+        }
+
+        ctx.pendingPenPoints.clear();
+        if (ctx.requestRender) ctx.requestRender();
+        else if (ctx.interactor) ctx.interactor->Render();
     }
 };
 

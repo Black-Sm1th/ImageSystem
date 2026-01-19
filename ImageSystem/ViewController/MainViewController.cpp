@@ -367,11 +367,27 @@ void SliceInteractorStyle::ResetInteractionState()
             m_ctx.renderer->RemoveViewProp(m_ctx.pendingCircleActor);
             m_ctx.pendingCircleActor = nullptr;
         }
+        // 清除画笔标注
+        for (auto& it : m_ctx.penAnnotations) {
+            for (auto& a : it.actors) {
+                if (a) m_ctx.renderer->RemoveViewProp(a);
+            }
+            if (it.textActor) {
+                m_ctx.renderer->RemoveViewProp(it.textActor);
+            }
+        }
+        // 清除临时画笔
+        for (auto& a : m_ctx.pendingPenActors) {
+            if (a) m_ctx.renderer->RemoveViewProp(a);
+        }
+        m_ctx.pendingPenActors.clear();
     }
     m_ctx.measurements.clear();
     m_ctx.annotations.clear();
     m_ctx.circleAnnotations.clear();
+    m_ctx.penAnnotations.clear();
     m_ctx.pendingPoints.clear();
+    m_ctx.pendingPenPoints.clear();
     m_ctx.pendingMode = ToolMode::None;
     m_ctx.pendingPointActors.clear();
     m_ctx.pendingSegMode = false;
@@ -409,6 +425,15 @@ void SliceInteractorStyle::UpdateMeasurementVisibility(int sliceNumber, bool seg
 
     // 圆形标注也要跟着切片显示/隐藏
     for (auto& it : m_ctx.circleAnnotations) {
+        const bool visible = (it.segMode == segMode) && (it.sliceNumber == sliceNumber);
+        for (auto& a : it.actors) {
+            if (a) a->SetVisibility(visible ? 1 : 0);
+        }
+        if (it.textActor) it.textActor->SetVisibility(visible ? 1 : 0);
+    }
+
+    // 画笔标注也要跟着切片显示/隐藏
+    for (auto& it : m_ctx.penAnnotations) {
         const bool visible = (it.segMode == segMode) && (it.sliceNumber == sliceNumber);
         for (auto& a : it.actors) {
             if (a) a->SetVisibility(visible ? 1 : 0);
@@ -665,6 +690,124 @@ void SliceInteractorStyle::DeleteCircleAnnotation(int index)
     }
 }
 
+void SliceInteractorStyle::UpdatePenAnnotationText(int index, const std::string& text)
+{
+    if (index < 0 || index >= static_cast<int>(m_ctx.penAnnotations.size())) {
+        return;
+    }
+
+    auto& item = m_ctx.penAnnotations[index];
+    item.labelText = text;
+
+    // 移除旧的文本actor
+    if (item.textActor && m_ctx.renderer) {
+        m_ctx.renderer->RemoveActor(item.textActor);
+    }
+
+    // 如果文本不为空，创建新的文本actor
+    if (!text.empty() && !item.pathPoints.empty()) {
+        const double rgb[3]{ 0.5, 1.0, 0.5 };  // 绿色
+        const double textOffset = 3.0;
+
+        // 计算路径边界
+        double minX = item.pathPoints[0][0], maxX = minX;
+        double minY = item.pathPoints[0][1], maxY = minY;
+        double minZ = item.pathPoints[0][2], maxZ = minZ;
+
+        for (const auto& pt : item.pathPoints) {
+            minX = std::min(minX, pt[0]);
+            maxX = std::max(maxX, pt[0]);
+            minY = std::min(minY, pt[1]);
+            maxY = std::max(maxY, pt[1]);
+            minZ = std::min(minZ, pt[2]);
+            maxZ = std::max(maxZ, pt[2]);
+        }
+
+        double midX = (minX + maxX) * 0.5;
+        double midY = (minY + maxY) * 0.5;
+        double textPos[3];
+
+        switch (m_orientation) {
+        case SliceOrientation::Axial:
+            textPos[0] = midX;
+            textPos[1] = maxY + textOffset;
+            textPos[2] = item.pathPoints[0][2];
+            break;
+        case SliceOrientation::Sagittal:
+            textPos[0] = item.pathPoints[0][0];
+            textPos[1] = midY;
+            textPos[2] = minZ - textOffset;
+            break;
+        case SliceOrientation::Coronal:
+            textPos[0] = midX;
+            textPos[1] = item.pathPoints[0][1];
+            textPos[2] = minZ - textOffset;
+            break;
+        default:
+            textPos[0] = midX;
+            textPos[1] = maxY + textOffset;
+            textPos[2] = item.pathPoints[0][2];
+            break;
+        }
+
+        auto textActor = vtkSmartPointer<vtkBillboardTextActor3D>::New();
+        textActor->SetPosition(textPos[0], textPos[1], textPos[2]);
+        textActor->SetInput(text.c_str());
+        auto textProp = textActor->GetTextProperty();
+        textProp->SetColor(rgb[0], rgb[1], rgb[2]);
+        textProp->SetFontSize(16);
+        textProp->SetBold(1);
+        textProp->SetJustificationToCentered();
+        textProp->SetVerticalJustificationToCentered();
+        textActor->PickableOff();
+
+        item.textActor = textActor;
+        if (m_ctx.renderer) {
+            m_ctx.renderer->AddActor(textActor);
+        }
+    }
+
+    // 刷新渲染
+    if (m_ctx.requestRender) {
+        m_ctx.requestRender();
+    }
+    else if (this->Interactor) {
+        this->Interactor->Render();
+    }
+}
+
+void SliceInteractorStyle::DeletePenAnnotation(int index)
+{
+    if (index < 0 || index >= static_cast<int>(m_ctx.penAnnotations.size())) {
+        return;
+    }
+
+    auto& item = m_ctx.penAnnotations[index];
+
+    // 从renderer中移除所有actors
+    if (m_ctx.renderer) {
+        for (auto& actor : item.actors) {
+            if (actor) {
+                m_ctx.renderer->RemoveViewProp(actor);
+            }
+        }
+        if (item.textActor) {
+            m_ctx.renderer->RemoveViewProp(item.textActor);
+        }
+    }
+
+    // 从向量中删除该标注
+    m_ctx.penAnnotations.erase(m_ctx.penAnnotations.begin() + index);
+
+    // 刷新渲染
+    if (m_ctx.requestRender) {
+        m_ctx.requestRender();
+    }
+    else if (this->Interactor) {
+        this->Interactor->Render();
+    }
+}
+
 int SliceInteractorStyle::getCurrentSlice() const
 {
     // 根据当前数据模式选择切片
@@ -909,6 +1052,15 @@ void SliceVtkItemBase::onSegDataLoaded()
             setupCamera(data->renderer);
             applyParallelScale(data->imageSlice, data->renderer);
             style->rescaleAxisActor();
+            // 保存到静态映射中
+            s_interactorStyles[m_orientation] = style;
+            // 设置标注回调
+            auto mainVC = GET_SINGLETON(MainViewController);
+            style->SetAnnotationCallback([mainVC](double screenX, double screenY, int annotationIndex, SliceOrientation orientation, int annotationType) {
+                if (mainVC) {
+                    emit mainVC->annotationCreated(screenX, screenY, annotationIndex, static_cast<int>(orientation), annotationType);
+                }
+            });
         }
     });
     scheduleRender();
@@ -3385,9 +3537,7 @@ void MainViewController::deleteAnnotation(int orientation, int index)
 }
 
 void MainViewController::updateCircleAnnotationText(int orientation, int index, const QString& text)
-{
-    qDebug() << QStringLiteral("更新圆形标注文字 - 方向:") << orientation << QStringLiteral("索引:") << index << QStringLiteral("文字:") << text;
-    
+{ 
     SliceInteractorStyle* style = SliceVtkItemBase::GetInteractorStyle(static_cast<SliceOrientation>(orientation));
     if (style) {
         style->UpdateCircleAnnotationText(index, text.toStdString());
@@ -3396,12 +3546,28 @@ void MainViewController::updateCircleAnnotationText(int orientation, int index, 
 }
 
 void MainViewController::deleteCircleAnnotation(int orientation, int index)
-{
-    qDebug() << QStringLiteral("删除圆形标注 - 方向:") << orientation << QStringLiteral("索引:") << index;
-    
+{   
     SliceInteractorStyle* style = SliceVtkItemBase::GetInteractorStyle(static_cast<SliceOrientation>(orientation));
     if (style) {
         style->DeleteCircleAnnotation(index);
+    }
+    emit GET_SINGLETON(DicomDataModel)->segRefreshRenderer();
+}
+
+void MainViewController::updatePenAnnotationText(int orientation, int index, const QString& text)
+{  
+    SliceInteractorStyle* style = SliceVtkItemBase::GetInteractorStyle(static_cast<SliceOrientation>(orientation));
+    if (style) {
+        style->UpdatePenAnnotationText(index, text.toStdString());
+    }
+    emit GET_SINGLETON(DicomDataModel)->segRefreshRenderer();
+}
+
+void MainViewController::deletePenAnnotation(int orientation, int index)
+{  
+    SliceInteractorStyle* style = SliceVtkItemBase::GetInteractorStyle(static_cast<SliceOrientation>(orientation));
+    if (style) {
+        style->DeletePenAnnotation(index);
     }
     emit GET_SINGLETON(DicomDataModel)->segRefreshRenderer();
 }
