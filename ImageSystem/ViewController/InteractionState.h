@@ -25,7 +25,10 @@ enum class ToolMode
     Pan,              // 平移
     Zoom,             // 缩放（平行投影 scale）
     MeasureDistance,  // 距离测量
-    MeasureAngle      // 角度测量
+    MeasureAngle,     // 角度测量
+    AnnotationRectangle, //标注 - 矩形
+    AnnotationCircle,    //标注 - 圆形
+    AnnotationPen,       //标注 - 画笔
 };
 
 // 一次交互所需上下文（由 SliceInteractorStyle 组装）
@@ -72,7 +75,7 @@ struct InteractionContext
     std::vector<std::array<double, 3>> pendingPoints;
     ToolMode pendingMode{ ToolMode::None };
 
-    // 未完成测量的“点”预览（每次点击就显示一个点）
+    // 未完成测量的"点"预览（每次点击就显示一个点）
     bool pendingSegMode{ false };
     int pendingSliceNumber{ 0 };
     std::vector<vtkSmartPointer<vtkActor>> pendingPointActors;
@@ -82,6 +85,50 @@ struct InteractionContext
 
     // 已完成的测量集合
     std::vector<MeasurementItem> measurements;
+
+    // ===== 矩形标注（可多个，按切片显示/隐藏）=====
+    struct AnnotationRectItem
+    {
+        bool segMode{ false };           // 创建时是否在 segDataMode
+        int sliceNumber{ 0 };            // 创建时所在切片号
+        double startWorld[3]{ 0,0,0 };   // 起始点（世界坐标）
+        double endWorld[3]{ 0,0,0 };     // 结束点（世界坐标） 
+        std::string labelText;           // 标注文字
+        std::vector<vtkSmartPointer<vtkActor>> actors;  // 矩形边框
+        vtkSmartPointer<vtkBillboardTextActor3D> textActor;  // 标注文本
+    };
+
+    // 矩形标注拖动过程中的临时actor（松手后移入AnnotationRectItem）
+    vtkSmartPointer<vtkActor> pendingRectActors[4];  // 四条边
+    double pendingRectStart[3]{ 0,0,0 };
+    double pendingRectEnd[3]{ 0,0,0 };
+
+    // 已完成的矩形标注集合
+    std::vector<AnnotationRectItem> annotations;
+
+    // ===== 圆形标注（可多个，按切片显示/隐藏）=====
+    struct AnnotationCircleItem
+    {
+        bool segMode{ false };           // 创建时是否在 segDataMode
+        int sliceNumber{ 0 };            // 创建时所在切片号
+        double centerWorld[3]{ 0,0,0 };  // 圆心（世界坐标）
+        double radius{ 0.0 };            // 半径
+        std::string labelText;           // 标注文字
+        std::vector<vtkSmartPointer<vtkActor>> actors;  // 圆形边框
+        vtkSmartPointer<vtkBillboardTextActor3D> textActor;  // 标注文本
+    };
+
+    // 圆形标注拖动过程中的临时数据
+    vtkSmartPointer<vtkActor> pendingCircleActor;
+    double pendingCircleCenter[3]{ 0,0,0 };
+    double pendingCircleRadius{ 0.0 };
+
+    // 已完成的圆形标注集合
+    std::vector<AnnotationCircleItem> circleAnnotations;
+
+    // 标注完成后的回调（通知QML层显示输入框）
+    // annotationType: 0=矩形, 1=圆形, 2=画笔
+    std::function<void(double screenX, double screenY, int annotationIndex, int annotationType)> onAnnotationCreated;
 };
 
 class IInteractionState
