@@ -3,6 +3,7 @@
 #include "Model/BrainRegionTableModel.h"
 #include "Model/BrainSegmentationTableModel.h"
 #include "Modules/CommonFunc.h"
+#include "Modules/DicomNetwork.h"
 #include <vtkInteractorStyleImage.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkObjectFactory.h>

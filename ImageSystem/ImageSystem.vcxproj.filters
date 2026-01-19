@@ -76,6 +76,9 @@
     <ClCompile Include="Modules\BrainRegionVisualizer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Modules\DicomNetwork.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Module\CommonFunc.h">
@@ -111,6 +114,9 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="Modules\BrainNetworkData.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="Modules\DicomNetwork.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

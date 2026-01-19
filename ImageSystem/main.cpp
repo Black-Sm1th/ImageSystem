@@ -11,6 +11,7 @@
 #include "ViewController/MainViewController.h"
 #include "Model/DicomDataModel.h"
 #include "Modules/Version.h"
+#include "Modules/DicomNetwork.h"
 
 // 全局键盘事件过滤：不依赖 QML focus，把 1-6 写入 DicomDataModel.toolMode
 class GlobalKeyFilter : public QObject
@@ -76,6 +77,67 @@ protected:
 };
 VTK_MODULE_INIT(vtkRenderingVolumeOpenGL2);
 
+// ============================================================================
+// DICOM 网络测试函数
+// ============================================================================
+//void testDicomCFind(const QString& patientId)
+//{
+//    qDebug() << "\n========== DICOM C-FIND 测试 ==========";
+//    
+//    DicomNetwork dicom;
+//    
+//    // 使用默认配置 (可根据需要修改)
+//    // dicom.setLocalAeTitle("SHHZLX");
+//    // dicom.setRemoteAeTitle("ORANTHC");
+//    // dicom.setRemoteHost("127.0.0.1");
+//    // dicom.setRemotePort(8042);
+//    
+//    qDebug() << "本地 AE Title:" << dicom.localAeTitle();
+//    qDebug() << "远程 AE Title:" << dicom.remoteAeTitle();
+//    qDebug() << "远程服务器:" << dicom.remoteHost() << ":" << dicom.remotePort();
+//    qDebug() << "查询患者ID:" << patientId;
+//    qDebug() << "========================================\n";
+//    
+//    // 1. 先测试连接 (C-ECHO)
+//    qDebug() << "[Step 1] 执行 C-ECHO 测试连接...";
+//    bool echoOk = dicom.cEcho();
+//    if (!echoOk) {
+//        qWarning() << "C-ECHO 失败，无法连接到 PACS 服务器！";
+//        return;
+//    }
+//    qDebug() << "C-ECHO 成功！\n";
+//    
+//    // 2. 查询患者 (C-FIND Patient)
+//    qDebug() << "[Step 2] 执行 C-FIND 查询患者...";
+//    QList<QVariantMap> patients = dicom.findPatients(patientId, "*");
+//    
+//    qDebug() << "\n========== 查询结果 ==========";
+//    qDebug() << "找到" << patients.size() << "个患者:";
+//    for (const auto& patient : patients) {
+//        qDebug() << "  - 患者ID:" << patient.value("patientId").toString()
+//                 << " 姓名:" << patient.value("patientName").toString()
+//                 << " 性别:" << patient.value("patientSex").toString()
+//                 << " 出生日期:" << patient.value("patientBirthDate").toString();
+//    }
+//    
+//    // 3. 如果找到患者，继续查询检查
+//    if (!patients.isEmpty()) {
+//        QString pid = patients.first().value("patientId").toString();
+//        qDebug() << "\n[Step 3] 查询患者" << pid << "的检查记录...";
+//        QList<QVariantMap> studies = dicom.findStudies(pid, "*", "*");
+//        
+//        qDebug() << "找到" << studies.size() << "个检查:";
+//        for (const auto& study : studies) {
+//            qDebug() << "  - 检查日期:" << study.value("studyDate").toString()
+//                     << " 描述:" << study.value("studyDescription").toString()
+//                     << " 模态:" << study.value("modality").toString()
+//                     << " UID:" << study.value("studyInstanceUid").toString();
+//        }
+//    }
+//    
+//    qDebug() << "\n========== 测试完成 ==========\n";
+//}
+
 int main(int argc, char* argv[])
 {
     QQuickVTKItem::setGraphicsApi();
@@ -92,6 +154,10 @@ int main(int argc, char* argv[])
     QSurfaceFormat::setDefaultFormat(format);
     QtWebEngine::initialize();
     QGuiApplication app(argc, argv);
+    
+    // ====== 检查命令行参数，执行 DICOM 测试 ======
+    //testDicomCFind("N12188674");
+
 
     // 安装全局键盘监听（不依赖焦点）
     app.installEventFilter(new GlobalKeyFilter(&app));
