@@ -58,6 +58,12 @@ Item {
             height: 28
             inputRadius: 4
             backgroundColor: "#14FFFFFF"
+            Keys.onReturnPressed: {
+                root.confirm()
+            }
+            Keys.onEnterPressed: {
+                root.confirm()
+            }
         }
         
         // 按钮行
@@ -101,14 +107,9 @@ Item {
         // - 原点在左上角
         // - X轴向右，Y轴向下
         
-        // 调试输出
-        console.log("VTK坐标: (" + screenX + ", " + screenY + "), 视图: " + orient + ", 容器大小: " + parent.width + "x" + parent.height)
-        
         // 转换坐标：Y轴需要翻转
         var localX = screenX
         var localY = parent.height - screenY
-        
-        console.log("转换后坐标: (" + localX + ", " + localY + ")")
         
         // 输入框放在标注正上方中间
         // X坐标居中（减去输入框宽度的一半）
@@ -137,9 +138,6 @@ Item {
         if (newY + height > parent.height - 10) {
             newY = parent.height - height - 10
         }
-        
-        console.log("最终位置: (" + newX + ", " + newY + ")")
-        
         x = newX
         y = newY
         

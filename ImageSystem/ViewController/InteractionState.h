@@ -126,6 +126,24 @@ struct InteractionContext
     // 已完成的圆形标注集合
     std::vector<AnnotationCircleItem> circleAnnotations;
 
+    // ===== 画笔标注（可多个，按切片显示/隐藏）=====
+    struct AnnotationPenItem
+    {
+        bool segMode{ false };           // 创建时是否在 segDataMode
+        int sliceNumber{ 0 };            // 创建时所在切片号
+        std::vector<std::array<double, 3>> pathPoints;  // 路径点集合
+        std::string labelText;           // 标注文字
+        std::vector<vtkSmartPointer<vtkActor>> actors;  // 路径线段
+        vtkSmartPointer<vtkBillboardTextActor3D> textActor;  // 标注文本
+    };
+
+    // 画笔标注拖动过程中的临时数据
+    std::vector<std::array<double, 3>> pendingPenPoints;  // 当前路径点
+    std::vector<vtkSmartPointer<vtkActor>> pendingPenActors;  // 临时线段
+
+    // 已完成的画笔标注集合
+    std::vector<AnnotationPenItem> penAnnotations;
+
     // 标注完成后的回调（通知QML层显示输入框）
     // annotationType: 0=矩形, 1=圆形, 2=画笔
     std::function<void(double screenX, double screenY, int annotationIndex, int annotationType)> onAnnotationCreated;
