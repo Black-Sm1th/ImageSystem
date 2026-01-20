@@ -593,6 +593,15 @@ ApplicationWindow {
                 }
             }
             LeftToolButton {
+                id: screenshotToolBtn
+                iconSource: "qrc:/image/toolScreenshot.png"
+                isSelected: expandSelection.visible
+                onClicked: {
+                    expandSelection.visible = !expandSelection.visible
+                }
+            }
+
+            LeftToolButton {
                 id: resetToolBtn
                 iconSource: "qrc:/image/toolReset.png"
                 onClicked: {
@@ -602,6 +611,155 @@ ApplicationWindow {
         }
     }
 
+    // 截图选择面板
+    Rectangle{
+        id: expandSelection
+        z: 1000
+        y: screenshotToolBtn.y + topToolbar.height + topExpandBar.height
+        x: leftToolbar.width
+        height: expandColumn.height + 20
+        width: 120
+        color: "#2C3E50"
+        border.color: "#00FFFF"
+        border.width: 2
+        radius: 4
+        visible: false
+        
+        Column{
+            id: expandColumn
+            width: parent.width
+            anchors.centerIn: parent
+            spacing: 8
+            padding: 10
+            
+            Button {
+                text: qsTr("轴向视图")
+                width: parent.width - 20
+                height: 32
+                
+                background: Rectangle {
+                    color: parent.pressed ? "#34495E" : (parent.hovered ? "#3C5A78" : "#2C3E50")
+                    border.color: "#00FFFF"
+                    border.width: 1
+                    radius: 2
+                }
+                
+                contentItem: Text {
+                    text: parent.text
+                    color: "#FFFFFF"
+                    font.pixelSize: 13
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                
+                onClicked: {
+                    screenshotFileDialog.viewType = 0
+                    screenshotFileDialog.open()
+                    expandSelection.visible = false
+                }
+            }
+            
+            Button {
+                text: qsTr("矢状视图")
+                width: parent.width - 20
+                height: 32
+                
+                background: Rectangle {
+                    color: parent.pressed ? "#34495E" : (parent.hovered ? "#3C5A78" : "#2C3E50")
+                    border.color: "#00FFFF"
+                    border.width: 1
+                    radius: 2
+                }
+                
+                contentItem: Text {
+                    text: parent.text
+                    color: "#FFFFFF"
+                    font.pixelSize: 13
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                
+                onClicked: {
+                    screenshotFileDialog.viewType = 1
+                    screenshotFileDialog.open()
+                    expandSelection.visible = false
+                }
+            }
+            
+            Button {
+                text: qsTr("冠状视图")
+                width: parent.width - 20
+                height: 32
+                
+                background: Rectangle {
+                    color: parent.pressed ? "#34495E" : (parent.hovered ? "#3C5A78" : "#2C3E50")
+                    border.color: "#00FFFF"
+                    border.width: 1
+                    radius: 2
+                }
+                
+                contentItem: Text {
+                    text: parent.text
+                    color: "#FFFFFF"
+                    font.pixelSize: 13
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                
+                onClicked: {
+                    screenshotFileDialog.viewType = 2
+                    screenshotFileDialog.open()
+                    expandSelection.visible = false
+                }
+            }
+            
+            Button {
+                text: qsTr("3D视图")
+                width: parent.width - 20
+                height: 32
+                
+                background: Rectangle {
+                    color: parent.pressed ? "#34495E" : (parent.hovered ? "#3C5A78" : "#2C3E50")
+                    border.color: "#00FFFF"
+                    border.width: 1
+                    radius: 2
+                }
+                
+                contentItem: Text {
+                    text: parent.text
+                    color: "#FFFFFF"
+                    font.pixelSize: 13
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                
+                onClicked: {
+                    screenshotFileDialog.viewType = 3
+                    screenshotFileDialog.open()
+                    expandSelection.visible = false
+                }
+            }
+        }
+    }
+    
+    // 截图保存对话框
+    FileDialog {
+        id: screenshotFileDialog
+        title: qsTr("选择保存位置")
+        selectFolder: false
+        selectExisting: false
+        nameFilters: ["PNG图片 (*.png)", "JPEG图片 (*.jpg)", "所有文件 (*)"]
+        defaultSuffix: "png"
+        property int viewType: 0  // 0=Axial, 1=Sagittal, 2=Coronal, 3=Volume
+        
+        onAccepted: {
+            var filePath = screenshotFileDialog.fileUrl.toString()
+            if (filePath.startsWith("file:///")) {
+                filePath = filePath.substring(8)
+            }
+            $MainViewController.captureViewScreenshot(viewType, filePath)
+        }
+    }
     // 右侧控制面板
     Item {
         id: rightPanel

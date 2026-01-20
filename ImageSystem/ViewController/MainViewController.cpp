@@ -1,6 +1,9 @@
 ﻿#include "MainViewController.h"
 #include <algorithm>
 #include <vtkTransform.h>
+#include <vtkWindowToImageFilter.h>
+#include <vtkPNGWriter.h>
+#include <vtkJPEGWriter.h>
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDebug>
@@ -931,6 +934,8 @@ QQuickVTKItem::vtkUserData SliceVtkItemBase::initializeVTK(vtkRenderWindow* rend
         this, &SliceVtkItemBase::onInteractionResetRequested);
     connect(m_dataModel, &DicomDataModel::crosshairEnabledChanged,
         this, &SliceVtkItemBase::onCrosshairEnabledChanged);
+    connect(m_dataModel, &DicomDataModel::screenshotRequested,
+        this, &SliceVtkItemBase::onScreenshotRequested);
 
     // 在渲染线程初始化VTK对象
     vtkSmartPointer<vtkImageData> imageData = m_dataModel->getImageData();
@@ -971,6 +976,62 @@ void SliceVtkItemBase::onCrosshairEnabledChanged(bool enabled)
         }
     });
     scheduleRender();
+}
+
+void SliceVtkItemBase::onScreenshotRequested(int viewType, QString filePath)
+{
+    // 检查是否是当前视图
+    int currentViewType = static_cast<int>(m_orientation);
+    if (viewType != currentViewType) {
+        return;  // 不是当前视图，忽略
+    }
+    
+    // 在渲染线程中执行截图
+    dispatch_async([filePath](vtkRenderWindow* rw, vtkUserData userData) {
+        Q_UNUSED(userData);
+        if (!rw) {
+            qDebug() << "截图失败：渲染窗口为空";
+            return;
+        }
+
+        // 确保渲染完成
+        rw->Render();
+
+        // 创建窗口到图像过滤器
+        auto windowToImage = vtkSmartPointer<vtkWindowToImageFilter>::New();
+        windowToImage->SetInput(rw);
+        windowToImage->SetScale(1);
+        windowToImage->SetInputBufferTypeToRGBA();
+        windowToImage->ReadFrontBufferOn();   // 从前缓冲区读取以捕获所有标注（包括文字）
+        windowToImage->ShouldRerenderOn();    // 确保在捕获前重新渲染，捕获所有元素
+        windowToImage->Update();
+
+        // 根据文件扩展名选择写入器
+        QString ext = filePath.right(4).toLower();
+
+        if (ext == ".png") {
+            auto writer = vtkSmartPointer<vtkPNGWriter>::New();
+            writer->SetFileName(filePath.toStdString().c_str());
+            writer->SetInputConnection(windowToImage->GetOutputPort());
+            writer->Write();
+            qDebug() << "PNG截图保存成功：" << filePath;
+        } else if (ext == ".jpg" || ext == "jpeg") {
+            auto writer = vtkSmartPointer<vtkJPEGWriter>::New();
+            writer->SetFileName(filePath.toStdString().c_str());
+            writer->SetInputConnection(windowToImage->GetOutputPort());
+            writer->SetQuality(95);
+            writer->Write();
+            qDebug() << "JPEG截图保存成功：" << filePath;
+        } else {
+            // 默认使用PNG
+            QString pngPath = filePath + ".png";
+            auto writer = vtkSmartPointer<vtkPNGWriter>::New();
+            writer->SetFileName(pngPath.toStdString().c_str());
+            writer->SetInputConnection(windowToImage->GetOutputPort());
+            writer->Write();
+            qDebug() << "PNG截图保存成功：" << pngPath;
+        }
+    });
 }
 
 void SliceVtkItemBase::onDataLoaded()
@@ -1431,6 +1492,8 @@ QQuickVTKItem::vtkUserData VolumeVtkItem::initializeVTK(vtkRenderWindow* renderW
         this, &VolumeVtkItem::onSegRefreshRenderer);
     connect(GET_SINGLETON(DicomDataModel), &DicomDataModel::interactionResetRequested,
         this, &VolumeVtkItem::onInteractionResetRequested);
+    connect(GET_SINGLETON(DicomDataModel), &DicomDataModel::screenshotRequested,
+        this, &VolumeVtkItem::onScreenshotRequested);
     // 在渲染线程初始化VTK对象
     vtkSmartPointer<vtkImageData> imageData = GET_SINGLETON(DicomDataModel)->getImageData();
     if (imageData) {
@@ -1456,6 +1519,61 @@ void VolumeVtkItem::onInteractionResetRequested()
         data->renderer->ResetCamera();
     });
     scheduleRender();
+}
+
+void VolumeVtkItem::onScreenshotRequested(int viewType, QString filePath)
+{
+    // 检查是否是3D视图
+    if (viewType != 3) {
+        return;  // 不是3D视图，忽略
+    }
+    
+    // 在渲染线程中执行截图
+    dispatch_async([filePath](vtkRenderWindow* rw, vtkUserData userData) {
+        Q_UNUSED(userData);
+        if (!rw) {
+            qDebug() << "截图失败：渲染窗口为空";
+            return;
+        }
+
+        // 确保渲染完成
+        rw->Render();
+
+        // 创建窗口到图像过滤器
+        auto windowToImage = vtkSmartPointer<vtkWindowToImageFilter>::New();
+        windowToImage->SetInput(rw);
+        windowToImage->SetScale(1);
+        windowToImage->SetInputBufferTypeToRGBA();
+        windowToImage->ReadFrontBufferOn();   // 从前缓冲区读取以捕获所有标注（包括文字）
+        windowToImage->ShouldRerenderOn();    // 确保在捕获前重新渲染，捕获所有元素
+        windowToImage->Update();
+
+        // 根据文件扩展名选择写入器
+        QString ext = filePath.right(4).toLower();
+
+        if (ext == ".png") {
+            auto writer = vtkSmartPointer<vtkPNGWriter>::New();
+            writer->SetFileName(filePath.toStdString().c_str());
+            writer->SetInputConnection(windowToImage->GetOutputPort());
+            writer->Write();
+            qDebug() << "3D视图PNG截图保存成功：" << filePath;
+        } else if (ext == ".jpg" || ext == "jpeg") {
+            auto writer = vtkSmartPointer<vtkJPEGWriter>::New();
+            writer->SetFileName(filePath.toStdString().c_str());
+            writer->SetInputConnection(windowToImage->GetOutputPort());
+            writer->SetQuality(95);
+            writer->Write();
+            qDebug() << "3D视图JPEG截图保存成功：" << filePath;
+        } else {
+            // 默认使用PNG
+            QString pngPath = filePath + ".png";
+            auto writer = vtkSmartPointer<vtkPNGWriter>::New();
+            writer->SetFileName(pngPath.toStdString().c_str());
+            writer->SetInputConnection(windowToImage->GetOutputPort());
+            writer->Write();
+            qDebug() << "3D视图PNG截图保存成功：" << pngPath;
+        }
+    });
 }
 
 void VolumeVtkItem::onDataLoaded()
@@ -3570,4 +3688,15 @@ void MainViewController::deletePenAnnotation(int orientation, int index)
         style->DeletePenAnnotation(index);
     }
     emit GET_SINGLETON(DicomDataModel)->segRefreshRenderer();
+}
+
+void MainViewController::captureViewScreenshot(int viewType, const QString& filePath)
+{
+    qDebug() << QStringLiteral("截图请求 - 视图类型:") << viewType << QStringLiteral("保存路径:") << filePath;
+    
+    // 通过DicomDataModel发送截图信号，由各个视图在渲染线程中处理
+    auto dicomModel = GET_SINGLETON(DicomDataModel);
+    if (dicomModel) {
+        emit dicomModel->screenshotRequested(viewType, filePath);
+    }
 }

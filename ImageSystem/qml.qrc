@@ -341,5 +341,6 @@
         <file>image/toolCircle.png</file>
         <file>image/toolPen.png</file>
         <file>image/toolRectangle.png</file>
+        <file>image/toolScreenshot.png</file>
     </qresource>
 </RCC>

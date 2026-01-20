@@ -154,6 +154,7 @@ private slots:
     void onWindowChanged();
     void onInteractionResetRequested();
     void onCrosshairEnabledChanged(bool enabled);
+    void onScreenshotRequested(int viewType, QString filePath);
 
 private:
     void setupView(vtkRenderWindow* renderWindow, SliceViewData* data, vtkImageData* imageData);
@@ -226,11 +227,15 @@ class VolumeVtkItem : public QQuickVTKItem
 public:
     vtkUserData initializeVTK(vtkRenderWindow* renderWindow) override;
 
+    // 获取3D视图的渲染窗口
+    static vtkRenderWindow* GetVolumeRenderWindow();
+
 private slots:
     void onDataLoaded();
     void onSegDataLoaded();
     void onSegRefreshRenderer();
     void onInteractionResetRequested();
+    void onScreenshotRequested(int viewType, QString filePath);
 
 private:
     static void setupView(vtkRenderWindow* renderWindow, VolumeViewData* data, vtkImageData* imageData);
@@ -288,6 +293,7 @@ public:
     Q_INVOKABLE void deleteCircleAnnotation(int orientation, int index);
     Q_INVOKABLE void updatePenAnnotationText(int orientation, int index, const QString& text);
     Q_INVOKABLE void deletePenAnnotation(int orientation, int index);
+    Q_INVOKABLE void captureViewScreenshot(int viewType, const QString& filePath);
     Q_PROPERTY(QString fmriprepLog READ fmriprepLog NOTIFY fmriprepLogUpdated)
     QString fmriprepLog() const { return m_fmriprepLog; }
     Q_PROPERTY(QString deepprepLog READ deepprepLog NOTIFY deepprepLogUpdated)

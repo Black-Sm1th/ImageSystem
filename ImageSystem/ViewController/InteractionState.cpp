@@ -67,6 +67,9 @@ namespace
 
         auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
         mapper->SetInputConnection(line->GetOutputPort());
+        // 解决标注线与图像重合时的深度冲突，让标注线始终显示在上层
+        mapper->SetResolveCoincidentTopologyToPolygonOffset();
+        mapper->SetRelativeCoincidentTopologyPolygonOffsetParameters(-1.0, -1.0);
 
         auto actor = vtkSmartPointer<vtkActor>::New();
         actor->SetMapper(mapper);
@@ -90,6 +93,9 @@ namespace
         // 设置文本垂直居中对齐（可选）
         textProp->SetVerticalJustificationToCentered();
         t->PickableOff();
+        // 设置显示偏移，确保文本始终显示在图像之上
+        t->SetDisplayOffset(0, 5);
+        t->ForceOpaqueOn();
         return t;
     }
 
@@ -104,6 +110,9 @@ namespace
 
         auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
         mapper->SetInputConnection(sphere->GetOutputPort());
+        // 解决标注点与图像重合时的深度冲突
+        mapper->SetResolveCoincidentTopologyToPolygonOffset();
+        mapper->SetRelativeCoincidentTopologyPolygonOffsetParameters(-1.0, -1.0);
 
         auto actor = vtkSmartPointer<vtkActor>::New();
         actor->SetMapper(mapper);
@@ -142,6 +151,9 @@ namespace
 
         auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
         mapper->SetInputConnection(circle->GetOutputPort());
+        // 解决标注圆与图像重合时的深度冲突
+        mapper->SetResolveCoincidentTopologyToPolygonOffset();
+        mapper->SetRelativeCoincidentTopologyPolygonOffsetParameters(-1.0, -1.0);
 
         auto actor = vtkSmartPointer<vtkActor>::New();
         actor->SetMapper(mapper);
