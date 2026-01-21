@@ -176,6 +176,8 @@ private:
 
     // 静态映射：方向 -> interactor style
     static std::map<SliceOrientation, vtkSmartPointer<SliceInteractorStyle>> s_interactorStyles;
+signals:
+    void messageRequest(bool success, const QString& msg);
 };
 
 // 轴向视图（Axial - XY平面）

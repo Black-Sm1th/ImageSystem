@@ -21,6 +21,14 @@ ApplicationWindow {
         id: dialogMessageBox
         anchors.fill: parent
     }
+    
+    // 监听 C++ 层的消息请求
+    Connections {
+        target: $DicomDataModel
+        function onShowMessageRequested(type, text) {
+            dialogMessageBox.showMessage(type, text, 2000)
+        }
+    }
     // 顶部功能栏
     Rectangle {
         id: topToolbar
