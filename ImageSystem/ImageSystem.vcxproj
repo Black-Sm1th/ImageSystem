@@ -114,10 +114,12 @@
     <ClCompile Include="Model\DicomDataModel.cpp" />
     <ClCompile Include="Model\BrainRegionTableModel.cpp" />
     <ClCompile Include="Model\BrainSegmentationTableModel.cpp" />
+    <ClCompile Include="Modules\ApiManager.cpp" />
     <ClCompile Include="Modules\BrainNetworkData.cpp" />
     <ClCompile Include="Modules\BrainMetrics.cpp" />
     <ClCompile Include="Modules\BrainRegionVisualizer.cpp" />
     <ClCompile Include="ViewController\InteractionState.cpp" />
+    <ClCompile Include="ViewController\KnowledgeChatManager.cpp" />
     <ClCompile Include="ViewController\MainViewController.cpp" />
     <ClCompile Include="Modules\DicomNetwork.cpp" />
     <ClCompile Include="Modules\BatchMriScanner.cpp" />
@@ -133,7 +135,9 @@
     <None Include="qml\main.qml" />
   </ItemGroup>
   <ItemGroup>
+    <QtMoc Include="ViewController\KnowledgeChatManager.h" />
     <QtMoc Include="Modules\BrainNetworkData.h" />
+    <QtMoc Include="Modules\ApiManager.h" />
     <ClInclude Include="Modules\DicomNetwork.h" />
     <QtMoc Include="Modules\BatchMriScanner.h" />
     <ClInclude Include="Modules\BrainMetrics.h" />

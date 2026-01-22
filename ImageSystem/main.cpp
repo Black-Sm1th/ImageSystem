@@ -13,6 +13,7 @@
 #include "Modules/Version.h"
 #include "Modules/DicomNetwork.h"
 #include "Modules/BatchMriScanner.h"
+#include "ViewController/KnowledgeChatManager.h"
 
 // 全局键盘事件过滤：不依赖 QML focus，把 1-6 写入 DicomDataModel.toolMode
 class GlobalKeyFilter : public QObject
@@ -191,7 +192,6 @@ void testBatchMriScan(const QString& rootPath)
 
 int main(int argc, char* argv[])
 {
-    system("chcp 65001");
     QQuickVTKItem::setGraphicsApi();
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -237,6 +237,9 @@ int main(int argc, char* argv[])
     engine.rootContext()->setContextProperty("$BrainRegionTableModel", GET_SINGLETON(MainViewController)->getBrainRegionTableModel());
     // 将BrainSegmentationTableModel暴露给QML
     engine.rootContext()->setContextProperty("$BrainSegmentationTableModel", GET_SINGLETON(DicomDataModel)->getSegmentationTableModel());
+
+    engine.rootContext()->setContextProperty("$chatManager", GET_SINGLETON(KnowledgeChatManager));
+
     int fontId1 = QFontDatabase::addApplicationFont(":/fonts/AlibabaPuHuiTi-3-55-Regular.ttf");
     int fontId2 = QFontDatabase::addApplicationFont(":/fonts/AlibabaPuHuiTi-3-65-Medium.ttf");
     int fontId3 = QFontDatabase::addApplicationFont(":/fonts/AlibabaPuHuiTi-3-85-Bold.ttf");
