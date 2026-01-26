@@ -1,161 +1,94 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+fMRIPrep Batch Runner (Modified for participants.tsv priority)
+==============================================================
+Directly run fMRIPrep on a pre-converted BIDS dataset.
+Prioritizes subjects from participants.tsv if available.
 
+Usage:
+    python run_fmriprep.py --bids_dir C:/BIDS_Output --output_dir C:/fMRIPrep_Results --license_file license.txt
+    python run_fmriprep.py ... --subjects sub-001 sub-002
+"""
 import sys
 import os
 import subprocess
-import re
-import shutil
-import glob
 import argparse
 import platform
 from pathlib import Path
 
-# ===========================
-# 0. Dependency Check
-# ===========================
 try:
-    from dcm2bids.dcm2niix_gen import Dcm2niixGen
-    from dcm2bids.utils.io import write_txt
-    from dcm2bids.utils.scaffold import bids_starter_kit
+    import pandas as pd
 except ImportError:
-    print("Error: 'dcm2bids' package is missing.")
-    print("Please install it using: pip install dcm2bids")
-    sys.exit(1)
+    pd = None
+    print("Warning: pandas not installed. Cannot read participants.tsv automatically.")
 
 # ===========================
 # 1. Platform Helpers
 # ===========================
-
 def get_docker_cmd():
     """Returns the appropriate docker command list based on OS."""
     if platform.system().lower() == 'windows':
         return ['docker']
     return ['sudo', 'docker']
 
-def is_in_directory(filepath, directory):
-    """Check if filepath is inside directory."""
-    return os.path.realpath(filepath).startswith(os.path.realpath(directory) + os.sep)
-
 # ===========================
-# 2. BIDS Conversion Logic
+# 2. BIDS Validation & Subject Scanning
 # ===========================
+def scan_bids_subjects(bids_dir: str):
+    """
+    Scan BIDS directory and return list of subject IDs (with 'sub-' prefix).
+    """
+    bids_path = Path(bids_dir)
+    
+    if not bids_path.exists():
+        print(f"Error: BIDS directory not found: {bids_dir}")
+        return []
+    
+    subjects = sorted([d.name for d in bids_path.iterdir()
+                       if d.is_dir() and d.name.startswith('sub-')])
+    
+    return subjects
 
-def dicom2bids(dicoms_dir: str, bids_dir: str):
+def validate_bids_structure(bids_dir: str):
     """
-    Main function to orchestrate DICOM to BIDS conversion.
-    Source Logic:
+    Basic validation of BIDS structure.
+    Returns (is_valid, message, subject_count)
     """
-    print(f"--- Starting DICOM to BIDS conversion ---")
-    print(f"Source: {dicoms_dir}")
-    print(f"Target: {bids_dir}")
+    bids_path = Path(bids_dir)
     
-    # 1. Create Scaffold
-    dcm2bids_scaffold(bids_dir)
+    if not bids_path.exists():
+        return False, f"BIDS directory not found: {bids_dir}", 0
     
-    # 2. Run dcm2niix via wrapper
-    dicom2bids_helper(dicom_dir=dicoms_dir, bids_dir=bids_dir)
+    desc_file = bids_path / "dataset_description.json"
+    if not desc_file.exists():
+        print("Warning: dataset_description.json not found (optional but recommended)")
     
-    # 3. Filter and organize files
-    for modality in ["T1w", "T2w", "task-rest_bold"]:
-        dicom2bids_filter(bids_dir, modality)
+    subjects = scan_bids_subjects(bids_dir)
     
-    return bids_dir
-
-def dcm2bids_scaffold(bids_dir: str):
-    """Creates the BIDS directory structure and default files."""
-    for _ in ["code", "derivatives", "sourcedata"]:
-        os.makedirs(os.path.join(bids_dir, _), exist_ok=True)
+    if len(subjects) == 0:
+        return False, "No subjects (sub-*) found in BIDS directory", 0
     
-    # Write standard BIDS files using dcm2bids templates
-    write_txt(os.path.join(bids_dir, "CHANGES"), bids_starter_kit.CHANGES)
-    write_txt(os.path.join(bids_dir, "dataset_description.json"),
-              bids_starter_kit.dataset_description.replace("BIDS_VERSION", "v1.8.0"))
-    write_txt(os.path.join(bids_dir, "participants.json"), bids_starter_kit.participants_json)
-    write_txt(os.path.join(bids_dir, "participants.tsv"), bids_starter_kit.participants_tsv)
-    write_txt(os.path.join(bids_dir, ".bidsignore"), "tmp_dcm2bids")
-    write_txt(os.path.join(bids_dir, "README"), bids_starter_kit.README)
-    
-    # Reset sub-01 directory
-    sub_dir = os.path.join(bids_dir, "sub-01")
-    if os.path.exists(sub_dir):
-        shutil.rmtree(sub_dir)
-    os.makedirs(sub_dir, exist_ok=True)
-    os.makedirs(os.path.join(sub_dir, "anat"), exist_ok=True)
-    os.makedirs(os.path.join(sub_dir, "func"), exist_ok=True)
-
-def dicom2bids_helper(dicom_dir: str, bids_dir: str):
-    """
-    Runs dcm2niix to convert DICOMs to temporary NIfTI files.
-    NOTE: Requires dcm2niix to be in system PATH.
-    """
-    helper_dir = os.path.join(bids_dir, "tmp_dcm2bids", "helper")
-    # Ensure helper dir exists (though dcm2bids usually handles it)
-    os.makedirs(helper_dir, exist_ok=True)
-    
-    try:
-        app = Dcm2niixGen(dicom_dirs=[dicom_dir], bids_dir=Path(helper_dir), helper=True)
-        app.run(force=True)
-    except Exception as e:
-        print(f"Error running dcm2niix: {e}")
-        print("Ensure 'dcm2niix' is installed and in your system PATH.")
-        raise e
-    return bids_dir
-
-def dicom2bids_filter(bids_dir: str, modality: str):
-    """
-    Filters and moves NIfTI files to their correct BIDS subfolders based on Modality.
-    Logic derived from
-    """
-    helper_dir = os.path.join(bids_dir, "tmp_dcm2bids", "helper")
-    # Use glob to find json files
-    json_files = glob.glob(os.path.join(helper_dir, "*.json"))
-    
-    for file in json_files:
-        # Check if corresponding NIfTI exists
-        nii_file = file.replace("json", "nii.gz")
-        if not os.path.exists(nii_file):
-            continue
+    valid_subjects = []
+    for sub in subjects:
+        sub_path = bids_path / sub
+        anat_path = sub_path / "anat"
         
-        # Logic from source: Skip ROI
-        if re.search(r'ROI', file, re.I):
-            continue
-            
-        subdir = ""
-        # Filter for Anat
-        if modality in ["T1w", "T2w"]:
-            pattern = r'_T1' if modality == 'T1w' else r'_T2'
-            pattern_3d = r'_3DT1' if modality == 'T1w' else r'_3DT2'
-            subdir = "anat"
-            if not re.search(pattern_3d, file, re.I) and not re.search(pattern, file, re.I):
-                continue
+        t1_files = list(anat_path.glob("*_T1w.nii.gz")) if anat_path.exists() else []
         
-        # Filter for Func
-        elif modality in ["task-rest_bold"]:
-            pattern_bold = r'_bold'
-            pattern_rest = r'_rest'
-            pattern_exclude = r'fieldmap|SB'
-            
-            if re.search(pattern_exclude, file, re.I):
-                continue
-            subdir = "func"
-            if not re.search(pattern_bold, file, re.I) and not re.search(pattern_rest, file, re.I):
-                continue
-        
-        # Move files
-        dest_json = os.path.join(bids_dir, f"sub-01", subdir, f"sub-01_{modality}.json")
-        dest_nii = os.path.join(bids_dir, f"sub-01", subdir, f"sub-01_{modality}.nii.gz")
-        
-        print(f"Moving: {os.path.basename(file)} -> sub-01/{subdir}")
-        shutil.move(file, dest_json)
-        shutil.move(nii_file, dest_nii)
-        
-    return True
+        if len(t1_files) > 0:
+            valid_subjects.append(sub)
+        else:
+            print(f"Warning: {sub} has no T1w file, will be skipped")
+    
+    if len(valid_subjects) == 0:
+        return False, "No valid subjects with T1w files found", 0
+    
+    return True, f"Found {len(valid_subjects)} valid subjects with T1w", len(valid_subjects)
 
 # ===========================
 # 3. Docker Execution Logic
 # ===========================
-
 def check_docker():
     """Verify that docker is installed and accessible."""
     cmd = get_docker_cmd() + ['version']
@@ -166,7 +99,7 @@ def check_docker():
         if e.errno == ENOENT:
             return -1
         raise e
-    if ret.stderr.startswith(b'Cannot connect to the Docker daemon.'):
+    if ret.stderr and b'Cannot connect to the Docker daemon' in ret.stderr:
         return 0
     return 1
 
@@ -176,121 +109,146 @@ def check_image(image):
     ret = subprocess.run(cmd, stdout=subprocess.PIPE)
     return bool(ret.stdout)
 
-def check_memory(image):
-    """Check total memory from within a docker container."""
-    cmd = get_docker_cmd() + ['run', '--rm', '--entrypoint=free', image, '-m']
-    ret = subprocess.run(cmd, stdout=subprocess.PIPE)
-    if ret.returncode:
-        return -1
-
-    try:
-        mem = [
-            line.decode().split()[1] for line in ret.stdout.splitlines() if line.startswith(b'Mem:')
-        ][0]
-        return int(mem)
-    except IndexError:
-        return -1
-
-def run_docker(bids_dir, output_dir, freesurfer: bool = False, 
-               analysis_level: str = "participant", 
-               image: str = 'nipreps/fmriprep:latest', 
-               fs_license_file: str = None, 
-               fs_subjects_dir: str = None, 
-               work_dir: str = None,
-               container_name: str = "fmriprep_runner"):
+def run_fmriprep_docker(bids_dir, output_dir,
+                        image: str = 'nipreps/fmriprep:24.1.1',
+                        fs_license_file: str = None,
+                        subjects: list = None,
+                        skip_bids_validation: bool = False,
+                        anat_only: bool = False,
+                        use_syn_sdc: bool = False,
+                        ignore_fieldmaps: bool = True,
+                        output_spaces: str = 'MNI152NLin2009cAsym:res-2',
+                        nthreads: int = None,
+                        mem_mb: int = None,
+                        low_mem: bool = False,
+                        fs_no_reconall: bool = True):
+    """
+    Run fMRIPrep via Docker with GPU support.
+    """
+    print("\n" + "=" * 60)
+    print("fMRIPrep Docker Runner")
+    print("=" * 60)
     
-    print("\n--- Preparing to run Docker ---")
-    
-    # 1. Check Environment
-    check = check_docker()
-    if check < 1:
-        if check == -1:
-            print('Error: Could not find docker command... Is it installed?')
+    # Check Docker
+    docker_ok = check_docker()
+    if docker_ok < 1:
+        if docker_ok == -1:
+            print('Error: Docker command not found. Is Docker installed?')
         else:
-            print("Error: Make sure you have permission to run 'docker'")
+            print("Error: Cannot connect to Docker daemon. Is it running?")
         return 1
-
+    
     if not check_image(image):
-        print(f'Downloading image {image}. This may take a while...')
-
-    mem_total = check_memory(image)
-    if mem_total != -1 and mem_total < 8000:
-        print('Warning: <8GB of RAM is available within your Docker environment.')
-
-    # 2. Get Docker Version
+        print(f"Image {image} not found locally. Will be pulled automatically (~15GB).")
+    
+    # Get Docker version for env var
     cmd_ver = get_docker_cmd() + ['version', '--format', '{{.Server.Version}}']
-    ret = subprocess.run(cmd_ver, stdout=subprocess.PIPE)
-    docker_version = ret.stdout.decode('ascii').strip() if ret.returncode == 0 else "unknown"
-
-    # 3. Build Command
-    # Start with base command (no TTY to avoid "not a TTY" errors in non-interactive envs)
-    command = get_docker_cmd() + ['run', '--rm', '--name', container_name, '-e', 'DOCKER_VERSION_8395080871=%s' % docker_version]
+    ret = subprocess.run(cmd_ver, stdout=subprocess.PIPE, text=True)
+    docker_version = ret.stdout.strip() if ret.returncode == 0 else "unknown"
     
-    # Platform specific: User Mapping
-    # Windows does not use -u uid:gid mapping for Docker Desktop usually
-    if platform.system().lower() != 'windows':
-        try:
-            command.extend(['-u', '{}'.format(os.getgid())])
-        except AttributeError:
-            pass
-
-    # License File
+    # Build command
+    command = get_docker_cmd() + [
+        'run',
+        '--rm',
+        '-e', f'DOCKER_VERSION_8395080871={docker_version}'
+    ]
+    
+    # Mounts
+    abs_bids = os.path.abspath(bids_dir)
+    abs_output = os.path.abspath(output_dir)
+    os.makedirs(abs_output, exist_ok=True)
+    
+    # Work directory
+    work_dir = os.path.join(abs_output, 'work')
+    os.makedirs(work_dir, exist_ok=True)
+    
+    command.extend(['-v', f'{abs_bids}:/data:ro'])
+    command.extend(['-v', f'{abs_output}:/out'])
+    command.extend(['-v', f'{work_dir}:/work'])
+    
     if fs_license_file and os.path.exists(fs_license_file):
-        # Convert to absolute path for Docker mounting
         abs_license = os.path.abspath(fs_license_file)
-        command.extend(['-v', '{}:/opt/freesurfer/license.txt:ro'.format(abs_license)])
-    elif freesurfer:
-        print("Warning: Freesurfer enabled but no license file provided/found.")
-
-    main_args = []
-    unknown_args = []
+        command.extend(['-v', f'{abs_license}:/opt/freesurfer/license.txt:ro'])
+    else:
+        print("Error: FreeSurfer license file required but not found.")
+        print("Get one at: https://surfer.nmr.mgh.harvard.edu/registration.html")
+        return 1
     
-    # 4. Mount Directories (Critical for Windows)
-    # Use os.path.abspath to ensure C:/... or D:/... format
-    if bids_dir:
-        abs_bids = os.path.abspath(bids_dir)
-        command.extend(['-v', ':'.join((abs_bids, '/data', 'ro'))])
-        main_args.append('/data')
-        
-    if output_dir:
-        abs_out = os.path.abspath(output_dir)
-        os.makedirs(abs_out, exist_ok=True)
-        command.extend(['-v', ':'.join((abs_out, '/out'))])
-        main_args.append('/out')
-    
-    main_args.append(analysis_level)
-
-    if fs_subjects_dir:
-        abs_fs = os.path.abspath(fs_subjects_dir)
-        command.extend(['-v', '{}:/opt/subjects'.format(abs_fs)])
-        unknown_args.extend(['--fs-subjects-dir', '/opt/subjects'])
-
-    if work_dir:
-        abs_work = os.path.abspath(work_dir)
-        # Check nesting
-        if bids_dir and is_in_directory(abs_work, os.path.abspath(bids_dir)):
-            print('Error: Working directory cannot be a subdirectory of the input BIDS folder.')
-            return 1
-        command.extend(['-v', ':'.join((abs_work, '/scratch'))])
-        unknown_args.extend(['-w', '/scratch'])
-
-    if not freesurfer:
-        unknown_args.append("--fs-no-reconall")
-
+    # Image & args
     command.append(image)
-    command.extend(main_args)
-    command.extend(unknown_args)
-
-    # 5. Execute
-    log_path = os.path.join(output_dir, "fmriprep-docker.log")
-    print(f"Logging to: {log_path}")
-    print('RUNNING COMMAND:', ' '.join(command))
-
+    command.extend(['/data', '/out', 'participant'])
+    command.extend(['-w', '/work'])
+    
+    # Participant labels
+    if subjects:
+        # fMRIPrep accepts multiple --participant-label arguments or space-separated
+        labels = [s.replace('sub-', '').strip() for s in subjects]
+        for label in labels:
+            command.extend(['--participant-label', label])
+        print(f"Passing to fMRIPrep: --participant-label {' '.join(labels)}")
+    else:
+        print("No --participant-label -> fMRIPrep will process ALL subjects in /data")
+    
+    # Optional flags
+    if skip_bids_validation:
+        command.append('--skip-bids-validation')
+    
+    if anat_only:
+        command.append('--anat-only')
+    
+    if fs_no_reconall:
+        command.append('--fs-no-reconall')
+    
+    if ignore_fieldmaps:
+        command.append('--ignore')
+        command.append('fieldmaps')
+    
+    if use_syn_sdc:
+        command.append('--use-syn-sdc')
+    
+    if output_spaces:
+        command.extend(['--output-spaces', output_spaces])
+    
+    if nthreads:
+        command.extend(['--nthreads', str(nthreads)])
+    
+    if mem_mb:
+        command.extend(['--mem-mb', str(mem_mb)])
+    
+    if low_mem:
+        command.append('--low-mem')
+    
+    # Log path
+    log_path = os.path.join(abs_output, "fmriprep-docker.log")
+    
+    print(f"\nBIDS Input : {abs_bids}")
+    print(f"Output     : {abs_output}")
+    print(f"Work Dir   : {work_dir}")
+    print(f"Log File   : {log_path}")
+    print(f"Anat Only  : {anat_only}")
+    print(f"FS Reconall: {not fs_no_reconall}")
+    print(f"SDC        : {'syn-sdc' if use_syn_sdc else ('fieldmaps' if not ignore_fieldmaps else 'disabled')}")
+    if subjects:
+        print(f"Subjects   : {', '.join(subjects)} ({len(subjects)})")
+    else:
+        print("Subjects   : ALL in BIDS directory")
+    
+    print("\n" + "-" * 60)
+    print("Full Docker Command:")
+    print(' '.join(command))
+    print("-" * 60 + "\n")
+    
+    print("Starting fMRIPrep... (may take hours per subject)")
+    print("Progress in:", log_path, "\n")
+    
     try:
-        # Use utf-8 encoding for Windows log files
-        with open(log_path, "w", encoding='utf-8') as file:
-            ret = subprocess.run(command, stdout=file, stderr=subprocess.STDOUT, text=True, encoding='utf-8')
+        with open(log_path, "w", encoding='utf-8') as f:
+            ret = subprocess.run(command, stdout=f, stderr=subprocess.STDOUT,
+                               text=True, encoding='utf-8')
         return ret.returncode
+    except KeyboardInterrupt:
+        print("\nInterrupted by user!")
+        return 130
     except Exception as e:
         print(f"Execution failed: {e}")
         return 1
@@ -298,53 +256,151 @@ def run_docker(bids_dir, output_dir, freesurfer: bool = False,
 # ===========================
 # 4. Main Entry Point
 # ===========================
-
 def main():
-    parser = argparse.ArgumentParser(description='Run fMRIPrep via Docker (Windows/Linux Compatible)')
-    
-    # Required Arguments
-    parser.add_argument('--dicom_dir', required=True, type=str, help="Input directory containing DICOM files")
-    parser.add_argument('--bids_dir', required=True, type=str, help="Temporary directory for BIDS structure")
-    parser.add_argument('--output_dir', required=True, type=str, help="Final output directory")
-    
-    # Optional Arguments
-    parser.add_argument('--freesurfer', action='store_true', help="Enable Freesurfer surface reconstruction")
-    parser.add_argument('--analysis_level', default="participant", type=str)
-    parser.add_argument('--image', default='nipreps/fmriprep:latest', type=str)
-    parser.add_argument('--fs_license_file', default=None, type=str)
-    parser.add_argument('--fs_subjects_dir', default=None, type=str)
-    parser.add_argument('--work_dir', default=None, type=str)
+    parser = argparse.ArgumentParser(
+        description='Run fMRIPrep on a BIDS dataset (prioritizes participants.tsv)',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python run_fmriprep.py --bids_dir C:/BIDS --output_dir C:/Results --license_file license.txt
+  # -> automatically uses subjects from participants.tsv (if exists)
 
+  python run_fmriprep.py ... --subjects sub-001 sub-002
+  # -> overrides TSV, only processes these
+  
+  python run_fmriprep.py ... --anat_only
+  # -> only process anatomical images (faster)
+        """
+    )
+    
+    # Required
+    parser.add_argument('--bids_dir', required=True, type=str,
+                        help="BIDS dataset directory")
+    parser.add_argument('--output_dir', required=True, type=str,
+                        help="Output directory")
+    parser.add_argument('--license_file', required=True, type=str,
+                        help="FreeSurfer license file path")
+    
+    # Optional
+    parser.add_argument('--image', default='nipreps/fmriprep:24.1.1',
+                        help="Docker image (default: nipreps/fmriprep:24.1.1)")
+    parser.add_argument('--subjects', nargs='+', type=str, default=None,
+                        help="Specific subjects (overrides TSV)")
+    parser.add_argument('--skip_bids_validation', action='store_true',
+                        help="Skip BIDS validation")
+    parser.add_argument('--anat_only', action='store_true',
+                        help="Only process anatomical images")
+    parser.add_argument('--fs_reconall', action='store_true',
+                        help="Enable FreeSurfer surface reconstruction (slow, disabled by default)")
+    parser.add_argument('--use_syn_sdc', action='store_true',
+                        help="Use fieldmap-less SyN-based SDC")
+    parser.add_argument('--use_fieldmaps', action='store_true',
+                        help="Use fieldmaps for SDC (requires fmap/ in BIDS)")
+    parser.add_argument('--output_spaces', default='MNI152NLin2009cAsym:res-2',
+                        help="Output spaces (default: MNI152NLin2009cAsym:res-2)")
+    parser.add_argument('--nthreads', type=int, default=None,
+                        help="Maximum number of threads")
+    parser.add_argument('--mem_mb', type=int, default=None,
+                        help="Maximum memory in MB")
+    parser.add_argument('--low_mem', action='store_true',
+                        help="Use low memory mode")
+    
     args = parser.parse_args()
-
-    print(f"Received arguments: {args}")
-
-    # Step 1: Convert DICOM to BIDS
-    try:
-        dicom2bids(args.dicom_dir, args.bids_dir)
-    except Exception as e:
-        print(f"CRITICAL ERROR during DICOM conversion: {e}")
+    
+    print("\n" + "#" * 60)
+    print("#" + " " * 18 + "fMRIPrep Batch Runner" + " " * 19 + "#")
+    print("#" * 60 + "\n")
+    
+    # License check
+    if not os.path.exists(args.license_file):
+        print(f"Error: License file not found: {args.license_file}")
         sys.exit(1)
-
-    # Step 2: Run Docker
-    exit_code = run_docker(
+    
+    # Step 1: Validate BIDS & get all subjects
+    print("[Step 1] Validating BIDS dataset...")
+    is_valid, message, _ = validate_bids_structure(args.bids_dir)
+    if not is_valid:
+        print(f"Error: {message}")
+        sys.exit(1)
+    print(f"  {message}")
+    
+    all_subjects = scan_bids_subjects(args.bids_dir)
+    print(f"\nSubjects found in BIDS directory: {len(all_subjects)}")
+    
+    # Step 2: Determine subjects to process
+    participants_file = Path(args.bids_dir) / "participants.tsv"
+    use_tsv = False
+    tsv_subjects = []
+    
+    if participants_file.exists() and pd is not None:
+        try:
+            df = pd.read_csv(participants_file, sep='\t', dtype=str)
+            if 'participant_id' in df.columns:
+                tsv_subjects = df['participant_id'].dropna().unique().tolist()
+                # Normalize format, ensure starts with sub-
+                tsv_subjects = [s if s.startswith('sub-') else f"sub-{s}" for s in tsv_subjects]
+                use_tsv = True
+                print(f"Found participants.tsv -> {len(tsv_subjects)} subjects")
+            else:
+                print("Warning: participants.tsv has no 'participant_id' column")
+        except Exception as e:
+            print(f"Warning: Cannot read participants.tsv: {e}")
+    else:
+        if not participants_file.exists():
+            print("participants.tsv not found -> will process all subjects")
+        else:
+            print("pandas not installed -> cannot read TSV automatically")
+    
+    # Determine final subject list to process
+    if args.subjects:
+        subjects_to_process = args.subjects
+        print(f"\nUsing command-line --subjects ({len(subjects_to_process)}):")
+    elif use_tsv:
+        subjects_to_process = tsv_subjects
+        print(f"\nUsing subjects from participants.tsv ({len(subjects_to_process)}):")
+    else:
+        subjects_to_process = None
+        print(f"\nNo specific list -> processing ALL {len(all_subjects)} subjects")
+    
+    if subjects_to_process:
+        # Filter out subjects not present in BIDS directory
+        valid = [s for s in subjects_to_process if s in all_subjects]
+        if len(valid) < len(subjects_to_process):
+            print(f"Warning: {len(subjects_to_process)-len(valid)} subjects from list not found in BIDS")
+        subjects_to_process = valid
+        for s in subjects_to_process:
+            print(f"  - {s}")
+    
+    # Step 3: Run
+    print("\n[Step 2] Starting fMRIPrep Docker...")
+    exit_code = run_fmriprep_docker(
         bids_dir=args.bids_dir,
         output_dir=args.output_dir,
-        freesurfer=args.freesurfer,
-        analysis_level=args.analysis_level,
         image=args.image,
-        fs_license_file=args.fs_license_file,
-        fs_subjects_dir=args.fs_subjects_dir,
-        work_dir=args.work_dir,
-        container_name="fmriprep_runner"
+        fs_license_file=args.license_file,
+        subjects=subjects_to_process,
+        skip_bids_validation=args.skip_bids_validation,
+        anat_only=args.anat_only,
+        use_syn_sdc=args.use_syn_sdc,
+        ignore_fieldmaps=not args.use_fieldmaps,
+        output_spaces=args.output_spaces,
+        nthreads=args.nthreads,
+        mem_mb=args.mem_mb,
+        low_mem=args.low_mem,
+        fs_no_reconall=not args.fs_reconall
     )
     
     if exit_code != 0:
-        print(f"fMRIPrep Docker finished with error code: {exit_code}")
+        print(f"\nfMRIPrep exited with code {exit_code}")
+        print("Check:", os.path.join(os.path.abspath(args.output_dir), "fmriprep-docker.log"))
         sys.exit(exit_code)
     
-    print("fMRIPrep finished successfully.")
+    print("\n" + "#" * 60)
+    print("#" + " " * 15 + "fMRIPrep Completed Successfully!" + " " * 10 + "#")
+    print("#" * 60)
+    print(f"\nResults in: {os.path.abspath(args.output_dir)}")
     sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

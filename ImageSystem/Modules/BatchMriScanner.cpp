@@ -301,12 +301,30 @@ void BatchMriScanner::performScan(const QString& rootPath, int maxDepth)
                     .arg(info.repetitionTime)
                     .arg(info.numberOfImages)
                     .arg(info.modality.isEmpty() ? "(empty)" : info.modality);
+        qDebug() << QString("      Identity: PatientID=%1, StudyDate=%2")
+                    .arg(info.patientId.isEmpty() ? "(empty)" : info.patientId)
+                    .arg(info.studyDate.isEmpty() ? "(empty)" : info.studyDate);
 
-        // Use folder name as pair key (extract subject ID from folder name)
-        // e.g., "sub001_20250101123456" -> "sub001"
-        QString pairKey = folderName.section('_', 0, 0);  // Take first part before underscore
-        if (pairKey.isEmpty()) {
-            pairKey = folderName;  // Fallback to full folder name
+        // ========== Generate Pair Key ==========
+        // Priority 1: PatientID + StudyDate (most reliable for same-session pairing)
+        // Priority 2: Folder name prefix (fallback for anonymized data)
+        QString pairKey;
+        
+        if (!info.patientId.isEmpty() && !info.studyDate.isEmpty()) {
+            // Best case: use PatientID + StudyDate
+            pairKey = info.patientId + "_" + info.studyDate;
+            qDebug() << QString("      PairKey: %1 (by PatientID+StudyDate)").arg(pairKey);
+        } else if (!info.patientId.isEmpty()) {
+            // PatientID only (no study date)
+            pairKey = info.patientId;
+            qDebug() << QString("      PairKey: %1 (by PatientID only)").arg(pairKey);
+        } else {
+            // Fallback: use folder name prefix
+            pairKey = folderName.section('_', 0, 0);
+            if (pairKey.isEmpty()) {
+                pairKey = folderName;
+            }
+            qDebug() << QString("      PairKey: %1 (by FolderName - FALLBACK)").arg(pairKey);
         }
         
         if (info.type == MriSeriesInfo::T1W) {

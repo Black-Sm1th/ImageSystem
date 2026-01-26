@@ -1,160 +1,94 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+DeepPrep Batch Runner (Modified for participants.tsv priority)
+============================================================
+Directly run DeepPrep on a pre-converted BIDS dataset.
+Prioritizes subjects from participants.tsv if available.
 
+Usage:
+    python run_deepprep.py --bids_dir C:/BIDS_Output --output_dir C:/DeepPrep_Results --license_file license.txt
+    python run_deepprep.py ... --subjects sub-001 sub-002
+"""
 import sys
 import os
 import subprocess
-import re
-import shutil
-import glob
 import argparse
 import platform
 from pathlib import Path
 
-# ===========================
-# 0. Dependency Check
-# ===========================
 try:
-    from dcm2bids.dcm2niix_gen import Dcm2niixGen
-    from dcm2bids.utils.io import write_txt
-    from dcm2bids.utils.scaffold import bids_starter_kit
+    import pandas as pd
 except ImportError:
-    print("Error: 'dcm2bids' package is missing.")
-    print("Please install it using: pip install dcm2bids")
-    sys.exit(1)
+    pd = None
+    print("Warning: pandas not installed. Cannot read participants.tsv automatically.")
 
 # ===========================
 # 1. Platform Helpers
 # ===========================
-
 def get_docker_cmd():
     """Returns the appropriate docker command list based on OS."""
     if platform.system().lower() == 'windows':
         return ['docker']
     return ['sudo', 'docker']
 
-def is_in_directory(filepath, directory):
-    """Check if filepath is inside directory."""
-    return os.path.realpath(filepath).startswith(os.path.realpath(directory) + os.sep)
-
 # ===========================
-# 2. BIDS Conversion Logic
+# 2. BIDS Validation & Subject Scanning
 # ===========================
+def scan_bids_subjects(bids_dir: str):
+    """
+    Scan BIDS directory and return list of subject IDs (with 'sub-' prefix).
+    """
+    bids_path = Path(bids_dir)
+    
+    if not bids_path.exists():
+        print(f"Error: BIDS directory not found: {bids_dir}")
+        return []
+    
+    subjects = sorted([d.name for d in bids_path.iterdir()
+                       if d.is_dir() and d.name.startswith('sub-')])
+    
+    return subjects
 
-def dicom2bids(dicoms_dir: str, bids_dir: str):
+def validate_bids_structure(bids_dir: str):
     """
-    Main function to orchestrate DICOM to BIDS conversion.
+    Basic validation of BIDS structure.
+    Returns (is_valid, message, subject_count)
     """
-    print(f"--- Starting DICOM to BIDS conversion ---")
-    print(f"Source: {dicoms_dir}")
-    print(f"Target: {bids_dir}")
+    bids_path = Path(bids_dir)
     
-    # 1. Create Scaffold
-    dcm2bids_scaffold(bids_dir)
+    if not bids_path.exists():
+        return False, f"BIDS directory not found: {bids_dir}", 0
     
-    # 2. Run dcm2niix via wrapper
-    dicom2bids_helper(dicom_dir=dicoms_dir, bids_dir=bids_dir)
+    desc_file = bids_path / "dataset_description.json"
+    if not desc_file.exists():
+        print("Warning: dataset_description.json not found (optional but recommended)")
     
-    # 3. Filter and organize files
-    for modality in ["T1w", "T2w", "task-rest_bold"]:
-        dicom2bids_filter(bids_dir, modality)
+    subjects = scan_bids_subjects(bids_dir)
     
-    print(f"--- BIDS conversion completed ---")
-    return bids_dir
-
-def dcm2bids_scaffold(bids_dir: str):
-    """Creates the BIDS directory structure and default files."""
-    for _ in ["code", "derivatives", "sourcedata"]:
-        os.makedirs(os.path.join(bids_dir, _), exist_ok=True)
+    if len(subjects) == 0:
+        return False, "No subjects (sub-*) found in BIDS directory", 0
     
-    # Write standard BIDS files using dcm2bids templates
-    write_txt(os.path.join(bids_dir, "CHANGES"), bids_starter_kit.CHANGES)
-    write_txt(os.path.join(bids_dir, "dataset_description.json"),
-              bids_starter_kit.dataset_description.replace("BIDS_VERSION", "v1.8.0"))
-    write_txt(os.path.join(bids_dir, "participants.json"), bids_starter_kit.participants_json)
-    write_txt(os.path.join(bids_dir, "participants.tsv"), bids_starter_kit.participants_tsv)
-    write_txt(os.path.join(bids_dir, ".bidsignore"), "tmp_dcm2bids")
-    write_txt(os.path.join(bids_dir, "README"), bids_starter_kit.README)
-    
-    # Reset sub-01 directory
-    sub_dir = os.path.join(bids_dir, "sub-01")
-    if os.path.exists(sub_dir):
-        shutil.rmtree(sub_dir)
-    os.makedirs(sub_dir, exist_ok=True)
-    os.makedirs(os.path.join(sub_dir, "anat"), exist_ok=True)
-    os.makedirs(os.path.join(sub_dir, "func"), exist_ok=True)
-
-def dicom2bids_helper(dicom_dir: str, bids_dir: str):
-    """
-    Runs dcm2niix to convert DICOMs to temporary NIfTI files.
-    NOTE: Requires dcm2niix to be in system PATH.
-    """
-    helper_dir = os.path.join(bids_dir, "tmp_dcm2bids", "helper")
-    # Ensure helper dir exists (though dcm2bids usually handles it)
-    os.makedirs(helper_dir, exist_ok=True)
-    
-    try:
-        app = Dcm2niixGen(dicom_dirs=[dicom_dir], bids_dir=Path(helper_dir), helper=True)
-        app.run(force=True)
-    except Exception as e:
-        print(f"Error running dcm2niix: {e}")
-        print("Ensure 'dcm2niix' is installed and in your system PATH.")
-        raise e
-    return bids_dir
-
-def dicom2bids_filter(bids_dir: str, modality: str):
-    """
-    Filters and moves NIfTI files to their correct BIDS subfolders based on Modality.
-    """
-    helper_dir = os.path.join(bids_dir, "tmp_dcm2bids", "helper")
-    # Use glob to find json files
-    json_files = glob.glob(os.path.join(helper_dir, "*.json"))
-    
-    for file in json_files:
-        # Check if corresponding NIfTI exists
-        nii_file = file.replace("json", "nii.gz")
-        if not os.path.exists(nii_file):
-            continue
+    valid_subjects = []
+    for sub in subjects:
+        sub_path = bids_path / sub
+        anat_path = sub_path / "anat"
         
-        # Logic from source: Skip ROI
-        if re.search(r'ROI', file, re.I):
-            continue
-            
-        subdir = ""
-        # Filter for Anat
-        if modality in ["T1w", "T2w"]:
-            pattern = r'_T1' if modality == 'T1w' else r'_T2'
-            pattern_3d = r'_3DT1' if modality == 'T1w' else r'_3DT2'
-            subdir = "anat"
-            if not re.search(pattern_3d, file, re.I) and not re.search(pattern, file, re.I):
-                continue
+        t1_files = list(anat_path.glob("*_T1w.nii.gz")) if anat_path.exists() else []
         
-        # Filter for Func
-        elif modality in ["task-rest_bold"]:
-            pattern_bold = r'_bold'
-            pattern_rest = r'_rest'
-            pattern_exclude = r'fieldmap|SB'
-            
-            if re.search(pattern_exclude, file, re.I):
-                continue
-            subdir = "func"
-            if not re.search(pattern_bold, file, re.I) and not re.search(pattern_rest, file, re.I):
-                continue
-        
-        # Move files
-        dest_json = os.path.join(bids_dir, f"sub-01", subdir, f"sub-01_{modality}.json")
-        dest_nii = os.path.join(bids_dir, f"sub-01", subdir, f"sub-01_{modality}.nii.gz")
-        
-        print(f"Moving: {os.path.basename(file)} -> sub-01/{subdir}")
-        shutil.move(file, dest_json)
-        shutil.move(nii_file, dest_nii)
-        
-    return True
+        if len(t1_files) > 0:
+            valid_subjects.append(sub)
+        else:
+            print(f"Warning: {sub} has no T1w file, will be skipped")
+    
+    if len(valid_subjects) == 0:
+        return False, "No valid subjects with T1w files found", 0
+    
+    return True, f"Found {len(valid_subjects)} valid subjects with T1w", len(valid_subjects)
 
 # ===========================
 # 3. Docker Execution Logic
 # ===========================
-
 def check_docker():
     """Verify that docker is installed and accessible."""
     cmd = get_docker_cmd() + ['version']
@@ -165,7 +99,7 @@ def check_docker():
         if e.errno == ENOENT:
             return -1
         raise e
-    if ret.stderr.startswith(b'Cannot connect to the Docker daemon.'):
+    if ret.stderr and b'Cannot connect to the Docker daemon' in ret.stderr:
         return 0
     return 1
 
@@ -175,84 +109,124 @@ def check_image(image):
     ret = subprocess.run(cmd, stdout=subprocess.PIPE)
     return bool(ret.stdout)
 
-def run_deepprep_docker(bids_dir, output_dir, 
+def run_deepprep_docker(bids_dir, output_dir,
                         image: str = 'pbfslab/deepprep:25.1.1.cuda129',
                         fs_license_file: str = None,
                         bold_task_type: str = 'rest',
-                        bold_sdc: bool = False,
-                        container_name: str = "deepprep_runner"):
+                        bold_sdc: bool = True,
+                        subjects: list = None,
+                        skip_bids_validation: bool = False,
+                        anat_only: bool = False,
+                        bold_only: bool = False,
+                        device: str = 'auto',
+                        resume: bool = False):
     """
     Run DeepPrep via Docker with GPU support.
     """
+    print("\n" + "=" * 60)
+    print("DeepPrep Docker Runner")
+    print("=" * 60)
     
-    print("\n--- Preparing to run DeepPrep Docker ---")
-    
-    # 1. Check Environment
-    check = check_docker()
-    if check < 1:
-        if check == -1:
-            print('Error: Could not find docker command... Is it installed?')
+    # Check Docker
+    docker_ok = check_docker()
+    if docker_ok < 1:
+        if docker_ok == -1:
+            print('Error: Docker command not found. Is Docker installed?')
         else:
-            print("Error: Make sure you have permission to run 'docker'")
+            print("Error: Cannot connect to Docker daemon. Is it running?")
         return 1
-
+    
     if not check_image(image):
-        print(f'Downloading image {image}. This may take a while...')
-
-    # 2. Get Docker Version
+        print(f"Image {image} not found locally. Will be pulled automatically (~10GB).")
+    
+    # Get Docker version for env var
     cmd_ver = get_docker_cmd() + ['version', '--format', '{{.Server.Version}}']
-    ret = subprocess.run(cmd_ver, stdout=subprocess.PIPE)
-    docker_version = ret.stdout.decode('ascii').strip() if ret.returncode == 0 else "unknown"
-
-    # 3. Build Command
-    # Note: Do NOT use -it flag when running from non-interactive environments
-    # -it causes "input device is not a TTY" error on Windows
+    ret = subprocess.run(cmd_ver, stdout=subprocess.PIPE, text=True)
+    docker_version = ret.stdout.strip() if ret.returncode == 0 else "unknown"
+    
+    # Build command
     command = get_docker_cmd() + [
         'run',
         '--rm',
         '--gpus', 'all',
-        '--name', container_name,
-        '-e', 'DOCKER_VERSION_8395080871=%s' % docker_version
+        '-e', f'DOCKER_VERSION_8395080871={docker_version}'
     ]
-
-    # 4. Mount Directories
-    # Convert to absolute paths
+    
+    # Mounts
     abs_bids = os.path.abspath(bids_dir)
     abs_output = os.path.abspath(output_dir)
     os.makedirs(abs_output, exist_ok=True)
     
-    # Mount BIDS directory as /input
-    command.extend(['-v', '{}:/input'.format(abs_bids)])
+    command.extend(['-v', f'{abs_bids}:/input'])
+    command.extend(['-v', f'{abs_output}:/output'])
     
-    # Mount output directory as /output
-    command.extend(['-v', '{}:/output'.format(abs_output)])
-    
-    # Mount license file
     if fs_license_file and os.path.exists(fs_license_file):
         abs_license = os.path.abspath(fs_license_file)
-        command.extend(['-v', '{}:/fs_license.txt:ro'.format(abs_license)])
+        command.extend(['-v', f'{abs_license}:/fs_license.txt:ro'])
     else:
-        print("Error: FreeSurfer license file is required but not found.")
+        print("Error: FreeSurfer license file required but not found.")
+        print("Get one at: https://surfer.nmr.mgh.harvard.edu/registration.html")
         return 1
-
-    # 5. Add image and arguments
+    
+    # Image & args
     command.append(image)
     command.extend(['/input', '/output', 'participant'])
     command.extend(['--fs_license_file', '/fs_license.txt'])
     command.extend(['--bold_task_type', bold_task_type])
-    command.extend(['--bold_sdc', str(bold_sdc)])
-
-    # 6. Execute
+    command.extend(['--bold_sdc', str(bold_sdc).lower()])
+    command.extend(['--device', device])
+    
+    if subjects:
+        # Remove 'sub-' prefix for DeepPrep
+        # DeepPrep expects space-separated IDs as a single string: 'sub-001 sub-002'
+        labels = [s.replace('sub-', '').strip() for s in subjects]
+        labels_str = ' '.join(labels)
+        command.extend(['--participant_label', labels_str])
+        print(f"Passing to DeepPrep: --participant_label '{labels_str}'")
+    else:
+        print("No --participant_label -> DeepPrep will process ALL subjects in /input")
+    
+    if skip_bids_validation:
+        command.append('--skip_bids_validation')
+    
+    if anat_only:
+        command.append('--anat_only')
+    
+    if bold_only:
+        command.append('--bold_only')
+    
+    if resume:
+        command.append('--resume')
+    
+    # Log path
     log_path = os.path.join(abs_output, "deepprep-docker.log")
-    print(f"Logging to: {log_path}")
-    print('RUNNING COMMAND:', ' '.join(command))
-    print()
-
+    
+    print(f"\nBIDS Input : {abs_bids}")
+    print(f"Output     : {abs_output}")
+    print(f"Log File   : {log_path}")
+    print(f"Task Type  : {bold_task_type}")
+    print(f"SDC        : {bold_sdc}")
+    if subjects:
+        print(f"Subjects   : {', '.join(subjects)} ({len(subjects)})")
+    else:
+        print("Subjects   : ALL in BIDS directory")
+    
+    print("\n" + "-" * 60)
+    print("Full Docker Command:")
+    print(' '.join(command))
+    print("-" * 60 + "\n")
+    
+    print("Starting DeepPrep... (may take hours per subject)")
+    print("Progress in:", log_path, "\n")
+    
     try:
-        # Use utf-8 encoding for Windows log files
-        with open(log_path, "w", encoding='utf-8') as file:
-            ret = subprocess.run(command, stdout=file, stderr=subprocess.STDOUT, text=True, encoding='utf-8')
+        with open(log_path, "w", encoding='utf-8') as f:
+            ret = subprocess.run(command, stdout=f, stderr=subprocess.STDOUT,
+                               text=True, encoding='utf-8')
         return ret.returncode
+    except KeyboardInterrupt:
+        print("\nInterrupted by user!")
+        return 130
     except Exception as e:
         print(f"Execution failed: {e}")
         return 1
@@ -260,80 +234,147 @@ def run_deepprep_docker(bids_dir, output_dir,
 # ===========================
 # 4. Main Entry Point
 # ===========================
-
 def main():
-    parser = argparse.ArgumentParser(description='Convert DICOM to BIDS and run DeepPrep via Docker')
+    parser = argparse.ArgumentParser(
+        description='Run DeepPrep on a BIDS dataset (prioritizes participants.tsv)',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python run_deepprep.py --bids_dir C:/BIDS --output_dir C:/Results --license_file license.txt
+  # -> automatically uses subjects from participants.tsv (if exists)
+
+  python run_deepprep.py ... --subjects sub-001 sub-002
+  # -> overrides TSV, only processes these
+        """
+    )
     
-    # Required Arguments
-    parser.add_argument('--input_dir', required=True, type=str, 
-                        help="Input directory containing DICOM files")
-    parser.add_argument('--bids_dir', required=True, type=str, 
-                        help="Directory for BIDS structure output")
-    parser.add_argument('--output_dir', required=True, type=str, 
-                        help="Final output directory for DeepPrep results")
+    # Required
+    parser.add_argument('--bids_dir', required=True, type=str,
+                        help="BIDS dataset directory")
+    parser.add_argument('--output_dir', required=True, type=str,
+                        help="Output directory")
     parser.add_argument('--license_file', required=True, type=str,
-                        help="Path to FreeSurfer license file")
+                        help="FreeSurfer license file path")
     
-    # Optional Arguments
-    parser.add_argument('--image', default='pbfslab/deepprep:25.1.1.cuda129', type=str,
-                        help="DeepPrep Docker image (default: pbfslab/deepprep:25.1.1.cuda129)")
-    parser.add_argument('--bold_task_type', default='rest', type=str,
-                        help="BOLD task type (default: rest)")
-    parser.add_argument('--bold_sdc', action='store_true',
-                        help="Enable BOLD susceptibility distortion correction (default: False)")
-
+    # Optional
+    parser.add_argument('--image', default='pbfslab/deepprep:25.1.1.cuda129',
+                        help="Docker image")
+    parser.add_argument('--bold_task_type', default='rest',
+                        help="BOLD task type")
+    parser.add_argument('--bold_sdc', action='store_true', default=True,
+                        help="Enable susceptibility distortion correction (default: True)")
+    parser.add_argument('--no_bold_sdc', action='store_true',
+                        help="Disable susceptibility distortion correction")
+    parser.add_argument('--subjects', nargs='+', type=str, default=None,
+                        help="Specific subjects (overrides TSV)")
+    parser.add_argument('--skip_bids_validation', action='store_true',
+                        help="Skip BIDS validation")
+    parser.add_argument('--anat_only', action='store_true',
+                        help="Only process anatomical images")
+    parser.add_argument('--bold_only', action='store_true',
+                        help="Only process functional images (requires Recon files)")
+    parser.add_argument('--device', default='auto',
+                        help="Device: auto, 0, 1, ..., or cpu (default: auto)")
+    parser.add_argument('--resume', action='store_true',
+                        help="Resume from last exit point")
+    
     args = parser.parse_args()
-
-    print("=" * 60)
-    print("DeepPrep Pipeline")
-    print("=" * 60)
-    print(f"Input Directory: {args.input_dir}")
-    print(f"BIDS Directory: {args.bids_dir}")
-    print(f"Output Directory: {args.output_dir}")
-    print(f"License File: {args.license_file}")
-    print(f"Docker Image: {args.image}")
-    print(f"BOLD Task Type: {args.bold_task_type}")
-    print(f"BOLD SDC: {args.bold_sdc}")
-    print("=" * 60)
-    print()
-
-    # Validate license file exists
+    
+    print("\n" + "#" * 60)
+    print("#" + " " * 18 + "DeepPrep Batch Runner" + " " * 19 + "#")
+    print("#" * 60 + "\n")
+    
+    # License check
     if not os.path.exists(args.license_file):
-        print(f"Error: License file not found at {args.license_file}")
+        print(f"Error: License file not found: {args.license_file}")
         sys.exit(1)
-
-    # Step 1: Convert DICOM to BIDS
-    print("\n[STEP 1/2] Converting DICOM to BIDS format...")
-    try:
-        dicom2bids(args.input_dir, args.bids_dir)
-    except Exception as e:
-        print(f"CRITICAL ERROR during DICOM conversion: {e}")
-        import traceback
-        traceback.print_exc()
+    
+    # Step 1: Validate BIDS & get all subjects
+    print("[Step 1] Validating BIDS dataset...")
+    is_valid, message, _ = validate_bids_structure(args.bids_dir)
+    if not is_valid:
+        print(f"Error: {message}")
         sys.exit(1)
-
-    # Step 2: Run DeepPrep Docker
-    print("\n[STEP 2/2] Running DeepPrep Docker container...")
+    print(f" {message}")
+    
+    all_subjects = scan_bids_subjects(args.bids_dir)
+    print(f"\nSubjects found in BIDS directory: {len(all_subjects)}")
+    
+    # Step 2: Determine subjects to process
+    participants_file = Path(args.bids_dir) / "participants.tsv"
+    use_tsv = False
+    tsv_subjects = []
+    
+    if participants_file.exists() and pd is not None:
+        try:
+            df = pd.read_csv(participants_file, sep='\t', dtype=str)
+            if 'participant_id' in df.columns:
+                tsv_subjects = df['participant_id'].dropna().unique().tolist()
+                # Normalize format, ensure starts with sub-
+                tsv_subjects = [s if s.startswith('sub-') else f"sub-{s}" for s in tsv_subjects]
+                use_tsv = True
+                print(f"Found participants.tsv -> {len(tsv_subjects)} subjects")
+            else:
+                print("Warning: participants.tsv has no 'participant_id' column")
+        except Exception as e:
+            print(f"Warning: Cannot read participants.tsv: {e}")
+    else:
+        if not participants_file.exists():
+            print("participants.tsv not found -> will process all subjects")
+        else:
+            print("pandas not installed -> cannot read TSV automatically")
+    
+    # Determine final subject list to process
+    if args.subjects:
+        subjects_to_process = args.subjects
+        print(f"\nUsing command-line --subjects ({len(subjects_to_process)}):")
+    elif use_tsv:
+        subjects_to_process = tsv_subjects
+        print(f"\nUsing subjects from participants.tsv ({len(subjects_to_process)}):")
+    else:
+        subjects_to_process = None
+        print(f"\nNo specific list -> processing ALL {len(all_subjects)} subjects")
+    
+    if subjects_to_process:
+        # Filter out subjects not present in BIDS directory
+        valid = [s for s in subjects_to_process if s in all_subjects]
+        if len(valid) < len(subjects_to_process):
+            print(f"Warning: {len(subjects_to_process)-len(valid)} subjects from list not found in BIDS")
+        subjects_to_process = valid
+        for s in subjects_to_process:
+            print(f" - {s}")
+    
+    # Determine bold_sdc value (--no_bold_sdc overrides --bold_sdc)
+    bold_sdc = not args.no_bold_sdc
+    
+    # Step 3: Run
+    print("\n[Step 2] Starting DeepPrep Docker...")
     exit_code = run_deepprep_docker(
         bids_dir=args.bids_dir,
         output_dir=args.output_dir,
         image=args.image,
         fs_license_file=args.license_file,
         bold_task_type=args.bold_task_type,
-        bold_sdc=args.bold_sdc,
-        container_name="deepprep_runner"
+        bold_sdc=bold_sdc,
+        subjects=subjects_to_process,
+        skip_bids_validation=args.skip_bids_validation,
+        anat_only=args.anat_only,
+        bold_only=args.bold_only,
+        device=args.device,
+        resume=args.resume
     )
     
     if exit_code != 0:
-        print(f"\nDeepPrep Docker finished with error code: {exit_code}")
-        print(f"Check log file: {os.path.join(os.path.abspath(args.output_dir), 'deepprep-docker.log')}")
+        print(f"\nDeepPrep exited with code {exit_code}")
+        print("Check:", os.path.join(os.path.abspath(args.output_dir), "deepprep-docker.log"))
         sys.exit(exit_code)
     
-    print("\n" + "=" * 60)
-    print("DeepPrep finished successfully!")
-    print("=" * 60)
+    print("\n" + "#" * 60)
+    print("#" + " " * 15 + "DeepPrep Completed Successfully!" + " " * 10 + "#")
+    print("#" * 60)
+    print(f"\nResults in: {os.path.abspath(args.output_dir)}")
     sys.exit(0)
+
 
 if __name__ == "__main__":
     main()
-

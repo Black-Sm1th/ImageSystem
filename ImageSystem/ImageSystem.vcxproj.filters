@@ -99,6 +99,9 @@
     <ClInclude Include="Modules\Version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Modules\DicomNetwork.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="Model\DicomDataModel.h">
@@ -114,9 +117,6 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="Modules\BrainNetworkData.h">
-      <Filter>Header Files</Filter>
-    </QtMoc>
-    <QtMoc Include="Modules\DicomNetwork.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>
