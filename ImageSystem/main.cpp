@@ -13,6 +13,7 @@
 #include "Modules/Version.h"
 #include "Modules/DicomNetwork.h"
 #include "Modules/BatchMriScanner.h"
+#include "Modules/BidsConverter.h"
 
 // 全局键盘事件过滤：不依赖 QML focus，把 1-6 写入 DicomDataModel.toolMode
 class GlobalKeyFilter : public QObject
@@ -131,6 +132,97 @@ void testBatchMriScan(const QString& rootPath)
     qDebug() << QStringLiteral("\n====================================\n");
 }
 
+// ============================================================================
+// 完整流程测试：扫描 -> 配对 -> 转换为 BIDS
+// ============================================================================
+void testFullBidsConversion(const QString& inputDir, const QString& outputDir)
+{
+    qDebug() << "\n##################################################";
+    qDebug() << "# Full Pipeline: Scan -> Pair -> BIDS Conversion";
+    qDebug() << "##################################################";
+    qDebug() << "Input Directory:" << inputDir;
+    qDebug() << "Output BIDS Directory:" << outputDir;
+    qDebug() << "";
+    
+    // ========== Step 1: Scan and Pair ==========
+    qDebug() << "========== Step 1: Scanning and Pairing ==========\n";
+    
+    BatchMriScanner scanner;
+    QList<MriPairResult> pairs = scanner.scanSync(inputDir, 5);
+    
+    if (pairs.isEmpty()) {
+        qWarning() << "No paired T1W/BOLD data found! Exiting.";
+        return;
+    }
+    
+    qDebug() << "\nFound" << pairs.size() << "paired subjects:\n";
+    for (int i = 0; i < pairs.size(); ++i) {
+        const auto& p = pairs[i];
+        qDebug() << QString("[%1] %2 - T1: %3 images, BOLD: %4 images")
+                    .arg(i + 1)
+                    .arg(p.patientName.isEmpty() ? "(Anonymous)" : p.patientName)
+                    .arg(p.t1ImageCount)
+                    .arg(p.boldImageCount);
+    }
+    
+    // ========== Step 2: Convert to BIDS ==========
+    qDebug() << "\n========== Step 2: Converting to BIDS Format ==========\n";
+    
+    BidsConverter converter;
+    converter.setOutputDirectory(outputDir);
+    converter.setDatasetName("BrainMRI_Study");
+    converter.setTaskName("rest");  // BOLD task name
+    
+    // Connect progress signal
+    QObject::connect(&converter, &BidsConverter::progressUpdated, [](const BidsConversionProgress& p) {
+        qDebug() << QString("Conversion Progress: %1% (%2/%3) - Current: %4 [%5]")
+                    .arg((int)(p.percentage() * 100))
+                    .arg(p.convertedPairs)
+                    .arg(p.totalPairs)
+                    .arg(p.currentSubject)
+                    .arg(p.currentStep);
+    });
+    
+    // Synchronous conversion
+    QList<BidsSubjectResult> results = converter.convertSync(pairs);
+    
+    // ========== Step 3: Summary ==========
+    qDebug() << "\n========== Conversion Summary ==========\n";
+    
+    int successCount = 0;
+    int t1OnlyCount = 0;
+    int boldOnlyCount = 0;
+    int failedCount = 0;
+    
+    for (const auto& r : results) {
+        if (r.t1Success && r.boldSuccess) {
+            successCount++;
+            qDebug() << QString("[OK] %1").arg(r.subjectId);
+            qDebug() << QString("     T1:   %1").arg(r.t1NiftiPath);
+            qDebug() << QString("     BOLD: %1").arg(r.boldNiftiPath);
+        } else if (r.t1Success) {
+            t1OnlyCount++;
+            qDebug() << QString("[PARTIAL] %1 - T1 only").arg(r.subjectId);
+        } else if (r.boldSuccess) {
+            boldOnlyCount++;
+            qDebug() << QString("[PARTIAL] %1 - BOLD only").arg(r.subjectId);
+        } else {
+            failedCount++;
+            qDebug() << QString("[FAILED] %1 - %2").arg(r.subjectId).arg(r.errorMessage);
+        }
+    }
+    
+    qDebug() << "\n------------------------------------------";
+    qDebug() << QString("Total:        %1 subjects").arg(results.size());
+    qDebug() << QString("Full Success: %1").arg(successCount);
+    qDebug() << QString("Partial:      %1 (T1 only: %2, BOLD only: %3)")
+                .arg(t1OnlyCount + boldOnlyCount).arg(t1OnlyCount).arg(boldOnlyCount);
+    qDebug() << QString("Failed:       %1").arg(failedCount);
+    qDebug() << "------------------------------------------";
+    qDebug() << QString("BIDS Output:  %1").arg(outputDir);
+    qDebug() << "\n##################################################\n";
+}
+
 //void testDicomCFind(const QString& patientId)
 //{
 //    qDebug() << "\n========== DICOM C-FIND 测试 ==========";
@@ -191,7 +283,7 @@ void testBatchMriScan(const QString& rootPath)
 
 int main(int argc, char* argv[])
 {
-    system("chcp 65001");
+    //system("chcp 65001");
     QQuickVTKItem::setGraphicsApi();
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -209,9 +301,14 @@ int main(int argc, char* argv[])
     
 
 
-    //testBatchMriScan("D:/brain_datasets");
+    // ========== 批量扫描并转换为 BIDS 格式 ==========
+    // 取消下面注释以运行完整流程测试
+    // testFullBidsConversion("D:/brain_datasets", "D:/BIDS_Output");
+    
+    // 或者只测试扫描功能
+    // testBatchMriScan("D:/brain_datasets");
 
-
+    testFullBidsConversion("C:/temp/brain_datasets","C:/temp");
 
     // 安装全局键盘监听（不依赖焦点）
     //app.installEventFilter(new GlobalKeyFilter(&app));
