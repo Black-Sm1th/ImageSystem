@@ -1,6 +1,7 @@
 ﻿#include "MainViewController.h"
 #include <algorithm>
 #include <vtkTransform.h>
+#include <QQuickItemGrabResult>
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDebug>
@@ -931,6 +932,8 @@ QQuickVTKItem::vtkUserData SliceVtkItemBase::initializeVTK(vtkRenderWindow* rend
         this, &SliceVtkItemBase::onInteractionResetRequested);
     connect(m_dataModel, &DicomDataModel::crosshairEnabledChanged,
         this, &SliceVtkItemBase::onCrosshairEnabledChanged);
+    connect(m_dataModel, &DicomDataModel::screenshotRequested,
+        this, &SliceVtkItemBase::onScreenshotRequested);
 
     // 在渲染线程初始化VTK对象
     vtkSmartPointer<vtkImageData> imageData = m_dataModel->getImageData();
@@ -971,6 +974,51 @@ void SliceVtkItemBase::onCrosshairEnabledChanged(bool enabled)
         }
     });
     scheduleRender();
+}
+
+void SliceVtkItemBase::onScreenshotRequested(int viewType, QString filePath)
+{
+    // 检查是否是当前视图
+    int currentViewType = static_cast<int>(m_orientation);
+    if (viewType != currentViewType) {
+        return;  // 不是当前视图，忽略
+    }
+    
+    // 使用 Qt 的 grabToImage 方法截图，可以捕获所有渲染内容包括标注文字
+    auto result = grabToImage();
+    if (!result) {
+        emit m_dataModel->showMessageRequested("error", QStringLiteral("截图失败"));
+        return;
+    }
+    
+    connect(result.data(), &QQuickItemGrabResult::ready, this, [this, result, filePath]() {
+        QImage image = result->image();
+        if (image.isNull()) {
+            emit m_dataModel->showMessageRequested("error", QStringLiteral("截图失败：图像为空"));
+            return;
+        }
+        
+        // 根据文件扩展名选择格式
+        QString ext = filePath.right(4).toLower();
+        const char* format = "PNG";
+        int quality = -1;
+        
+        if (ext == ".jpg" || ext == "jpeg") {
+            format = "JPEG";
+            quality = 95;
+        }
+        
+        QString savePath = filePath;
+        if (ext != ".png" && ext != ".jpg" && ext != "jpeg") {
+            savePath = filePath + ".png";
+        }
+        
+        if (image.save(savePath, format, quality)) {
+            emit m_dataModel->showMessageRequested("success", QStringLiteral("截图保存成功"));
+        } else {
+            emit m_dataModel->showMessageRequested("error", QStringLiteral("截图保存失败"));
+        }
+    });
 }
 
 void SliceVtkItemBase::onDataLoaded()
@@ -1431,6 +1479,8 @@ QQuickVTKItem::vtkUserData VolumeVtkItem::initializeVTK(vtkRenderWindow* renderW
         this, &VolumeVtkItem::onSegRefreshRenderer);
     connect(GET_SINGLETON(DicomDataModel), &DicomDataModel::interactionResetRequested,
         this, &VolumeVtkItem::onInteractionResetRequested);
+    connect(GET_SINGLETON(DicomDataModel), &DicomDataModel::screenshotRequested,
+        this, &VolumeVtkItem::onScreenshotRequested);
     // 在渲染线程初始化VTK对象
     vtkSmartPointer<vtkImageData> imageData = GET_SINGLETON(DicomDataModel)->getImageData();
     if (imageData) {
@@ -1456,6 +1506,52 @@ void VolumeVtkItem::onInteractionResetRequested()
         data->renderer->ResetCamera();
     });
     scheduleRender();
+}
+
+void VolumeVtkItem::onScreenshotRequested(int viewType, QString filePath)
+{
+    // 检查是否是3D视图
+    if (viewType != 3) {
+        return;  // 不是3D视图，忽略
+    }
+    
+    auto dicomModel = GET_SINGLETON(DicomDataModel);
+    
+    // 使用 Qt 的 grabToImage 方法截图
+    auto result = grabToImage();
+    if (!result) {
+        emit dicomModel->showMessageRequested("error", QStringLiteral("截图失败"));
+        return;
+    }
+    
+    connect(result.data(), &QQuickItemGrabResult::ready, this, [dicomModel, result, filePath]() {
+        QImage image = result->image();
+        if (image.isNull()) {
+            emit dicomModel->showMessageRequested("error", QStringLiteral("截图失败：图像为空"));
+            return;
+        }
+        
+        // 根据文件扩展名选择格式
+        QString ext = filePath.right(4).toLower();
+        const char* format = "PNG";
+        int quality = -1;
+        
+        if (ext == ".jpg" || ext == "jpeg") {
+            format = "JPEG";
+            quality = 95;
+        }
+        
+        QString savePath = filePath;
+        if (ext != ".png" && ext != ".jpg" && ext != "jpeg") {
+            savePath = filePath + ".png";
+        }
+        
+        if (image.save(savePath, format, quality)) {
+            emit dicomModel->showMessageRequested("success", QStringLiteral("截图保存成功"));
+        } else {
+            emit dicomModel->showMessageRequested("error", QStringLiteral("截图保存失败"));
+        }
+    });
 }
 
 void VolumeVtkItem::onDataLoaded()
@@ -1951,7 +2047,30 @@ void MainViewController::appendFmriprepLog(const QString& text)
     if (text.isEmpty())
         return;
     m_fmriprepLog.append(text);
-    emit fmriprepLogUpdated();
+    // 限制日志长度，避免TextArea渲染大量文本导致UI卡顿
+    // 10000字符约等于200-300行日志，足够查看最近的输出
+    const int maxLogLength = 10000;
+    if (m_fmriprepLog.length() > maxLogLength) {
+        // 保留后半部分日志，从换行符处截断以保持完整行
+        int cutPos = m_fmriprepLog.indexOf('\n', m_fmriprepLog.length() - maxLogLength);
+        if (cutPos > 0) {
+            m_fmriprepLog = m_fmriprepLog.mid(cutPos + 1);
+        } else {
+            m_fmriprepLog = m_fmriprepLog.right(maxLogLength);
+        }
+    }
+    // 使用节流机制，避免频繁触发UI更新
+    if (!m_fmriprepLogUpdateTimer) {
+        m_fmriprepLogUpdateTimer = new QTimer(this);
+        m_fmriprepLogUpdateTimer->setSingleShot(true);
+        m_fmriprepLogUpdateTimer->setInterval(300); // 300ms节流，减少UI更新频率
+        connect(m_fmriprepLogUpdateTimer, &QTimer::timeout, this, [this]() {
+            emit fmriprepLogUpdated();
+        });
+    }
+    if (!m_fmriprepLogUpdateTimer->isActive()) {
+        m_fmriprepLogUpdateTimer->start();
+    }
 }
 
 void MainViewController::clearFmriprepLog()
@@ -3440,7 +3559,30 @@ void MainViewController::appendDeepprepLog(const QString& text)
     if (text.isEmpty())
         return;
     m_deepprepLog.append(text);
-    emit deepprepLogUpdated();
+    // 限制日志长度，避免TextArea渲染大量文本导致UI卡顿
+    // 10000字符约等于200-300行日志，足够查看最近的输出
+    const int maxLogLength = 10000;
+    if (m_deepprepLog.length() > maxLogLength) {
+        // 保留后半部分日志，从换行符处截断以保持完整行
+        int cutPos = m_deepprepLog.indexOf('\n', m_deepprepLog.length() - maxLogLength);
+        if (cutPos > 0) {
+            m_deepprepLog = m_deepprepLog.mid(cutPos + 1);
+        } else {
+            m_deepprepLog = m_deepprepLog.right(maxLogLength);
+        }
+    }
+    // 使用节流机制，避免频繁触发UI更新
+    if (!m_deepprepLogUpdateTimer) {
+        m_deepprepLogUpdateTimer = new QTimer(this);
+        m_deepprepLogUpdateTimer->setSingleShot(true);
+        m_deepprepLogUpdateTimer->setInterval(300); // 300ms节流，减少UI更新频率
+        connect(m_deepprepLogUpdateTimer, &QTimer::timeout, this, [this]() {
+            emit deepprepLogUpdated();
+        });
+    }
+    if (!m_deepprepLogUpdateTimer->isActive()) {
+        m_deepprepLogUpdateTimer->start();
+    }
 }
 
 void MainViewController::clearDeepprepLog()
@@ -3570,4 +3712,13 @@ void MainViewController::deletePenAnnotation(int orientation, int index)
         style->DeletePenAnnotation(index);
     }
     emit GET_SINGLETON(DicomDataModel)->segRefreshRenderer();
+}
+
+void MainViewController::captureViewScreenshot(int viewType, const QString& filePath)
+{
+    // 通过DicomDataModel发送截图信号，由各个视图在渲染线程中处理
+    auto dicomModel = GET_SINGLETON(DicomDataModel);
+    if (dicomModel) {
+        emit dicomModel->screenshotRequested(viewType, filePath);
+    }
 }

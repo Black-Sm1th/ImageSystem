@@ -147,6 +147,8 @@ signals:
     void segSliceRefreshRequested();  // 仅刷新2D切片视图
     void interactionResetRequested();
     void dimensionsChanged();
+    void screenshotRequested(int viewType, QString filePath);  // viewType: 0=Axial, 1=Sagittal, 2=Coronal, 3=Volume
+    void showMessageRequested(const QString& type, const QString& text);  // type: "success", "error", "warning", "info"
 
 private:
     void finalizeSegDataLoad(std::unique_ptr<BrainRegionVisualizer> region);

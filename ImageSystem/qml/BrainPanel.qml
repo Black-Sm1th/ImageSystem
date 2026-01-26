@@ -1819,26 +1819,58 @@ Rectangle {
                         color: "#E016171B"
                         radius: 8
 
+                        // 日志更新Timer，延迟更新避免阻塞动画
+                        Timer {
+                            id: logUpdateTimer
+                            interval: 150 // 150ms后更新，给动画充足时间
+                            repeat: false
+                            onTriggered: {
+                                logArea.text = $MainViewController.fmriprepLog
+                            }
+                        }
+
+                        // 滚动延迟Timer，避免在更新文本时立即滚动导致卡顿
+                        Timer {
+                            id: scrollTimer
+                            interval: 50
+                            repeat: false
+                            onTriggered: {
+                                logArea.cursorPosition = logArea.length
+                                if (logArea.flickableItem) {
+                                    var flick = logArea.flickableItem
+                                    flick.contentY = Math.max(0, flick.contentHeight - flick.height)
+                                }
+                            }
+                        }
+
+                        Connections {
+                            target: $MainViewController
+                            function onFmriprepLogUpdated() {
+                                // 只有当面板可见时才更新日志
+                                if (fmriprepCol.visible) {
+                                    logUpdateTimer.restart()
+                                }
+                            }
+                        }
+
                         ScrollView {
                             anchors.fill: parent
                             clip: true
                             TextArea {
                                 id: logArea
                                 readOnly: true
-                                wrapMode: TextEdit.Wrap
-                                font.pixelSize: 16
-                                font.family: "Alibaba PuHuiTi 3.0"
+                                wrapMode: TextEdit.NoWrap // 禁用自动换行，大幅提升性能
+                                font.pixelSize: 14
                                 color: "#E5FFFFFF"
-                                text: $MainViewController.fmriprepLog
                                 background: null
 
+                                // 面板变为可见时同步日志
+                                Component.onCompleted: {
+                                    text = $MainViewController.fmriprepLog
+                                }
+
                                 onTextChanged: {
-                                    // 自动滚动到底部
-                                    logArea.cursorPosition = logArea.length
-                                    if (logArea.flickableItem) {
-                                        var flick = logArea.flickableItem
-                                        flick.contentY = Math.max(0, flick.contentHeight - flick.height)
-                                    }
+                                    scrollTimer.restart()
                                 }
                             }
                         }
@@ -1996,26 +2028,59 @@ Rectangle {
                         color: "#E016171B"
                         radius: 8
 
+                        // 日志更新Timer，延迟更新避免阻塞动画
+                        Timer {
+                            id: logUpdateTimerDeep
+                            interval: 150 // 150ms后更新，给动画充足时间
+                            repeat: false
+                            onTriggered: {
+                                logAreaDeep.text = $MainViewController.deepprepLog
+                            }
+                        }
+
+                        // 滚动延迟Timer，避免在更新文本时立即滚动导致卡顿
+                        Timer {
+                            id: scrollTimerDeep
+                            interval: 50
+                            repeat: false
+                            onTriggered: {
+                                logAreaDeep.cursorPosition = logAreaDeep.length
+                                if (logAreaDeep.flickableItem) {
+                                    var flick = logAreaDeep.flickableItem
+                                    flick.contentY = Math.max(0, flick.contentHeight - flick.height)
+                                }
+                            }
+                        }
+
+                        Connections {
+                            target: $MainViewController
+                            function onDeepprepLogUpdated() {
+                                // 只有当面板可见时才更新日志
+                                if (deepprepCol.visible) {
+                                    logUpdateTimerDeep.restart()
+                                }
+                            }
+                        }
+
                         ScrollView {
                             anchors.fill: parent
                             clip: true
                             TextArea {
                                 id: logAreaDeep
                                 readOnly: true
-                                wrapMode: TextEdit.Wrap
-                                font.pixelSize: 16
-                                font.family: "Alibaba PuHuiTi 3.0"
+                                wrapMode: TextEdit.NoWrap // 禁用自动换行，大幅提升性能
+                                font.pixelSize: 14
                                 color: "#E5FFFFFF"
-                                text: $MainViewController.deepprepLog
                                 background: null
 
+                                // 面板变为可见时同步日志
+                                Component.onCompleted: {
+                                    text = $MainViewController.deepprepLog
+                                }
+
                                 onTextChanged: {
-                                    // 自动滚动到底部
-                                    logAreaDeep.cursorPosition = logAreaDeep.length
-                                    if (logAreaDeep.flickableItem) {
-                                        var flick = logAreaDeep.flickableItem
-                                        flick.contentY = Math.max(0, flick.contentHeight - flick.height)
-                                    }
+                                    // 延迟滚动到底部，避免阻塞渲染
+                                    scrollTimerDeep.restart()
                                 }
                             }
                         }

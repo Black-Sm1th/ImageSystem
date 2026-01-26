@@ -21,6 +21,14 @@ ApplicationWindow {
         id: dialogMessageBox
         anchors.fill: parent
     }
+    
+    // 监听 C++ 层的消息请求
+    Connections {
+        target: $DicomDataModel
+        function onShowMessageRequested(type, text) {
+            dialogMessageBox.showMessage(type, text, 2000)
+        }
+    }
     // 顶部功能栏
     Rectangle {
         id: topToolbar
@@ -364,7 +372,7 @@ ApplicationWindow {
                     }
 
                     onClicked: {
-                        // win.showAIPanel = true
+                        win.showAIPanel = true
                     }
                 }
             }
@@ -593,6 +601,15 @@ ApplicationWindow {
                 }
             }
             LeftToolButton {
+                id: screenshotToolBtn
+                iconSource: "qrc:/image/toolScreenshot.png"
+                isSelected: expandSelection.visible
+                onClicked: {
+                    expandSelection.visible = !expandSelection.visible
+                }
+            }
+
+            LeftToolButton {
                 id: resetToolBtn
                 iconSource: "qrc:/image/toolReset.png"
                 onClicked: {
@@ -602,6 +619,93 @@ ApplicationWindow {
         }
     }
 
+    // 截图选择面板
+    Rectangle{
+        id: expandSelection
+        z: 1000
+        y: screenshotToolBtn.y + topToolbar.height + topExpandBar.height
+        x: screenshotToolBtn.x + screenshotToolBtn.width + 8
+        height: expandColumn.height + 20
+        width: 120
+        color: "#171717"
+        radius: 4
+        visible: false
+        
+        Column{
+            id: expandColumn
+            width: parent.width
+            anchors.centerIn: parent
+            spacing: 8
+            padding: 10
+            
+            CustomButton {
+                text: qsTr("轴向视图")
+                width: parent.width - 20
+                height: 32
+                backgroundColor: "#3C7EFF"
+                onClicked: {
+                    screenshotFileDialog.viewType = 0
+                    screenshotFileDialog.open()
+                    expandSelection.visible = false
+                }
+            }
+            
+            CustomButton {
+                text: qsTr("矢状视图")
+                width: parent.width - 20
+                height: 32
+                backgroundColor: "#3C7EFF"
+                onClicked: {
+                    screenshotFileDialog.viewType = 1
+                    screenshotFileDialog.open()
+                    expandSelection.visible = false
+                }
+            }
+            
+            CustomButton {
+                text: qsTr("冠状视图")
+                width: parent.width - 20
+                height: 32
+                backgroundColor: "#3C7EFF"
+                onClicked: {
+                    screenshotFileDialog.viewType = 2
+                    screenshotFileDialog.open()
+                    expandSelection.visible = false
+                }
+            }
+            
+            CustomButton {
+                text: qsTr("3D视图")
+                width: parent.width - 20
+                height: 32
+                backgroundColor: "#3C7EFF"
+                onClicked: {
+                    screenshotFileDialog.viewType = 3
+                    screenshotFileDialog.open()
+                    expandSelection.visible = false
+                }
+            }
+        }
+    }
+    
+    // 截图保存对话框
+    FileDialog {
+        id: screenshotFileDialog
+        title: qsTr("选择保存位置")
+        selectFolder: false
+        selectExisting: false
+        nameFilters: ["PNG图片 (*.png)", "JPEG图片 (*.jpg)", "所有文件 (*)"]
+        defaultSuffix: "png"
+        property int viewType: 0  // 0=Axial, 1=Sagittal, 2=Coronal, 3=Volume
+        
+        onAccepted: {
+            var filePath = screenshotFileDialog.fileUrl.toString()
+            if (filePath.startsWith("file:///")) {
+                filePath = filePath.substring(8)
+            }
+            $MainViewController.captureViewScreenshot(viewType, filePath)
+        }
+    }
     // 右侧控制面板
     Item {
         id: rightPanel
@@ -1282,6 +1386,7 @@ ApplicationWindow {
             padding: 20
             spacing: 20
             Rectangle{
+                id: aiTitle
                 width: parent.width - 40
                 height: 28
                 color: "transparent"
@@ -1332,90 +1437,241 @@ ApplicationWindow {
                     }
                 }
             }
-            Rectangle{
+            Rectangle {
+                id: messagesArea
                 width: parent.width - 40
-                height: parent.height - 28 - 40 - 20
+                height: parent.height - aiTitle.height - sendArea.height - 40 - 40
                 color: "transparent"
-                Rectangle{
-                    color: "#33FFFFFF"
-                    border.width: 1
-                    border.color: "#FFFFFF"
-                    height: 56
-                    radius: 60
-                    width: parent.width
-                    anchors.bottom: parent.bottom
-                    Image {
-                        id: linkBtn
-                        source: "qrc:/image/linkBtn.png"
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.left: parent.left
-                        anchors.leftMargin: 12
-                        MouseArea{
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onEntered: {
-                                parent.opacity = 0.8
-                                parent.scale = 1.05
-                            }
+                ScrollView {
+                    id: scrollView
+                    anchors.fill: parent
+                    clip: true
+                    ScrollBar.vertical.policy: ScrollBar.AsNeeded
+                    Column {
+                        id: messagesColumn
+                        width: scrollView.width
+                        spacing: 20
+                        // 使用Repeater显示消息
+                        Repeater {
+                            id: messagesRepeater
+                            model: $chatManager.messages
+                            // 消息气泡
+                            delegate: Column {
+                                id: messageItem
+                                width: messageBubble.width
+                                anchors.right: modelData.type === "user" ? parent.right : undefined
+                                anchors.rightMargin: modelData.type === "user" ? 24 : 0
+                                anchors.left: (modelData.type === "ai" || modelData.type === "thinking" || modelData.type === "interrupt") ? parent.left : undefined
+                                anchors.leftMargin: (modelData.type === "ai" || modelData.type === "thinking" || modelData.type === "interrupt") ? 24 : 0
+                                spacing: 6
 
-                            onExited: {
-                                parent.opacity = 1.0
-                                parent.scale = 1.0
-                            }
+                                // 消息气泡
+                                Rectangle {
+                                    id: messageBubble
+                                    width: (modelData.type !== "thinking" && modelData.type !== "interrupt") ? messageContent.width : thinkingRow.width
+                                    height: (modelData.type !== "thinking" && modelData.type !== "interrupt") ? messageContent.height : thinkingRow.height
+                                    color: modelData.type === "user" ? "#333C7EFF" : "#0FFFFFFF"
+                                    radius: 12
 
-                            onPressed: {
-                                parent.scale = 0.95
-                            }
+                                    // 普通消息内容
+                                    Text {
+                                        id: messageContent
+                                        anchors.centerIn: parent
+                                        width: Math.min(implicitWidth, messagesColumn.width - 48)
+                                        text: {
+                                            if (modelData.type === "thinking" || modelData.type === "interrupt") {
+                                                return ""
+                                            }
+                                            // 将字面量的\n转换为实际的换行符
+                                            var content = modelData.content || ""
+                                            return content.replace(/\\n/g, "\n")
+                                        }
+                                        padding: 12
+                                        font.family: "Alibaba PuHuiTi 3.0"
+                                        font.pixelSize: 16
+                                        color: "#FFFFFF"
+                                        wrapMode: Text.Wrap
+                                        textFormat: Text.MarkdownText
+                                        visible: (modelData.type !== "thinking" && modelData.type !== "interrupt")
+                                    }
 
-                            onReleased: {
-                                parent.scale = containsMouse ? 1.05 : 1.0
-                            }
-                            onClicked: {
+                                    // 思考中动画
+                                    Row {
+                                        id: thinkingRow
+                                        anchors.centerIn: parent
+                                        spacing: 2
+                                        visible: modelData.type === "thinking" || modelData.type === "interrupt"
 
+                                        Text {
+                                            text: qsTr(modelData.content)
+                                            font.weight: Font.Bold
+                                            font.family: "Alibaba PuHuiTi 3.0"
+                                            font.pixelSize: 16
+                                            color: "#FFFFFF"
+                                        }
+
+                                        Text {
+                                            id: dots
+                                            text: "."
+                                            font.weight: Font.Bold
+                                            visible: modelData.type === "thinking"
+                                            font.family: "Alibaba PuHuiTi 3.0"
+                                            font.pixelSize: 16
+                                            color: "#FFFFFF"
+
+                                            Timer {
+                                                id: dotsTimer
+                                                interval: 500
+                                                running: modelData.type === "thinking"
+                                                repeat: true
+                                                property int dotCount: 1
+
+                                                onTriggered: {
+                                                    dotCount = (dotCount % 3) + 1
+                                                    dots.text = ".".repeat(dotCount)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // AI消息的操作按钮（只在最后一条AI消息显示）
+                                Row {
+                                    id: actionButtons
+                                    spacing: 4
+                                    anchors.right: parent.right
+                                    visible: modelData.type === "ai" && index === ($chatManager.messages.length - 1) && !$chatManager.isSending && index !== 0
+                                    Image {
+                                        source: "qrc:/image/copyBtn.png"
+                                        MouseArea {
+                                            id: copyBtnArea
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                // 将字面量的\n转换为实际的换行符后再复制
+                                                var content = modelData.content || ""
+                                                var formattedContent = content.replace(/\\n/g, "\n")
+                                                $chatManager.copyToClipboard(formattedContent)
+                                                dialogMessageBox.success("已复制！")
+                                            }
+                                            onEntered: parent.scale = 1.1
+                                            onExited: parent.scale = 1.0
+                                            onPressed: parent.scale = 0.9
+                                            onReleased: parent.scale = 1
+                                            hoverEnabled: true
+                                        }
+                                    }
+                                    Image {
+                                        source: "qrc:/image/resetBtn.png"
+                                        MouseArea {
+                                            id: regenerateBtnArea
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: $chatManager.regenerateLastResponse()
+                                            hoverEnabled: true
+                                            onEntered: parent.scale = 1.1
+                                            onExited: parent.scale = 1.0
+                                            onPressed: parent.scale = 0.9
+                                            onReleased: parent.scale = 1
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
-                    SingleLineTextInput{
-                        anchors.left: linkBtn.right
-                        anchors.leftMargin: 8
-                        backgroundColor: "transparent"
-                        textColor: "#E5FFFFFF"
-                        anchors.right: sendBtn.left
-                        anchors.rightMargin: 25
-                        inputHeight: 28
-                        borderWidth: 0
-                        anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+            Rectangle{
+                id: sendArea
+                color: "#33FFFFFF"
+                border.width: 1
+                border.color: "#FFFFFF"
+                height: 56
+                radius: 60
+                width: parent.width - 40
+                Image {
+                    id: linkBtn
+                    source: "qrc:/image/linkBtn.png"
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.left: parent.left
+                    anchors.leftMargin: 12
+                    MouseArea{
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onEntered: {
+                            parent.opacity = 0.8
+                            parent.scale = 1.05
+                        }
+
+                        onExited: {
+                            parent.opacity = 1.0
+                            parent.scale = 1.0
+                        }
+
+                        onPressed: {
+                            parent.scale = 0.95
+                        }
+
+                        onReleased: {
+                            parent.scale = containsMouse ? 1.05 : 1.0
+                        }
+                        onClicked: {
+
+                        }
                     }
-                    Image{
-                        id: sendBtn
-                        source: "qrc:/image/sendBtn.png"
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.right: parent.right
-                        anchors.rightMargin: 12
-                        MouseArea{
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onEntered: {
-                                parent.opacity = 0.8
-                                parent.scale = 1.05
-                            }
+                }
+                SingleLineTextInput{
+                    id: messageInput
+                    anchors.left: linkBtn.right
+                    anchors.leftMargin: 8
+                    backgroundColor: "transparent"
+                    textColor: "#E5FFFFFF"
+                    anchors.right: sendBtn.left
+                    anchors.rightMargin: 25
+                    inputHeight: 28
+                    borderWidth: 0
+                    anchors.verticalCenter: parent.verticalCenter
+                    Keys.onPressed: {
+                        var message = messageInput.text.trim()
+                        if (message.length > 0 && !$chatManager.isSending) {
+                            $chatManager.sendMessage(message)
+                            messageInput.text = ""
+                        }
+                    }
+                }
+                Image{
+                    id: sendBtn
+                    source: "qrc:/image/sendBtn.png"
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
+                    MouseArea{
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onEntered: {
+                            parent.opacity = 0.8
+                            parent.scale = 1.05
+                        }
 
-                            onExited: {
-                                parent.opacity = 1.0
-                                parent.scale = 1.0
-                            }
+                        onExited: {
+                            parent.opacity = 1.0
+                            parent.scale = 1.0
+                        }
 
-                            onPressed: {
-                                parent.scale = 0.95
-                            }
+                        onPressed: {
+                            parent.scale = 0.95
+                        }
 
-                            onReleased: {
-                                parent.scale = containsMouse ? 1.05 : 1.0
-                            }
-                            onClicked: {
-
+                        onReleased: {
+                            parent.scale = containsMouse ? 1.05 : 1.0
+                        }
+                        onClicked: {
+                            var message = messageInput.text.trim()
+                            if (message.length > 0 && !$chatManager.isSending) {
+                                $chatManager.sendMessage(message)
+                                messageInput.text = ""
                             }
                         }
                     }

@@ -154,6 +154,7 @@ private slots:
     void onWindowChanged();
     void onInteractionResetRequested();
     void onCrosshairEnabledChanged(bool enabled);
+    void onScreenshotRequested(int viewType, QString filePath);
 
 private:
     void setupView(vtkRenderWindow* renderWindow, SliceViewData* data, vtkImageData* imageData);
@@ -175,6 +176,8 @@ private:
 
     // 静态映射：方向 -> interactor style
     static std::map<SliceOrientation, vtkSmartPointer<SliceInteractorStyle>> s_interactorStyles;
+signals:
+    void messageRequest(bool success, const QString& msg);
 };
 
 // 轴向视图（Axial - XY平面）
@@ -226,11 +229,15 @@ class VolumeVtkItem : public QQuickVTKItem
 public:
     vtkUserData initializeVTK(vtkRenderWindow* renderWindow) override;
 
+    // 获取3D视图的渲染窗口
+    static vtkRenderWindow* GetVolumeRenderWindow();
+
 private slots:
     void onDataLoaded();
     void onSegDataLoaded();
     void onSegRefreshRenderer();
     void onInteractionResetRequested();
+    void onScreenshotRequested(int viewType, QString filePath);
 
 private:
     static void setupView(vtkRenderWindow* renderWindow, VolumeViewData* data, vtkImageData* imageData);
@@ -288,6 +295,7 @@ public:
     Q_INVOKABLE void deleteCircleAnnotation(int orientation, int index);
     Q_INVOKABLE void updatePenAnnotationText(int orientation, int index, const QString& text);
     Q_INVOKABLE void deletePenAnnotation(int orientation, int index);
+    Q_INVOKABLE void captureViewScreenshot(int viewType, const QString& filePath);
     Q_PROPERTY(QString fmriprepLog READ fmriprepLog NOTIFY fmriprepLogUpdated)
     QString fmriprepLog() const { return m_fmriprepLog; }
     Q_PROPERTY(QString deepprepLog READ deepprepLog NOTIFY deepprepLogUpdated)
@@ -322,6 +330,7 @@ private:
     QString m_fmriprepLogFilePath;
     qint64 m_fmriprepLogReadPos = 0;
     QTimer* m_fmriprepLogTimer = nullptr;
+    QTimer* m_fmriprepLogUpdateTimer = nullptr; // 节流Timer，避免频繁更新UI
     
     QPointer<QProcess> m_deepprepProcess;
     qint64 m_deepprepPid = -1;
@@ -329,5 +338,6 @@ private:
     QString m_deepprepLogFilePath;
     qint64 m_deepprepLogReadPos = 0;
     QTimer* m_deepprepLogTimer = nullptr;
+    QTimer* m_deepprepLogUpdateTimer = nullptr; // 节流Timer，避免频繁更新UI
 };
 
