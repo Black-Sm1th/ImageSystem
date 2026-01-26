@@ -2047,7 +2047,30 @@ void MainViewController::appendFmriprepLog(const QString& text)
     if (text.isEmpty())
         return;
     m_fmriprepLog.append(text);
-    emit fmriprepLogUpdated();
+    // 限制日志长度，避免TextArea渲染大量文本导致UI卡顿
+    // 10000字符约等于200-300行日志，足够查看最近的输出
+    const int maxLogLength = 10000;
+    if (m_fmriprepLog.length() > maxLogLength) {
+        // 保留后半部分日志，从换行符处截断以保持完整行
+        int cutPos = m_fmriprepLog.indexOf('\n', m_fmriprepLog.length() - maxLogLength);
+        if (cutPos > 0) {
+            m_fmriprepLog = m_fmriprepLog.mid(cutPos + 1);
+        } else {
+            m_fmriprepLog = m_fmriprepLog.right(maxLogLength);
+        }
+    }
+    // 使用节流机制，避免频繁触发UI更新
+    if (!m_fmriprepLogUpdateTimer) {
+        m_fmriprepLogUpdateTimer = new QTimer(this);
+        m_fmriprepLogUpdateTimer->setSingleShot(true);
+        m_fmriprepLogUpdateTimer->setInterval(300); // 300ms节流，减少UI更新频率
+        connect(m_fmriprepLogUpdateTimer, &QTimer::timeout, this, [this]() {
+            emit fmriprepLogUpdated();
+        });
+    }
+    if (!m_fmriprepLogUpdateTimer->isActive()) {
+        m_fmriprepLogUpdateTimer->start();
+    }
 }
 
 void MainViewController::clearFmriprepLog()
@@ -3536,7 +3559,30 @@ void MainViewController::appendDeepprepLog(const QString& text)
     if (text.isEmpty())
         return;
     m_deepprepLog.append(text);
-    emit deepprepLogUpdated();
+    // 限制日志长度，避免TextArea渲染大量文本导致UI卡顿
+    // 10000字符约等于200-300行日志，足够查看最近的输出
+    const int maxLogLength = 10000;
+    if (m_deepprepLog.length() > maxLogLength) {
+        // 保留后半部分日志，从换行符处截断以保持完整行
+        int cutPos = m_deepprepLog.indexOf('\n', m_deepprepLog.length() - maxLogLength);
+        if (cutPos > 0) {
+            m_deepprepLog = m_deepprepLog.mid(cutPos + 1);
+        } else {
+            m_deepprepLog = m_deepprepLog.right(maxLogLength);
+        }
+    }
+    // 使用节流机制，避免频繁触发UI更新
+    if (!m_deepprepLogUpdateTimer) {
+        m_deepprepLogUpdateTimer = new QTimer(this);
+        m_deepprepLogUpdateTimer->setSingleShot(true);
+        m_deepprepLogUpdateTimer->setInterval(300); // 300ms节流，减少UI更新频率
+        connect(m_deepprepLogUpdateTimer, &QTimer::timeout, this, [this]() {
+            emit deepprepLogUpdated();
+        });
+    }
+    if (!m_deepprepLogUpdateTimer->isActive()) {
+        m_deepprepLogUpdateTimer->start();
+    }
 }
 
 void MainViewController::clearDeepprepLog()

@@ -330,6 +330,7 @@ private:
     QString m_fmriprepLogFilePath;
     qint64 m_fmriprepLogReadPos = 0;
     QTimer* m_fmriprepLogTimer = nullptr;
+    QTimer* m_fmriprepLogUpdateTimer = nullptr; // 节流Timer，避免频繁更新UI
     
     QPointer<QProcess> m_deepprepProcess;
     qint64 m_deepprepPid = -1;
@@ -337,5 +338,6 @@ private:
     QString m_deepprepLogFilePath;
     qint64 m_deepprepLogReadPos = 0;
     QTimer* m_deepprepLogTimer = nullptr;
+    QTimer* m_deepprepLogUpdateTimer = nullptr; // 节流Timer，避免频繁更新UI
 };
 
