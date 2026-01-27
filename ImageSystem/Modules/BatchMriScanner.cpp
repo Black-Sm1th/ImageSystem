@@ -19,6 +19,8 @@
 BatchMriScanner::BatchMriScanner(QObject* parent)
     : QObject(parent)
 {
+    // 注册自定义类型，用于跨线程信号队列连接
+    qRegisterMetaType<ScanProgress>("ScanProgress");
 }
 
 BatchMriScanner::~BatchMriScanner()

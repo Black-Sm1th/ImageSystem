@@ -38,7 +38,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
     <QtInstall>5.15.2_msvc2019_64</QtInstall>
-    <QtModules>quick;webengine;webenginewidgets</QtModules>
+    <QtModules>quick;concurrent;webengine;webenginewidgets</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
   </PropertyGroup>
   <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') or !Exists('$(QtMsBuild)\qt.props')">
@@ -61,12 +61,12 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(PROJECT_LIB)\dcmtk-install\debug\include;$(PROJECT_LIB)\pybind11;$(PROJECT_LIB)\VTK-9.4.2\install-debug\include\vtk-9.4;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(PROJECT_LIB)\dcmtk-3.6.9\install-debug\include;$(PROJECT_LIB)\pybind11;$(PROJECT_LIB)\VTK-9.4.2\install-debug\include\vtk-9.4;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(PROJECT_LIB)\dcmtk-install\debug\lib;$(PROJECT_LIB)\VTK-9.4.2\install-debug\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(PROJECT_LIB)\dcmtk-3.6.9\install-debug\lib;$(PROJECT_LIB)\VTK-9.4.2\install-debug\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vtkCommonCore-9.4d.lib;vtkCommonDataModel-9.4d.lib;vtkCommonExecutionModel-9.4d.lib;vtkCommonTransforms-9.4d.lib;vtkCommonMath-9.4d.lib;vtkCommonColor-9.4d.lib;vtkCommonSystem-9.4d.lib;vtkCommonMisc-9.4d.lib;vtkRenderingCore-9.4d.lib;vtkRenderingOpenGL2-9.4d.lib;vtkRenderingFreeType-9.4d.lib;vtkRenderingVolume-9.4d.lib;vtkRenderingVolumeOpenGL2-9.4d.lib;vtkRenderingImage-9.4d.lib;vtkInteractionWidgets-9.4d.lib;vtkInteractionStyle-9.4d.lib;vtkInteractionImage-9.4d.lib;vtkImagingCore-9.4d.lib;vtkImagingColor-9.4d.lib;vtkIOCore-9.4d.lib;vtkIOImage-9.4d.lib;vtkGUISupportQt-9.4d.lib;vtkGUISupportQtQuick-9.4d.lib;vtksys-9.4d.lib;vtkglad-9.4d.lib;vtkFiltersSources-9.4d.lib;vtkFiltersExtraction-9.4d.lib;vtkFiltersCore-9.4d.lib;vtkFiltersModeling-9.4d.lib;vtkFiltersGeometry-9.4d.lib;vtkRenderingAnnotation-9.4d.lib;vtkImagingMorphological-9.4d.lib;vtkImagingGeneral-9.4d.lib;vtkFiltersGeneral-9.4d.lib;cmr.lib;dcmdata.lib;dcmdsig.lib;dcmect.lib;dcmfg.lib;dcmimage.lib;dcmimgle.lib;dcmiod.lib;dcmjpeg.lib;dcmjpls.lib;dcmnet.lib;dcmpmap.lib;dcmpstat.lib;dcmqrdb.lib;dcmrt.lib;dcmseg.lib;dcmsr.lib;dcmtkcharls.lib;dcmtls.lib;dcmtract.lib;dcmwlm.lib;dcmxml.lib;i2d.lib;ijg12.lib;ijg16.lib;ijg8.lib;oficonv.lib;oflog.lib;ofstd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

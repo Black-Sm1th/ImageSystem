@@ -70,6 +70,9 @@ struct ScanProgress {
     float percentage() const { return totalFolders > 0 ? (float)scannedFolders / totalFolders : 0; }
 };
 
+// 注册自定义类型，用于跨线程信号传递
+Q_DECLARE_METATYPE(ScanProgress)
+
 /**
  * @brief 批量 MRI 扫描器
  * 

@@ -284,7 +284,7 @@ void testFullBidsConversion(const QString& inputDir, const QString& outputDir)
 
 int main(int argc, char* argv[])
 {
-    system("chcp 65001");
+    //system("chcp 65001");
     QQuickVTKItem::setGraphicsApi();
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -309,7 +309,7 @@ int main(int argc, char* argv[])
     // 或者只测试扫描功能
     // testBatchMriScan("D:/brain_datasets");
 
-    testFullBidsConversion("C:/temp/brain_datasets","C:/temp");
+    //testFullBidsConversion("C:/temp/brain_datasets","C:/temp");
 
     // 安装全局键盘监听（不依赖焦点）
     //app.installEventFilter(new GlobalKeyFilter(&app));
