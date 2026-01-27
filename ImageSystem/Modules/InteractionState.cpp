@@ -158,7 +158,6 @@ namespace
         auto actor = vtkSmartPointer<vtkActor>::New();
         actor->SetMapper(mapper);
         actor->GetProperty()->SetColor(rgb[0], rgb[1], rgb[2]);
-        actor->GetProperty()->SetLineWidth(lineWidth);
         actor->PickableOff();
         return actor;
     }

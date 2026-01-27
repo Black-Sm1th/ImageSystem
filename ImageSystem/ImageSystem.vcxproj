@@ -118,7 +118,8 @@
     <ClCompile Include="Modules\BrainNetworkData.cpp" />
     <ClCompile Include="Modules\BrainMetrics.cpp" />
     <ClCompile Include="Modules\BrainRegionVisualizer.cpp" />
-    <ClCompile Include="ViewController\InteractionState.cpp" />
+    <ClCompile Include="Modules\InteractionState.cpp" />
+    <ClCompile Include="Modules\SliceVtkItemBase.cpp" />
     <ClCompile Include="ViewController\KnowledgeChatManager.cpp" />
     <ClCompile Include="ViewController\MainViewController.cpp" />
     <ClCompile Include="Modules\DicomNetwork.cpp" />
@@ -136,6 +137,7 @@
     <None Include="qml\main.qml" />
   </ItemGroup>
   <ItemGroup>
+    <QtMoc Include="Modules\SliceVtkItemBase.h" />
     <QtMoc Include="ViewController\KnowledgeChatManager.h" />
     <QtMoc Include="Modules\BrainNetworkData.h" />
     <QtMoc Include="Modules\ApiManager.h" />
@@ -145,7 +147,7 @@
     <ClInclude Include="Modules\BrainMetrics.h" />
     <ClInclude Include="Modules\BrainRegionVisualizer.h" />
     <ClInclude Include="Modules\CommonFunc.h" />
-    <ClInclude Include="ViewController\InteractionState.h" />
+    <ClInclude Include="Modules\InteractionState.h" />
     <QtMoc Include="ViewController\MainViewController.h" />
     <QtMoc Include="Model\DicomDataModel.h" />
     <QtMoc Include="Model\BrainRegionTableModel.h" />

@@ -15,7 +15,7 @@
 #include "Modules/BatchMriScanner.h"
 #include "Modules/BidsConverter.h"
 #include "ViewController/KnowledgeChatManager.h"
-
+#include "Modules/SliceVtkItemBase.h"
 // 全局键盘事件过滤：不依赖 QML focus，把 1-6 写入 DicomDataModel.toolMode
 class GlobalKeyFilter : public QObject
 {
