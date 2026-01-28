@@ -83,7 +83,7 @@ Rectangle {
 
     FileDialog {
         id: preFileDialog
-        title: qsTr("选择要上传的文件")
+        title: qsTr("选择要预处理的文件夹")
         selectFolder: true
         onAccepted: {
             if (fileUrls.length === 0)
@@ -104,26 +104,6 @@ Rectangle {
             bidsDir.text = baseDir + "Bids"
             outputDir.text = baseDir + "Output"
             outputDetailDir.text = baseDir + "Output"
-        }
-    }
-
-    FileDialog {
-        id: outputDetailDialog
-        title: qsTr("选择要上传的文件")
-        selectFolder: true
-        onAccepted: {
-            if (fileUrls.length === 0)
-                return
-
-            var url = fileUrls[0].toString()
-            var path = url
-            if (path.startsWith("file:///")) {
-                path = path.substring("file:///".length)
-            }
-            // 统一为正斜杠，方便字符串处理
-            path = path.replace(/\\/g, "/")
-            detectOutputType(path)
-            startUnifiedImports(url, path)
         }
     }
     
@@ -147,8 +127,8 @@ Rectangle {
     }
 
     FileDialog {
-        id: inputDirDialog
-        title: qsTr("选择输入文件夹")
+        id: outputDetailDialog
+        title: qsTr("选择要上传的文件")
         selectFolder: true
         onAccepted: {
             if (fileUrls.length === 0)
@@ -161,34 +141,54 @@ Rectangle {
             }
             // 统一为正斜杠，方便字符串处理
             path = path.replace(/\\/g, "/")
-
-            inputDirDeep.text = path
-
-            var lastSlash = path.lastIndexOf("/")
-            var baseDir = lastSlash >= 0 ? path.substring(0, lastSlash + 1) : path
-            bidsDirDeep.text = baseDir + "Bids"
-            outputDirDeep.text = baseDir + "Output_deepprep"
+            detectOutputType(path)
+            startUnifiedImports(url, path)
         }
     }
 
-    FileDialog {
-        id: licenseFileDialogDeep
-        title: qsTr("选择license")
-        onAccepted: {
-            if (fileUrls.length === 0)
-                return
+    // FileDialog {
+    //     id: inputDirDialog
+    //     title: qsTr("选择输入文件夹")
+    //     selectFolder: true
+    //     onAccepted: {
+    //         if (fileUrls.length === 0)
+    //             return
 
-            var url = fileUrls[0].toString()
-            var path = url
-            if (path.startsWith("file:///")) {
-                path = path.substring("file:///".length)
-            }
-            // 统一为正斜杠，方便字符串处理
-            path = path.replace(/\\/g, "/")
+    //         var url = fileUrls[0].toString()
+    //         var path = url
+    //         if (path.startsWith("file:///")) {
+    //             path = path.substring("file:///".length)
+    //         }
+    //         // 统一为正斜杠，方便字符串处理
+    //         path = path.replace(/\\/g, "/")
 
-            licenseFileDeep.text = path
-        }
-    }
+    //         inputDirDeep.text = path
+
+    //         var lastSlash = path.lastIndexOf("/")
+    //         var baseDir = lastSlash >= 0 ? path.substring(0, lastSlash + 1) : path
+    //         bidsDirDeep.text = baseDir + "Bids"
+    //         outputDirDeep.text = baseDir + "Output_deepprep"
+    //     }
+    // }
+
+    // FileDialog {
+    //     id: licenseFileDialogDeep
+    //     title: qsTr("选择license")
+    //     onAccepted: {
+    //         if (fileUrls.length === 0)
+    //             return
+
+    //         var url = fileUrls[0].toString()
+    //         var path = url
+    //         if (path.startsWith("file:///")) {
+    //             path = path.substring("file:///".length)
+    //         }
+    //         // 统一为正斜杠，方便字符串处理
+    //         path = path.replace(/\\/g, "/")
+
+    //         licenseFileDeep.text = path
+    //     }
+    // }
 
     FileDialog {
         id: niiGzDialog
@@ -1334,21 +1334,101 @@ Rectangle {
                         height: parent.height
                         anchors.horizontalCenter: parent.horizontalCenter
                         z: 2
-                        // 传统处理 Tab
+                        // // 传统处理 Tab
+                        // Item{
+                        //     id: tab1
+                        //     height: parent.height
+                        //     width: 88
+                            
+                        //     property bool isHovered: false
+                        //     scale: isHovered && preAnalysis.currentTabIndex !== 0 ? 1.05 : 1.0
+                            
+                        //     Behavior on scale {
+                        //         NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                        //     }
+
+                        //     Label{
+                        //         text: qsTr("传统处理")
+                        //         font.pixelSize: 16
+                        //         anchors.centerIn: parent
+                        //         color: preAnalysis.currentTabIndex === 0 ? "#E5FFFFFF" : "#80FFFFFF"
+                        //         font.family: "Alibaba PuHuiTi 3.0"
+
+                        //         Behavior on color {
+                        //             ColorAnimation { duration: 200 }
+                        //         }
+                        //     }
+
+                        //     MouseArea {
+                        //         anchors.fill: parent
+                        //         cursorShape: Qt.PointingHandCursor
+                        //         hoverEnabled: true
+                                
+                        //         onEntered: tab1.isHovered = true
+                        //         onExited: tab1.isHovered = false
+                                
+                        //         onClicked: {
+                        //             textBackground.animateToTab(0)
+                        //             tabIndicator.animateToTab(0)
+                        //         }
+                        //     }
+                        // }
+
+                        // // 深度学习 Tab
+                        // Item{
+                        //     id: tab2
+                        //     height: parent.height
+                        //     width: 88
+                            
+                        //     property bool isHovered: false
+                        //     scale: isHovered && preAnalysis.currentTabIndex !== 1 ? 1.05 : 1.0
+                            
+                        //     Behavior on scale {
+                        //         NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                        //     }
+
+                        //     Label{
+                        //         text: qsTr("深度学习")
+                        //         font.pixelSize: 16
+                        //         anchors.centerIn: parent
+                        //         color: preAnalysis.currentTabIndex === 1 ? "#E5FFFFFF" : "#80FFFFFF"
+                        //         font.family: "Alibaba PuHuiTi 3.0"
+
+                        //         Behavior on color {
+                        //             ColorAnimation { duration: 200 }
+                        //         }
+                        //     }
+
+                        //     MouseArea {
+                        //         anchors.fill: parent
+                        //         cursorShape: Qt.PointingHandCursor
+                        //         hoverEnabled: true
+                                
+                        //         onEntered: tab2.isHovered = true
+                        //         onExited: tab2.isHovered = false
+                                
+                        //         onClicked: {
+                        //             textBackground.animateToTab(1)
+                        //             tabIndicator.animateToTab(1)
+                        //         }
+                        //     }
+                        // }
+
+                        // 预处理 Tab
                         Item{
-                            id: tab1
+                            id: tab4
                             height: parent.height
                             width: 88
-                            
+
                             property bool isHovered: false
                             scale: isHovered && preAnalysis.currentTabIndex !== 0 ? 1.05 : 1.0
-                            
+
                             Behavior on scale {
                                 NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
                             }
 
                             Label{
-                                text: qsTr("传统处理")
+                                text: qsTr("预处理")
                                 font.pixelSize: 16
                                 anchors.centerIn: parent
                                 color: preAnalysis.currentTabIndex === 0 ? "#E5FFFFFF" : "#80FFFFFF"
@@ -1363,53 +1443,13 @@ Rectangle {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
                                 hoverEnabled: true
-                                
-                                onEntered: tab1.isHovered = true
-                                onExited: tab1.isHovered = false
-                                
+
+                                onEntered: tab4.isHovered = true
+                                onExited: tab4.isHovered = false
+
                                 onClicked: {
                                     textBackground.animateToTab(0)
                                     tabIndicator.animateToTab(0)
-                                }
-                            }
-                        }
-
-                        // 深度学习 Tab
-                        Item{
-                            id: tab2
-                            height: parent.height
-                            width: 88
-                            
-                            property bool isHovered: false
-                            scale: isHovered && preAnalysis.currentTabIndex !== 1 ? 1.05 : 1.0
-                            
-                            Behavior on scale {
-                                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
-                            }
-
-                            Label{
-                                text: qsTr("深度学习")
-                                font.pixelSize: 16
-                                anchors.centerIn: parent
-                                color: preAnalysis.currentTabIndex === 1 ? "#E5FFFFFF" : "#80FFFFFF"
-                                font.family: "Alibaba PuHuiTi 3.0"
-
-                                Behavior on color {
-                                    ColorAnimation { duration: 200 }
-                                }
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                hoverEnabled: true
-                                
-                                onEntered: tab2.isHovered = true
-                                onExited: tab2.isHovered = false
-                                
-                                onClicked: {
-                                    textBackground.animateToTab(1)
-                                    tabIndicator.animateToTab(1)
                                 }
                             }
                         }
@@ -1421,7 +1461,7 @@ Rectangle {
                             width: 88
                             
                             property bool isHovered: false
-                            scale: isHovered && preAnalysis.currentTabIndex !== 2 ? 1.05 : 1.0
+                            scale: isHovered && preAnalysis.currentTabIndex !== 1 ? 1.05 : 1.0
                             
                             Behavior on scale {
                                 NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
@@ -1431,7 +1471,7 @@ Rectangle {
                                 text: qsTr("数据详情")
                                 font.pixelSize: 16
                                 anchors.centerIn: parent
-                                color: preAnalysis.currentTabIndex === 2 ? "#E5FFFFFF" : "#80FFFFFF"
+                                color: preAnalysis.currentTabIndex === 1 ? "#E5FFFFFF" : "#80FFFFFF"
                                 font.family: "Alibaba PuHuiTi 3.0"
 
                                 Behavior on color {
@@ -1448,8 +1488,8 @@ Rectangle {
                                 onExited: tab3.isHovered = false
                                 
                                 onClicked: {
-                                    textBackground.animateToTab(2)
-                                    tabIndicator.animateToTab(2)
+                                    textBackground.animateToTab(1)
+                                    tabIndicator.animateToTab(1)
                                 }
                             }
                         }
@@ -1469,7 +1509,7 @@ Rectangle {
                         }
                         
                         function getTabX(tabIndex) {
-                            var rowX = (tabContainer.width - 264) / 2
+                            var rowX = (tabContainer.width - 176) / 2
                             return rowX + tabIndex * 88
                         }
                         
@@ -1563,7 +1603,7 @@ Rectangle {
                         }
 
                         function getTabX(tabIndex) {
-                            var rowX = (tabContainer.width - 264) / 2
+                            var rowX = (tabContainer.width - 176) / 2
                             return rowX + tabIndex * 88
                         }
 
@@ -1626,462 +1666,1054 @@ Rectangle {
                         }
                     }
                 }
-                Column{
-                    id: fmriprepCol
+                // Column{
+                //     id: fmriprepCol
+                //     width: parent.width
+                //     spacing: 12
+                //     visible: preAnalysis.currentTabIndex === 0
+                //     // 四个标签的最大宽度，保持对齐
+                //     property int maxLabelWidth: Math.max(
+                //                                     Math.max(label1.implicitWidth, label2.implicitWidth),
+                //                                     Math.max(label3.implicitWidth, label4.implicitWidth))
+                //     Row{
+                //         height: 38
+                //         spacing: 10
+                //         Label {
+                //             id:label1
+                //             text: qsTr("输入Dicom文件夹：")
+                //             font.pixelSize: 16
+                //             color: "#80FFFFFF"
+                //             anchors.verticalCenter: parent.verticalCenter
+                //             width: fmriprepCol.maxLabelWidth
+                //         }
+                //         SingleLineTextInput{
+                //             id: dicomDir
+                //             width: fmriprepCol.width - label1.width - 60 - 20
+                //             height: 38
+                //             inputRadius: 4
+                //             backgroundColor: "#14FFFFFF"
+                //         }
+                //         CustomButton{
+                //             width: 60
+                //             height: 36
+                //             buttonRadius: 4
+                //             fontSize: 14
+                //             text: qsTr("导入")
+                //             anchors.verticalCenter: parent.verticalCenter
+                //             onClicked: {
+                //                 preFileDialog.open()
+                //             }
+                //         }
+                //     }
+                //     Row{
+                //         height: 38
+                //         spacing: 10
+                //         Label {
+                //             id:label2
+                //             text: qsTr("输出Bids文件夹：")
+                //             font.pixelSize: 16
+                //             color: "#80FFFFFF"
+                //             anchors.verticalCenter: parent.verticalCenter
+                //             width: fmriprepCol.maxLabelWidth
+                //         }
+                //         SingleLineTextInput{
+                //             id: bidsDir
+                //             width: fmriprepCol.width - label2.width - 10
+                //             height: 38
+                //             inputRadius: 4
+                //             backgroundColor: "#14FFFFFF"
+                //         }
+                //     }
+                //     Row{
+                //         height: 38
+                //         spacing: 10
+                //         Label {
+                //             id:label3
+                //             text: qsTr("输出Output文件夹：")
+                //             font.pixelSize: 16
+                //             color: "#80FFFFFF"
+                //             anchors.verticalCenter: parent.verticalCenter
+                //             width: fmriprepCol.maxLabelWidth
+                //         }
+                //         SingleLineTextInput{
+                //             id: outputDir
+                //             width: fmriprepCol.width - label3.width - 10
+                //             height: 38
+                //             inputRadius: 4
+                //             backgroundColor: "#14FFFFFF"
+                //         }
+                //     }
+                //     Row{
+                //         height: 38
+                //         spacing: 10
+                //         Label {
+                //             id:label4
+                //             text: qsTr("license文件地址：")
+                //             font.pixelSize: 16
+                //             color: "#80FFFFFF"
+                //             anchors.verticalCenter: parent.verticalCenter
+                //             width: fmriprepCol.maxLabelWidth
+                //         }
+                //         SingleLineTextInput{
+                //             id: licenseFile
+                //             width: fmriprepCol.width - label4.width - 60 - 20
+                //             height: 38
+                //             inputRadius: 4
+                //             backgroundColor: "#14FFFFFF"
+                //         }
+                //         CustomButton{
+                //             width: 60
+                //             height: 36
+                //             buttonRadius: 4
+                //             fontSize: 14
+                //             text: qsTr("导入")
+                //             anchors.verticalCenter: parent.verticalCenter
+                //             onClicked: {
+                //                 licenseFileDialog.open()
+                //             }
+                //         }
+                //     }
+                //     Row{
+                //         height: 30
+                //         spacing: 8
+                //         CheckBox {
+                //             id: freesurferCheckBox
+                //             checked: false
+                //             width: 14
+                //             height: 14
+                //             anchors.verticalCenter: parent.verticalCenter
+                //             indicator: Rectangle {
+                //                 implicitWidth: 14
+                //                 implicitHeight: 14
+                //                 radius: 2
+                //                 anchors.verticalCenter: parent.verticalCenter
+                //                 border.color: freesurferCheckBox.checked ? "#3C7EFF" : "#40000000"
+                //                 border.width: 1
+                //                 color: freesurferCheckBox.checked ? "#3C7EFF" : "#ffffff"
+
+                //                 Image{
+                //                     source: "qrc:/image/vector.png"
+                //                     anchors.centerIn: parent
+                //                     visible: freesurferCheckBox.checked
+                //                 }
+                //                 MouseArea {
+                //                     anchors.fill: parent
+                //                     cursorShape: Qt.PointingHandCursor
+                //                     onClicked: freesurferCheckBox.checked = !freesurferCheckBox.checked
+                //                 }
+                //             }
+                //         }
+                //         Label{
+                //             text: qsTr("使用freesurfer")
+                //             color: "#E5FFFFFF"
+                //             anchors.verticalCenter: parent.verticalCenter
+                //             MouseArea {
+                //                 anchors.fill: parent
+                //                 cursorShape: Qt.PointingHandCursor
+                //                 onClicked: freesurferCheckBox.checked = !freesurferCheckBox.checked
+                //             }
+                //         }
+                //     }
+                //     CustomButton{
+                //         width: parent.width
+                //         height: 48
+                //         text: qsTr("分析")
+                //         onClicked: {
+                //             function warn(msg) {
+                //                 if (messageManager) {
+                //                     messageManager.warning(msg, 2000)
+                //                 } else {
+                //                     console.log(msg)
+                //                 }
+                //             }
+
+                //             var d = dicomDir.text.trim()
+                //             var b = bidsDir.text.trim()
+                //             var o = outputDir.text.trim()
+                //             var l = licenseFile.text.trim()
+
+                //             if (d === "") {
+                //                 warn(qsTr("请输入 Dicom 文件夹路径"))
+                //                 return
+                //             }
+                //             if (b === "") {
+                //                 warn(qsTr("请输入 Bids 文件夹路径"))
+                //                 return
+                //             }
+                //             if (o === "") {
+                //                 warn(qsTr("请输入 Output 文件夹路径"))
+                //                 return
+                //             }
+                //             if (l === "") {
+                //                 warn(qsTr("请输入 license 文件路径"))
+                //                 return
+                //             }
+
+                //             $MainViewController.startfmriprepAnalysis(d, b, o, l, freesurferCheckBox.checked)
+                //         }
+                //     }
+                //     // log 日志展示
+                //     Rectangle {
+                //         width: parent.width
+                //         height: preAnalysis.height - tabContainer.height - 16 - 38 * 4 - 30 - 48 - 6 * 12
+                //         color: "#E016171B"
+                //         radius: 8
+
+                //         // 日志更新Timer，延迟更新避免阻塞动画
+                //         Timer {
+                //             id: logUpdateTimer
+                //             interval: 150 // 150ms后更新，给动画充足时间
+                //             repeat: false
+                //             onTriggered: {
+                //                 logArea.text = $MainViewController.fmriprepLog
+                //             }
+                //         }
+
+                //         // 滚动延迟Timer，避免在更新文本时立即滚动导致卡顿
+                //         Timer {
+                //             id: scrollTimer
+                //             interval: 50
+                //             repeat: false
+                //             onTriggered: {
+                //                 logArea.cursorPosition = logArea.length
+                //                 if (logArea.flickableItem) {
+                //                     var flick = logArea.flickableItem
+                //                     flick.contentY = Math.max(0, flick.contentHeight - flick.height)
+                //                 }
+                //             }
+                //         }
+
+                //         Connections {
+                //             target: $MainViewController
+                //             function onFmriprepLogUpdated() {
+                //                 // 只有当面板可见时才更新日志
+                //                 if (fmriprepCol.visible) {
+                //                     logUpdateTimer.restart()
+                //                 }
+                //             }
+                //         }
+
+                //         ScrollView {
+                //             anchors.fill: parent
+                //             clip: true
+                //             TextArea {
+                //                 id: logArea
+                //                 readOnly: true
+                //                 wrapMode: TextEdit.NoWrap // 禁用自动换行，大幅提升性能
+                //                 font.pixelSize: 14
+                //                 color: "#E5FFFFFF"
+                //                 background: null
+
+                //                 // 面板变为可见时同步日志
+                //                 Component.onCompleted: {
+                //                     text = $MainViewController.fmriprepLog
+                //                 }
+
+                //                 onTextChanged: {
+                //                     scrollTimer.restart()
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
+                // Column{
+                //     id: deepprepCol
+                //     width: parent.width
+                //     spacing: 12
+                //     visible: preAnalysis.currentTabIndex === 1
+                //     // 四个标签的最大宽度，保持对齐
+                //     property int maxLabelWidth: Math.max(
+                //                                     Math.max(label_dp1.implicitWidth, label_dp2.implicitWidth),
+                //                                     Math.max(label_dp3.implicitWidth, label_dp4.implicitWidth))
+                //     Row{
+                //         height: 38
+                //         spacing: 10
+                //         Label {
+                //             id:label_dp1
+                //             text: qsTr("输入Dicom文件夹：")
+                //             font.pixelSize: 16
+                //             color: "#80FFFFFF"
+                //             anchors.verticalCenter: parent.verticalCenter
+                //             width: deepprepCol.maxLabelWidth
+                //         }
+                //         SingleLineTextInput{
+                //             id: inputDirDeep
+                //             width: fmriprepCol.width - label_dp1.width - 60 - 20
+                //             height: 38
+                //             inputRadius: 4
+                //             backgroundColor: "#14FFFFFF"
+                //         }
+                //         CustomButton{
+                //             width: 60
+                //             height: 36
+                //             buttonRadius: 4
+                //             fontSize: 14
+                //             text: qsTr("导入")
+                //             anchors.verticalCenter: parent.verticalCenter
+                //             onClicked: {
+                //                 inputDirDialog.open()
+                //             }
+                //         }
+                //     }
+                //     Row{
+                //         height: 38
+                //         spacing: 10
+                //         Label {
+                //             id:label_dp2
+                //             text: qsTr("输出Bids文件夹：")
+                //             font.pixelSize: 16
+                //             color: "#80FFFFFF"
+                //             anchors.verticalCenter: parent.verticalCenter
+                //             width: deepprepCol.maxLabelWidth
+                //         }
+                //         SingleLineTextInput{
+                //             id: bidsDirDeep
+                //             width: fmriprepCol.width - label_dp2.width - 10
+                //             height: 38
+                //             inputRadius: 4
+                //             backgroundColor: "#14FFFFFF"
+                //         }
+                //     }
+                //     Row{
+                //         height: 38
+                //         spacing: 10
+                //         Label {
+                //             id:label_dp3
+                //             text: qsTr("输出Output文件夹：")
+                //             font.pixelSize: 16
+                //             color: "#80FFFFFF"
+                //             anchors.verticalCenter: parent.verticalCenter
+                //             width: deepprepCol.maxLabelWidth
+                //         }
+                //         SingleLineTextInput{
+                //             id: outputDirDeep
+                //             width: fmriprepCol.width - label_dp3.width - 10
+                //             height: 38
+                //             inputRadius: 4
+                //             backgroundColor: "#14FFFFFF"
+                //         }
+                //     }
+                //     Row{
+                //         height: 38
+                //         spacing: 10
+                //         Label {
+                //             id:label_dp4
+                //             text: qsTr("license文件地址：")
+                //             font.pixelSize: 16
+                //             color: "#80FFFFFF"
+                //             anchors.verticalCenter: parent.verticalCenter
+                //             width: deepprepCol.maxLabelWidth
+                //         }
+                //         SingleLineTextInput{
+                //             id: licenseFileDeep
+                //             width: fmriprepCol.width - label_dp4.width - 60 - 20
+                //             height: 38
+                //             inputRadius: 4
+                //             backgroundColor: "#14FFFFFF"
+                //         }
+                //         CustomButton{
+                //             width: 60
+                //             height: 36
+                //             buttonRadius: 4
+                //             fontSize: 14
+                //             text: qsTr("导入")
+                //             anchors.verticalCenter: parent.verticalCenter
+                //             onClicked: {
+                //                 licenseFileDialogDeep.open()
+                //             }
+                //         }
+                //     }
+                //     CustomButton{
+                //         width: parent.width
+                //         height: 48
+                //         text: qsTr("分析")
+                //         onClicked: {
+                //             function warn(msg) {
+                //                 if (messageManager) {
+                //                     messageManager.warning(msg, 2000)
+                //                 } else {
+                //                     console.log(msg)
+                //                 }
+                //             }
+
+                //             var i = inputDirDeep.text.trim()
+                //             var b = bidsDirDeep.text.trim()
+                //             var o = outputDirDeep.text.trim()
+                //             var l = licenseFileDeep.text.trim()
+
+                //             if (i === "") {
+                //                 warn(qsTr("请输入 Input 文件夹路径"))
+                //                 return
+                //             }
+                //             if (b === "") {
+                //                 warn(qsTr("请输入 Bids 文件夹路径"))
+                //                 return
+                //             }
+                //             if (o === "") {
+                //                 warn(qsTr("请输入 Output 文件夹路径"))
+                //                 return
+                //             }
+                //             if (l === "") {
+                //                 warn(qsTr("请输入 license 文件路径"))
+                //                 return
+                //             }
+
+                //             $MainViewController.startDeepprepAnalysis(i, b, o, l)
+                //         }
+                //     }
+                //     // log 日志展示
+                //     Rectangle {
+                //         width: parent.width
+                //         height: preAnalysis.height - tabContainer.height - 16 - 38 * 4 - 48 - 5 * 12
+                //         color: "#E016171B"
+                //         radius: 8
+
+                //         // 日志更新Timer，延迟更新避免阻塞动画
+                //         Timer {
+                //             id: logUpdateTimerDeep
+                //             interval: 150 // 150ms后更新，给动画充足时间
+                //             repeat: false
+                //             onTriggered: {
+                //                 logAreaDeep.text = $MainViewController.deepprepLog
+                //             }
+                //         }
+
+                //         // 滚动延迟Timer，避免在更新文本时立即滚动导致卡顿
+                //         Timer {
+                //             id: scrollTimerDeep
+                //             interval: 50
+                //             repeat: false
+                //             onTriggered: {
+                //                 logAreaDeep.cursorPosition = logAreaDeep.length
+                //                 if (logAreaDeep.flickableItem) {
+                //                     var flick = logAreaDeep.flickableItem
+                //                     flick.contentY = Math.max(0, flick.contentHeight - flick.height)
+                //                 }
+                //             }
+                //         }
+
+                //         Connections {
+                //             target: $MainViewController
+                //             function onDeepprepLogUpdated() {
+                //                 // 只有当面板可见时才更新日志
+                //                 if (deepprepCol.visible) {
+                //                     logUpdateTimerDeep.restart()
+                //                 }
+                //             }
+                //         }
+
+                //         ScrollView {
+                //             anchors.fill: parent
+                //             clip: true
+                //             TextArea {
+                //                 id: logAreaDeep
+                //                 readOnly: true
+                //                 wrapMode: TextEdit.NoWrap // 禁用自动换行，大幅提升性能
+                //                 font.pixelSize: 14
+                //                 color: "#E5FFFFFF"
+                //                 background: null
+
+                //                 // 面板变为可见时同步日志
+                //                 Component.onCompleted: {
+                //                     text = $MainViewController.deepprepLog
+                //                 }
+
+                //                 onTextChanged: {
+                //                     // 延迟滚动到底部，避免阻塞渲染
+                //                     scrollTimerDeep.restart()
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
+                ScrollView{
                     width: parent.width
-                    spacing: 12
+                    height: preAnalysis.height - 16 - 48
+                    clip: true
+                    ScrollBar.vertical.policy: ScrollBar.AlwaysOff
                     visible: preAnalysis.currentTabIndex === 0
-                    // 四个标签的最大宽度，保持对齐
-                    property int maxLabelWidth: Math.max(
-                                                    Math.max(label1.implicitWidth, label2.implicitWidth),
-                                                    Math.max(label3.implicitWidth, label4.implicitWidth))
-                    Row{
-                        height: 38
-                        spacing: 10
-                        Label {
-                            id:label1
-                            text: qsTr("输入Dicom文件夹：")
-                            font.pixelSize: 16
-                            color: "#80FFFFFF"
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: fmriprepCol.maxLabelWidth
-                        }
-                        SingleLineTextInput{
-                            id: dicomDir
-                            width: fmriprepCol.width - label1.width - 60 - 20
+                    Column{
+                        id: prepCol
+                        width: parent.width
+                        spacing: 12
+                        // 四个标签的最大宽度，保持对齐
+                        property int maxLabelWidth: Math.max(
+                                                        Math.max(label1.implicitWidth, label2.implicitWidth),
+                                                        Math.max(label3.implicitWidth, label4.implicitWidth))
+                        Row{
                             height: 38
-                            inputRadius: 4
-                            backgroundColor: "#14FFFFFF"
-                        }
-                        CustomButton{
-                            width: 60
-                            height: 36
-                            buttonRadius: 4
-                            fontSize: 14
-                            text: qsTr("导入")
-                            anchors.verticalCenter: parent.verticalCenter
-                            onClicked: {
-                                preFileDialog.open()
-                            }
-                        }
-                    }
-                    Row{
-                        height: 38
-                        spacing: 10
-                        Label {
-                            id:label2
-                            text: qsTr("输出Bids文件夹：")
-                            font.pixelSize: 16
-                            color: "#80FFFFFF"
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: fmriprepCol.maxLabelWidth
-                        }
-                        SingleLineTextInput{
-                            id: bidsDir
-                            width: fmriprepCol.width - label2.width - 10
-                            height: 38
-                            inputRadius: 4
-                            backgroundColor: "#14FFFFFF"
-                        }
-                    }
-                    Row{
-                        height: 38
-                        spacing: 10
-                        Label {
-                            id:label3
-                            text: qsTr("输出Output文件夹：")
-                            font.pixelSize: 16
-                            color: "#80FFFFFF"
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: fmriprepCol.maxLabelWidth
-                        }
-                        SingleLineTextInput{
-                            id: outputDir
-                            width: fmriprepCol.width - label3.width - 10
-                            height: 38
-                            inputRadius: 4
-                            backgroundColor: "#14FFFFFF"
-                        }
-                    }
-                    Row{
-                        height: 38
-                        spacing: 10
-                        Label {
-                            id:label4
-                            text: qsTr("license文件地址：")
-                            font.pixelSize: 16
-                            color: "#80FFFFFF"
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: fmriprepCol.maxLabelWidth
-                        }
-                        SingleLineTextInput{
-                            id: licenseFile
-                            width: fmriprepCol.width - label4.width - 60 - 20
-                            height: 38
-                            inputRadius: 4
-                            backgroundColor: "#14FFFFFF"
-                        }
-                        CustomButton{
-                            width: 60
-                            height: 36
-                            buttonRadius: 4
-                            fontSize: 14
-                            text: qsTr("导入")
-                            anchors.verticalCenter: parent.verticalCenter
-                            onClicked: {
-                                licenseFileDialog.open()
-                            }
-                        }
-                    }
-                    Row{
-                        height: 30
-                        spacing: 8
-                        CheckBox {
-                            id: freesurferCheckBox
-                            checked: false
-                            width: 14
-                            height: 14
-                            anchors.verticalCenter: parent.verticalCenter
-                            indicator: Rectangle {
-                                implicitWidth: 14
-                                implicitHeight: 14
-                                radius: 2
+                            spacing: 10
+                            Label {
+                                id:label1
+                                text: qsTr("搜索文件夹：")
+                                font.pixelSize: 16
+                                color: "#80FFFFFF"
                                 anchors.verticalCenter: parent.verticalCenter
-                                border.color: freesurferCheckBox.checked ? "#3C7EFF" : "#40000000"
-                                border.width: 1
-                                color: freesurferCheckBox.checked ? "#3C7EFF" : "#ffffff"
-
-                                Image{
-                                    source: "qrc:/image/vector.png"
-                                    anchors.centerIn: parent
-                                    visible: freesurferCheckBox.checked
-                                }
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: freesurferCheckBox.checked = !freesurferCheckBox.checked
-                                }
+                                width: prepCol.maxLabelWidth
                             }
-                        }
-                        Label{
-                            text: qsTr("使用freesurfer")
-                            color: "#E5FFFFFF"
-                            anchors.verticalCenter: parent.verticalCenter
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: freesurferCheckBox.checked = !freesurferCheckBox.checked
+                            SingleLineTextInput{
+                                id: dicomDir
+                                width: prepCol.width - label1.width - 60 - 20
+                                height: 38
+                                inputRadius: 4
+                                backgroundColor: "#14FFFFFF"
                             }
-                        }
-                    }
-                    CustomButton{
-                        width: parent.width
-                        height: 48
-                        text: qsTr("分析")
-                        onClicked: {
-                            function warn(msg) {
-                                if (messageManager) {
-                                    messageManager.warning(msg, 2000)
-                                } else {
-                                    console.log(msg)
+                            CustomButton{
+                                width: 60
+                                height: 36
+                                buttonRadius: 4
+                                fontSize: 14
+                                text: qsTr("导入")
+                                anchors.verticalCenter: parent.verticalCenter
+                                onClicked: {
+                                    preFileDialog.open()
                                 }
                             }
-
-                            var d = dicomDir.text.trim()
-                            var b = bidsDir.text.trim()
-                            var o = outputDir.text.trim()
-                            var l = licenseFile.text.trim()
-
-                            if (d === "") {
-                                warn(qsTr("请输入 Dicom 文件夹路径"))
-                                return
-                            }
-                            if (b === "") {
-                                warn(qsTr("请输入 Bids 文件夹路径"))
-                                return
-                            }
-                            if (o === "") {
-                                warn(qsTr("请输入 Output 文件夹路径"))
-                                return
-                            }
-                            if (l === "") {
-                                warn(qsTr("请输入 license 文件路径"))
-                                return
-                            }
-
-                            $MainViewController.startfmriprepAnalysis(d, b, o, l, freesurferCheckBox.checked)
-                        }
-                    }
-                    // log 日志展示
-                    Rectangle {
-                        width: parent.width
-                        height: preAnalysis.height - tabContainer.height - 16 - 38 * 4 - 30 - 48 - 6 * 12
-                        color: "#E016171B"
-                        radius: 8
-
-                        // 日志更新Timer，延迟更新避免阻塞动画
-                        Timer {
-                            id: logUpdateTimer
-                            interval: 150 // 150ms后更新，给动画充足时间
-                            repeat: false
-                            onTriggered: {
-                                logArea.text = $MainViewController.fmriprepLog
-                            }
-                        }
-
-                        // 滚动延迟Timer，避免在更新文本时立即滚动导致卡顿
-                        Timer {
-                            id: scrollTimer
-                            interval: 50
-                            repeat: false
-                            onTriggered: {
-                                logArea.cursorPosition = logArea.length
-                                if (logArea.flickableItem) {
-                                    var flick = logArea.flickableItem
-                                    flick.contentY = Math.max(0, flick.contentHeight - flick.height)
-                                }
-                            }
-                        }
-
-                        Connections {
-                            target: $MainViewController
-                            function onFmriprepLogUpdated() {
-                                // 只有当面板可见时才更新日志
-                                if (fmriprepCol.visible) {
-                                    logUpdateTimer.restart()
-                                }
-                            }
-                        }
-
-                        ScrollView {
-                            anchors.fill: parent
-                            clip: true
-                            TextArea {
-                                id: logArea
-                                readOnly: true
-                                wrapMode: TextEdit.NoWrap // 禁用自动换行，大幅提升性能
-                                font.pixelSize: 14
-                                color: "#E5FFFFFF"
-                                background: null
-
-                                // 面板变为可见时同步日志
-                                Component.onCompleted: {
-                                    text = $MainViewController.fmriprepLog
-                                }
-
-                                onTextChanged: {
-                                    scrollTimer.restart()
-                                }
-                            }
-                        }
-                    }
-                }
-                Column{
-                    id: deepprepCol
-                    width: parent.width
-                    spacing: 12
-                    visible: preAnalysis.currentTabIndex === 1
-                    // 四个标签的最大宽度，保持对齐
-                    property int maxLabelWidth: Math.max(
-                                                    Math.max(label_dp1.implicitWidth, label_dp2.implicitWidth),
-                                                    Math.max(label_dp3.implicitWidth, label_dp4.implicitWidth))
-                    Row{
-                        height: 38
-                        spacing: 10
-                        Label {
-                            id:label_dp1
-                            text: qsTr("输入Dicom文件夹：")
-                            font.pixelSize: 16
-                            color: "#80FFFFFF"
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: deepprepCol.maxLabelWidth
-                        }
-                        SingleLineTextInput{
-                            id: inputDirDeep
-                            width: fmriprepCol.width - label_dp1.width - 60 - 20
-                            height: 38
-                            inputRadius: 4
-                            backgroundColor: "#14FFFFFF"
                         }
                         CustomButton{
-                            width: 60
-                            height: 36
-                            buttonRadius: 4
-                            fontSize: 14
-                            text: qsTr("导入")
-                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width
+                            height: 48
+                            text: $MainViewController.isScanning ? qsTr("搜索中...") : qsTr("搜索")
+                            enabled: !$MainViewController.isScanning
                             onClicked: {
-                                inputDirDialog.open()
+                                $MainViewController.scanFolder(dicomDir.text)
                             }
                         }
-                    }
-                    Row{
-                        height: 38
-                        spacing: 10
-                        Label {
-                            id:label_dp2
-                            text: qsTr("输出Bids文件夹：")
-                            font.pixelSize: 16
-                            color: "#80FFFFFF"
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: deepprepCol.maxLabelWidth
+
+                        // 扫描进度条区域
+                        Column {
+                            width: parent.width
+                            spacing: 8
+                            visible: $MainViewController.isScanning || $MainViewController.scanProgress > 0
+
+                            // 进度条背景
+                            Rectangle {
+                                width: parent.width
+                                height: 8
+                                radius: 4
+                                color: "#14FFFFFF"
+
+                                // 进度条填充
+                                Rectangle {
+                                    width: parent.width * $MainViewController.scanProgress
+                                    height: parent.height
+                                    radius: 4
+                                    color: "#3C7EFF"
+
+                                    Behavior on width {
+                                        NumberAnimation {
+                                            duration: 200
+                                            easing.type: Easing.OutQuad
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 进度文字信息
+                            Row {
+                                width: parent.width
+                                spacing: 16
+
+                                Label {
+                                    text: qsTr("进度：") + Math.round($MainViewController.scanProgress * 100) + "%"
+                                    font.pixelSize: 12
+                                    color: "#80FFFFFF"
+                                }
+
+                                Label {
+                                    text: qsTr("已扫描：") + $MainViewController.scanScannedFolders + "/" + $MainViewController.scanTotalFolders
+                                    font.pixelSize: 12
+                                    color: "#80FFFFFF"
+                                }
+                            }
+
+                            // 扫描统计信息
+                            Row {
+                                width: parent.width
+                                spacing: 16
+
+                                Label {
+                                    text: qsTr("T1W：") + $MainViewController.scanFoundT1Count
+                                    font.pixelSize: 12
+                                    color: "#4CAF50"
+                                }
+
+                                Label {
+                                    text: qsTr("BOLD：") + $MainViewController.scanFoundBoldCount
+                                    font.pixelSize: 12
+                                    color: "#FF9800"
+                                }
+
+                                Label {
+                                    text: qsTr("配对成功：") + $MainViewController.scanPairedCount
+                                    font.pixelSize: 12
+                                    color: "#3C7EFF"
+                                }
+                            }
+
+                            // 当前扫描的文件夹
+                            Label {
+                                width: parent.width
+                                text: $MainViewController.isScanning ? qsTr("正在扫描：") + $MainViewController.scanCurrentFolder : qsTr("扫描完成")
+                                font.pixelSize: 11
+                                color: "#60FFFFFF"
+                                elide: Text.ElideMiddle
+                            }
                         }
-                        SingleLineTextInput{
-                            id: bidsDirDeep
-                            width: fmriprepCol.width - label_dp2.width - 10
+
+                        // MRI 配对结果表格
+                        Column {
+                            width: parent.width
+                            spacing: 8
+                            visible: !$MainViewController.isScanning && $MriPairResultModel.resultCount > 0
+
+                            // 表格标题和操作栏
+                            Row {
+                                width: parent.width
+                                spacing: 12
+
+                                Label {
+                                    text: qsTr("扫描结果（") + $MriPairResultModel.resultCount + qsTr("条）")
+                                    font.pixelSize: 14
+                                    font.bold: true
+                                    color: "#FFFFFF"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+
+                                Item { width: 1; height: 1; }
+
+                                // 全选按钮
+                                CustomButton {
+                                    width: 60
+                                    height: 28
+                                    buttonRadius: 4
+                                    fontSize: 12
+                                    text: qsTr("全选")
+                                    onClicked: {
+                                        $MriPairResultModel.selectAll()
+                                    }
+                                }
+
+                                // 取消全选按钮
+                                CustomButton {
+                                    width: 70
+                                    height: 28
+                                    buttonRadius: 4
+                                    fontSize: 12
+                                    backgroundColor: "#14FFFFFF"
+                                    borderColor: "#3C7EFF"
+                                    borderWidth: 1
+                                    text: qsTr("取消全选")
+                                    onClicked: {
+                                        $MriPairResultModel.deselectAll()
+                                    }
+                                }
+
+                                Label {
+                                    text: qsTr("已选：") + $MriPairResultModel.checkedCount
+                                    font.pixelSize: 12
+                                    color: "#3C7EFF"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+
+                            // 表格容器（支持横向滚动）
+                            Flickable {
+                                id: mriTableFlickable
+                                width: parent.width
+                                height: Math.min($MriPairResultModel.resultCount * 44 + 36, 306) + 12  // 36为表头高度，12为滚动条空间
+                                contentWidth: mriTableContentWidth
+                                contentHeight: height
+                                clip: true
+                                boundsBehavior: Flickable.StopAtBounds
+
+                                // 表格内容总宽度
+                                property int mriTableContentWidth: 40 + 120 + 140 + 60 + 100 + 100  // 选择+患者ID+姓名+性别+出生日期+检查日期
+
+                                ScrollBar.horizontal: ScrollBar {
+                                    active: true
+                                    policy: ScrollBar.AsNeeded
+                                }
+
+                                Column {
+                                    width: mriTableFlickable.mriTableContentWidth
+                                    spacing: 0
+
+                                    // 表格头部
+                                    Rectangle {
+                                        width: parent.width
+                                        height: 36
+                                        color: "#1AFFFFFF"
+                                        radius: 4
+
+                                        Row {
+                                            anchors.fill: parent
+                                            anchors.leftMargin: 8
+                                            anchors.rightMargin: 8
+                                            spacing: 0
+
+                                            // 勾选列
+                                            Item {
+                                                width: 40
+                                                height: parent.height
+                                                Label {
+                                                    anchors.centerIn: parent
+                                                    text: qsTr("选择")
+                                                    font.pixelSize: 12
+                                                    color: "#80FFFFFF"
+                                                }
+                                            }
+
+                                            // 患者ID列
+                                            Item {
+                                                width: 120
+                                                height: parent.height
+                                                Label {
+                                                    anchors.centerIn: parent
+                                                    text: qsTr("患者ID")
+                                                    font.pixelSize: 12
+                                                    color: "#80FFFFFF"
+                                                }
+                                            }
+
+                                            // 姓名列
+                                            Item {
+                                                width: 140
+                                                height: parent.height
+                                                Label {
+                                                    anchors.centerIn: parent
+                                                    text: qsTr("姓名")
+                                                    font.pixelSize: 12
+                                                    color: "#80FFFFFF"
+                                                }
+                                            }
+
+                                            // 性别列
+                                            Item {
+                                                width: 60
+                                                height: parent.height
+                                                Label {
+                                                    anchors.centerIn: parent
+                                                    text: qsTr("性别")
+                                                    font.pixelSize: 12
+                                                    color: "#80FFFFFF"
+                                                }
+                                            }
+
+                                            // 出生日期列
+                                            Item {
+                                                width: 100
+                                                height: parent.height
+                                                Label {
+                                                    anchors.centerIn: parent
+                                                    text: qsTr("出生日期")
+                                                    font.pixelSize: 12
+                                                    color: "#80FFFFFF"
+                                                }
+                                            }
+
+                                            // 检查日期列
+                                            Item {
+                                                width: 100
+                                                height: parent.height
+                                                Label {
+                                                    anchors.centerIn: parent
+                                                    text: qsTr("检查日期")
+                                                    font.pixelSize: 12
+                                                    color: "#80FFFFFF"
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // 表格内容区域
+                                    ListView {
+                                        id: mriResultListView
+                                        width: parent.width
+                                        height: Math.min($MriPairResultModel.resultCount * 44, 270)
+                                        clip: true
+                                        model: $MriPairResultModel
+                                        interactive: true
+
+                                        ScrollBar.vertical: ScrollBar {
+                                            active: true
+                                            policy: ScrollBar.AsNeeded
+                                        }
+
+                                        delegate: Rectangle {
+                                            width: mriResultListView.width
+                                            height: 44
+                                            color: index % 2 === 0 ? "#0AFFFFFF" : "transparent"
+                                            radius: 2
+
+                                            // 鼠标悬停效果
+                                            Rectangle {
+                                                anchors.fill: parent
+                                                color: "#1AFFFFFF"
+                                                radius: 2
+                                                visible: mriRowMouseArea.containsMouse
+                                            }
+
+                                            MouseArea {
+                                                id: mriRowMouseArea
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    $MriPairResultModel.toggleChecked(index)
+                                                }
+                                            }
+
+                                            Row {
+                                                anchors.fill: parent
+                                                anchors.leftMargin: 8
+                                                anchors.rightMargin: 8
+                                                spacing: 0
+
+                                                // 勾选框
+                                                Item {
+                                                    width: 40
+                                                    height: parent.height
+
+                                                    Rectangle {
+                                                        anchors.centerIn: parent
+                                                        width: 20
+                                                        height: 20
+                                                        radius: 4
+                                                        color: model.isChecked ? "#3C7EFF" : "transparent"
+                                                        border.color: model.isChecked ? "#3C7EFF" : "#60FFFFFF"
+                                                        border.width: 1
+
+                                                        // 勾选符号
+                                                        Text {
+                                                            anchors.centerIn: parent
+                                                            text: "✓"
+                                                            color: "#FFFFFF"
+                                                            font.pixelSize: 14
+                                                            font.bold: true
+                                                            visible: model.isChecked
+                                                        }
+
+                                                        MouseArea {
+                                                            anchors.fill: parent
+                                                            cursorShape: Qt.PointingHandCursor
+                                                            onClicked: {
+                                                                $MriPairResultModel.toggleChecked(index)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+
+                                                // 患者ID
+                                                Item {
+                                                    width: 120
+                                                    height: parent.height
+                                                    Label {
+                                                        anchors.centerIn: parent
+                                                        width: parent.width - 8
+                                                        text: model.patientId || "-"
+                                                        font.pixelSize: 12
+                                                        color: "#FFFFFF"
+                                                        elide: Text.ElideRight
+                                                        horizontalAlignment: Text.AlignHCenter
+                                                    }
+                                                }
+
+                                                // 姓名
+                                                Item {
+                                                    width: 140
+                                                    height: parent.height
+                                                    Label {
+                                                        anchors.centerIn: parent
+                                                        width: parent.width - 8
+                                                        text: model.patientName || "-"
+                                                        font.pixelSize: 12
+                                                        color: "#FFFFFF"
+                                                        elide: Text.ElideRight
+                                                        horizontalAlignment: Text.AlignHCenter
+                                                    }
+                                                }
+
+                                                // 性别
+                                                Item {
+                                                    width: 60
+                                                    height: parent.height
+                                                    Label {
+                                                        anchors.centerIn: parent
+                                                        text: {
+                                                            var sex = model.patientSex || ""
+                                                            if (sex === "M") return qsTr("男")
+                                                            if (sex === "F") return qsTr("女")
+                                                            return sex || "-"
+                                                        }
+                                                        font.pixelSize: 12
+                                                        color: "#FFFFFF"
+                                                    }
+                                                }
+
+                                                // 出生日期
+                                                Item {
+                                                    width: 100
+                                                    height: parent.height
+                                                    Label {
+                                                        anchors.centerIn: parent
+                                                        text: {
+                                                            var date = model.patientBirthDate || ""
+                                                            if (date.length === 8) {
+                                                                return date.substring(0, 4) + "-" + date.substring(4, 6) + "-" + date.substring(6, 8)
+                                                            }
+                                                            return date || "-"
+                                                        }
+                                                        font.pixelSize: 12
+                                                        color: "#FFFFFF"
+                                                    }
+                                                }
+
+                                                // 检查日期
+                                                Item {
+                                                    width: 100
+                                                    height: parent.height
+                                                    Label {
+                                                        anchors.centerIn: parent
+                                                        text: {
+                                                            var date = model.studyDate || ""
+                                                            if (date.length === 8) {
+                                                                return date.substring(0, 4) + "-" + date.substring(4, 6) + "-" + date.substring(6, 8)
+                                                            }
+                                                            return date || "-"
+                                                        }
+                                                        font.pixelSize: 12
+                                                        color: "#FFFFFF"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Row{
                             height: 38
-                            inputRadius: 4
-                            backgroundColor: "#14FFFFFF"
+                            spacing: 10
+                            visible: !$MainViewController.isScanning && $MriPairResultModel.checkedCount
+                            Label {
+                                id:label2
+                                text: qsTr("输出Bids文件夹：")
+                                font.pixelSize: 16
+                                color: "#80FFFFFF"
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: prepCol.maxLabelWidth
+                            }
+                            SingleLineTextInput{
+                                id: bidsDir
+                                width: prepCol.width - label2.width - 10
+                                height: 38
+                                inputRadius: 4
+                                backgroundColor: "#14FFFFFF"
+                            }
                         }
-                    }
-                    Row{
-                        height: 38
-                        spacing: 10
-                        Label {
-                            id:label_dp3
-                            text: qsTr("输出Output文件夹：")
-                            font.pixelSize: 16
-                            color: "#80FFFFFF"
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: deepprepCol.maxLabelWidth
-                        }
-                        SingleLineTextInput{
-                            id: outputDirDeep
-                            width: fmriprepCol.width - label_dp3.width - 10
+                        Row{
                             height: 38
-                            inputRadius: 4
-                            backgroundColor: "#14FFFFFF"
+                            spacing: 10
+                            visible: !$MainViewController.isScanning && $MriPairResultModel.checkedCount
+                            Label {
+                                id:label3
+                                text: qsTr("输出Output文件夹：")
+                                font.pixelSize: 16
+                                color: "#80FFFFFF"
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: prepCol.maxLabelWidth
+                            }
+                            SingleLineTextInput{
+                                id: outputDir
+                                width: prepCol.width - label3.width - 10
+                                height: 38
+                                inputRadius: 4
+                                backgroundColor: "#14FFFFFF"
+                            }
                         }
-                    }
-                    Row{
-                        height: 38
-                        spacing: 10
-                        Label {
-                            id:label_dp4
-                            text: qsTr("license文件地址：")
-                            font.pixelSize: 16
-                            color: "#80FFFFFF"
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: deepprepCol.maxLabelWidth
-                        }
-                        SingleLineTextInput{
-                            id: licenseFileDeep
-                            width: fmriprepCol.width - label_dp4.width - 60 - 20
+                        Row{
                             height: 38
-                            inputRadius: 4
-                            backgroundColor: "#14FFFFFF"
+                            spacing: 10
+                            visible: !$MainViewController.isScanning && $MriPairResultModel.checkedCount
+                            Label {
+                                id:label4
+                                text: qsTr("license文件地址：")
+                                font.pixelSize: 16
+                                color: "#80FFFFFF"
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: prepCol.maxLabelWidth
+                            }
+                            SingleLineTextInput{
+                                id: licenseFile
+                                width: prepCol.width - label4.width - 60 - 20
+                                height: 38
+                                inputRadius: 4
+                                backgroundColor: "#14FFFFFF"
+                            }
+                            CustomButton{
+                                width: 60
+                                height: 36
+                                buttonRadius: 4
+                                fontSize: 14
+                                text: qsTr("导入")
+                                anchors.verticalCenter: parent.verticalCenter
+                                onClicked: {
+                                    licenseFileDialog.open()
+                                }
+                            }
+                        }
+                        Row {
+                            height: 38
+                            spacing: 10
+                            visible: !$MainViewController.isScanning && $MriPairResultModel.checkedCount
+                            Label {
+                                text: qsTr("预处理方式：")
+                                font.pixelSize: 16
+                                color: "#80FFFFFF"
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: prepCol.maxLabelWidth
+                            }
+                            CustomComboBox {
+                                id: methodComboBox
+                                width: prepCol.width - prepCol.maxLabelWidth - 10
+                                model: ["传统处理", "深度学习"]
+                            }
                         }
                         CustomButton{
-                            width: 60
-                            height: 36
-                            buttonRadius: 4
-                            fontSize: 14
-                            text: qsTr("导入")
-                            anchors.verticalCenter: parent.verticalCenter
+                            visible: !$MainViewController.isScanning && $MriPairResultModel.checkedCount
+                            width: parent.width
+                            height: 48
+                            text: qsTr("分析")
                             onClicked: {
-                                licenseFileDialogDeep.open()
-                            }
-                        }
-                    }
-                    CustomButton{
-                        width: parent.width
-                        height: 48
-                        text: qsTr("分析")
-                        onClicked: {
-                            function warn(msg) {
-                                if (messageManager) {
-                                    messageManager.warning(msg, 2000)
-                                } else {
-                                    console.log(msg)
+                                function warn(msg) {
+                                    if (messageManager) {
+                                        messageManager.warning(msg, 2000)
+                                    } else {
+                                        console.log(msg)
+                                    }
                                 }
-                            }
-
-                            var i = inputDirDeep.text.trim()
-                            var b = bidsDirDeep.text.trim()
-                            var o = outputDirDeep.text.trim()
-                            var l = licenseFileDeep.text.trim()
-
-                            if (i === "") {
-                                warn(qsTr("请输入 Input 文件夹路径"))
-                                return
-                            }
-                            if (b === "") {
-                                warn(qsTr("请输入 Bids 文件夹路径"))
-                                return
-                            }
-                            if (o === "") {
-                                warn(qsTr("请输入 Output 文件夹路径"))
-                                return
-                            }
-                            if (l === "") {
-                                warn(qsTr("请输入 license 文件路径"))
-                                return
-                            }
-
-                            $MainViewController.startDeepprepAnalysis(i, b, o, l)
-                        }
-                    }
-                    // log 日志展示
-                    Rectangle {
-                        width: parent.width
-                        height: preAnalysis.height - tabContainer.height - 16 - 38 * 4 - 48 - 5 * 12
-                        color: "#E016171B"
-                        radius: 8
-
-                        // 日志更新Timer，延迟更新避免阻塞动画
-                        Timer {
-                            id: logUpdateTimerDeep
-                            interval: 150 // 150ms后更新，给动画充足时间
-                            repeat: false
-                            onTriggered: {
-                                logAreaDeep.text = $MainViewController.deepprepLog
-                            }
-                        }
-
-                        // 滚动延迟Timer，避免在更新文本时立即滚动导致卡顿
-                        Timer {
-                            id: scrollTimerDeep
-                            interval: 50
-                            repeat: false
-                            onTriggered: {
-                                logAreaDeep.cursorPosition = logAreaDeep.length
-                                if (logAreaDeep.flickableItem) {
-                                    var flick = logAreaDeep.flickableItem
-                                    flick.contentY = Math.max(0, flick.contentHeight - flick.height)
+                                var b = bidsDir.text.trim()
+                                var o = outputDir.text.trim()
+                                var l = licenseFile.text.trim()
+                                if (b === "") {
+                                    warn(qsTr("请输入 Bids 文件夹路径"))
+                                    return
                                 }
-                            }
-                        }
-
-                        Connections {
-                            target: $MainViewController
-                            function onDeepprepLogUpdated() {
-                                // 只有当面板可见时才更新日志
-                                if (deepprepCol.visible) {
-                                    logUpdateTimerDeep.restart()
+                                if (o === "") {
+                                    warn(qsTr("请输入 Output 文件夹路径"))
+                                    return
                                 }
-                            }
-                        }
-
-                        ScrollView {
-                            anchors.fill: parent
-                            clip: true
-                            TextArea {
-                                id: logAreaDeep
-                                readOnly: true
-                                wrapMode: TextEdit.NoWrap // 禁用自动换行，大幅提升性能
-                                font.pixelSize: 14
-                                color: "#E5FFFFFF"
-                                background: null
-
-                                // 面板变为可见时同步日志
-                                Component.onCompleted: {
-                                    text = $MainViewController.deepprepLog
+                                if (l === "") {
+                                    warn(qsTr("请输入 license 文件路径"))
+                                    return
                                 }
-
-                                onTextChanged: {
-                                    // 延迟滚动到底部，避免阻塞渲染
-                                    scrollTimerDeep.restart()
+                                if(methodComboBox.selectedIndices.length === 0){
+                                    warn(qsTr("请选择预处理方式"))
+                                    return
                                 }
+                                $MainViewController.startPreAnalysis(methodComboBox.selectedIndices[0], b, o, l)
                             }
                         }
                     }
@@ -2090,7 +2722,7 @@ Rectangle {
                     id: preDetailCol
                     width: parent.width
                     spacing: 12
-                    visible: preAnalysis.currentTabIndex === 2
+                    visible: preAnalysis.currentTabIndex === 1
                     Row{
                         height: 38
                         spacing: 10

@@ -335,6 +335,8 @@ int main(int argc, char* argv[])
     engine.rootContext()->setContextProperty("$BrainRegionTableModel", GET_SINGLETON(MainViewController)->getBrainRegionTableModel());
     // 将BrainSegmentationTableModel暴露给QML
     engine.rootContext()->setContextProperty("$BrainSegmentationTableModel", GET_SINGLETON(DicomDataModel)->getSegmentationTableModel());
+    // 将MriPairResultModel暴露给QML
+    engine.rootContext()->setContextProperty("$MriPairResultModel", GET_SINGLETON(MainViewController)->getMriPairResultModel());
 
     engine.rootContext()->setContextProperty("$chatManager", GET_SINGLETON(KnowledgeChatManager));
 

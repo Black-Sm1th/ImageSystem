@@ -114,6 +114,7 @@
     <ClCompile Include="Model\DicomDataModel.cpp" />
     <ClCompile Include="Model\BrainRegionTableModel.cpp" />
     <ClCompile Include="Model\BrainSegmentationTableModel.cpp" />
+    <ClCompile Include="Model\MriPairResultModel.cpp" />
     <ClCompile Include="Modules\ApiManager.cpp" />
     <ClCompile Include="Modules\BrainNetworkData.cpp" />
     <ClCompile Include="Modules\BrainMetrics.cpp" />
@@ -152,6 +153,7 @@
     <QtMoc Include="Model\DicomDataModel.h" />
     <QtMoc Include="Model\BrainRegionTableModel.h" />
     <QtMoc Include="Model\BrainSegmentationTableModel.h" />
+    <QtMoc Include="Model\MriPairResultModel.h" />
     <ClInclude Include="Modules\Version.h" />
     <ClInclude Include="Module\CommonFunc.h" />
   </ItemGroup>

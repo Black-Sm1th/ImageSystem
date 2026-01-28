@@ -19,6 +19,7 @@
 #include "Modules/BrainNetworkData.h"
 #include "Model/DicomDataModel.h"
 #include "Modules/SliceVtkItemBase.h"
+#include "Modules/BidsConverter.h"
 
 MainViewController::MainViewController(QObject* parent)
     : QObject(parent)
@@ -44,11 +45,26 @@ MainViewController::MainViewController(QObject* parent)
     setpredictedBrainAge(0.0);
     setbrainAgeProcessing(false);
     
+    // 初始化扫描进度属性
+    setisScanning(false);
+    setscanTotalFolders(0);
+    setscanScannedFolders(0);
+    setscanFoundT1Count(0);
+    setscanFoundBoldCount(0);
+    setscanPairedCount(0);
+    setscanProgress(0.0);
+    setscanCurrentFolder("");
+    
     // 初始化表格模型
     m_brainRegionTableModel = new BrainRegionTableModel(this);
     m_brainSegmentationTableModel = GET_SINGLETON(DicomDataModel)->getSegmentationTableModel();
+    m_mriPairResultModel = new MriPairResultModel(this);
     m_mriScanner = new BatchMriScanner();
+    m_bidsConverter = new BidsConverter();
     QObject::connect(m_mriScanner, &BatchMriScanner::progressUpdated, this, &MainViewController::onScanProgressUpdated);
+    QObject::connect(m_mriScanner, &BatchMriScanner::scanFinished, this, &MainViewController::onScanFinished);
+    QObject::connect(m_bidsConverter, &BidsConverter::progressUpdated, this, &MainViewController::onConverterProgressUpdated);
+    QObject::connect(m_bidsConverter, &BidsConverter::conversionFinished, this, &MainViewController::onConversionFinished);
     // 应用退出时停止 fmriprep 和 deepprep 进程并停止日志轮询
     if (QCoreApplication::instance()) {
         connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit,
@@ -388,6 +404,11 @@ BrainRegionTableModel* MainViewController::getBrainRegionTableModel() const
 BrainSegmentationTableModel* MainViewController::getBrainSegmentationTableModel() const
 {
     return m_brainSegmentationTableModel;
+}
+
+MriPairResultModel* MainViewController::getMriPairResultModel() const
+{
+    return m_mriPairResultModel;
 }
 
 void MainViewController::appendFmriprepLog(const QString& text)
@@ -1996,13 +2017,6 @@ bool MainViewController::isDeepprepOutput(const QString& outputPath)
     int score = (hasQC ? 1 : 0) + (hasBOLD ? 1 : 0) + (hasRecon ? 1 : 0);
     bool isDeepPrep = score >= 2;
     
-    qDebug() << QStringLiteral("检测输出类型 - 路径: %1, DeepPrep: %2 (QC:%3, BOLD:%4, Recon:%5)")
-        .arg(path)
-        .arg(isDeepPrep ? "是" : "否")
-        .arg(hasQC ? "✓" : "✗")
-        .arg(hasBOLD ? "✓" : "✗")
-        .arg(hasRecon ? "✓" : "✗");
-    
     return isDeepPrep;
 }
 
@@ -2073,16 +2087,63 @@ void MainViewController::captureViewScreenshot(int viewType, const QString& file
 
 void MainViewController::scanFolder(const QString& inputDir)
 {
-    m_mriScanner->startScan("E:\\");
+    if (!m_mriScanner) {
+        return;
+    }
+    m_mriScanner->startScan(inputDir);
+}
+
+void MainViewController::startPreAnalysis(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile)
+{
+    // 获取选中的 MRI 配对结果
+    QList<MriPairResult> checkedResults = m_mriPairResultModel->getCheckedResults();
+    
+    if (checkedResults.isEmpty()) {
+        qWarning() << "No MRI pairs selected for analysis";
+        return;
+    }
+    
+    qDebug() << "Starting pre-analysis with" << checkedResults.size() << "selected pairs";
+    qDebug() << "Method:" << (method == 0 ? "Traditional" : "Deep Learning");
+    qDebug() << "BIDS Path:" << bidsPath;
+    qDebug() << "Output Path:" << outputPath;
+    qDebug() << "License File:" << licenseFile;
+    
+    // 设置 BIDS 转换器参数
+    m_bidsConverter->setOutputDirectory(bidsPath);
+    m_bidsConverter->setDatasetName("BrainMRI_Study");
+    m_bidsConverter->setTaskName("rest");
+    
+    // 启动转换，传入选中的结果
+    m_bidsConverter->startConversion(checkedResults);
 }
 
 void MainViewController::onScanProgressUpdated(const ScanProgress& progress) {
-    qDebug() << "111111";
-    qDebug() << progress.currentFolder;
-    qDebug() << progress.foundBoldCount;
-    qDebug() << progress.foundT1Count;
-    qDebug() << progress.pairedCount;
-    qDebug() << progress.percentage();
-    qDebug() << progress.scannedFolders;
-    qDebug() << progress.totalFolders;
+    setisScanning(true);
+    setscanTotalFolders(progress.totalFolders);
+    setscanScannedFolders(progress.scannedFolders);
+    setscanFoundT1Count(progress.foundT1Count);
+    setscanFoundBoldCount(progress.foundBoldCount);
+    setscanPairedCount(progress.pairedCount);
+    setscanProgress(progress.percentage());
+    setscanCurrentFolder(progress.currentFolder);
+}
+
+void MainViewController::onScanFinished(const QList<MriPairResult>& results)
+{
+    setisScanning(false);
+    setscanProgress(1.0);
+    
+    // 加载结果到表格模型
+    m_mriPairResultModel->loadResults(results);
+    
+    qDebug() << "Scan finished with" << results.size() << "paired results";
+}
+
+void MainViewController::onConverterProgressUpdated(const BidsConversionProgress& progress)
+{
+}
+
+void MainViewController::onConversionFinished(const QList<BidsSubjectResult>& results)
+{
 }

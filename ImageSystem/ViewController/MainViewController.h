@@ -2,9 +2,11 @@
 #include "Model/DicomDataModel.h"
 #include "Model/BrainRegionTableModel.h"
 #include "Model/BrainSegmentationTableModel.h"
+#include "Model/MriPairResultModel.h"
 #include "Modules/CommonFunc.h"
 #include "Modules/DicomNetwork.h"
 #include "Modules/BatchMriScanner.h"
+#include "Modules/BidsConverter.h"
 #include "Modules/InteractionState.h"
 #include <vtkInteractorStyleImage.h>
 #include <vtkRenderWindowInteractor.h>
@@ -60,6 +62,16 @@ class MainViewController : public QObject
         QUICK_PROPERTY(QString, currentCovarianceUrl)
         QUICK_PROPERTY(QString, currentRegionplotsUrl)
         QUICK_PROPERTY(QString, currentViewConnectomeUrl)
+
+        // 扫描进度相关属性
+        QUICK_PROPERTY(bool, isScanning)
+        QUICK_PROPERTY(int, scanTotalFolders)
+        QUICK_PROPERTY(int, scanScannedFolders)
+        QUICK_PROPERTY(int, scanFoundT1Count)
+        QUICK_PROPERTY(int, scanFoundBoldCount)
+        QUICK_PROPERTY(int, scanPairedCount)
+        QUICK_PROPERTY(double, scanProgress)
+        QUICK_PROPERTY(QString, scanCurrentFolder)
 public:
     Q_INVOKABLE void calculateKidney();
     Q_INVOKABLE void importBrainData(const QString& url);
@@ -88,6 +100,7 @@ public:
     Q_INVOKABLE void deletePenAnnotation(int orientation, int index);
     Q_INVOKABLE void captureViewScreenshot(int viewType, const QString& filePath);
     Q_INVOKABLE void scanFolder(const QString& inputDir);
+    Q_INVOKABLE void startPreAnalysis(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile);
     Q_PROPERTY(QString fmriprepLog READ fmriprepLog NOTIFY fmriprepLogUpdated)
     QString fmriprepLog() const { return m_fmriprepLog; }
     Q_PROPERTY(QString deepprepLog READ deepprepLog NOTIFY deepprepLogUpdated)
@@ -95,6 +108,7 @@ public:
     // 获取表格模型
     BrainRegionTableModel* getBrainRegionTableModel() const;
     BrainSegmentationTableModel* getBrainSegmentationTableModel() const;
+    MriPairResultModel* getMriPairResultModel() const;
     
 signals:
     void brainAnalysisStarted();
@@ -106,6 +120,9 @@ signals:
 
 public slots:
     void onScanProgressUpdated(const ScanProgress& progress);
+    void onScanFinished(const QList<MriPairResult>& results);
+    void onConverterProgressUpdated(const BidsConversionProgress& progress);
+    void onConversionFinished(const QList<BidsSubjectResult>& results);
 
 private:
     bool loadOutputData(const QString& path);
@@ -116,9 +133,10 @@ private:
     void appendDeepprepLog(const QString& text);
     void startDeepprepLogTimer(const QString& logFilePath);
     void stopDeepprepLogTimer();
-    
+    BidsConverter* m_bidsConverter;
     BrainRegionTableModel* m_brainRegionTableModel;
     BrainSegmentationTableModel* m_brainSegmentationTableModel;
+    MriPairResultModel* m_mriPairResultModel;
     BatchMriScanner* m_mriScanner;
     QPointer<QProcess> m_fmriprepProcess;
     qint64 m_fmriprepPid = -1;

@@ -1,4 +1,4 @@
-#ifndef BIDSCONVERTER_H
+﻿#ifndef BIDSCONVERTER_H
 #define BIDSCONVERTER_H
 
 #include <QObject>
@@ -24,7 +24,7 @@ struct BidsConversionProgress {
         return (double)convertedPairs / totalPairs;
     }
 };
-
+Q_DECLARE_METATYPE(BidsConversionProgress)
 // ============================================================================
 // BIDS Conversion Result (per subject)
 // ============================================================================
@@ -38,7 +38,8 @@ struct BidsSubjectResult {
     bool boldSuccess = false;
     QString errorMessage;
 };
-
+Q_DECLARE_METATYPE(BidsSubjectResult)
+Q_DECLARE_METATYPE(QList<BidsSubjectResult>)
 // ============================================================================
 // BidsConverter Class
 // ============================================================================
