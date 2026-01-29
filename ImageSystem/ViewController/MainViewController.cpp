@@ -11,11 +11,16 @@
 #include <QProcess>
 #include <QRegularExpression>
 #include <QTextStream>
+#include <QDirIterator>
 #include <QPdfWriter>
 #include <QPainter>
 #include <QPageSize>
 #include <QFont>
 #include <QPainterPath>
+#include <QtConcurrent/QtConcurrent>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 #include "Modules/BrainNetworkData.h"
 #include "Model/DicomDataModel.h"
 #include "Modules/SliceVtkItemBase.h"
@@ -101,9 +106,19 @@ void MainViewController::setupDockerPrepRunner()
         if (exitCode == 0) {
             qDebug() << QStringLiteral("fMRIPrep 运行成功！");
             appendPreAnalysisLog(QStringLiteral("\n>>> fMRIPrep 运行成功！\n"));
+            writeMetadataFile(m_preAnalysisOutputPath, m_currentProcessingPairs);
         } else {
             qDebug() << QStringLiteral("fMRIPrep 运行失败！") << message;
             appendPreAnalysisLog(QStringLiteral("\n>>> fMRIPrep 运行失败！%1\n").arg(message));
+            appendPreAnalysisLog(QStringLiteral(">>> 正在异步删除失败的输出目录...\n"));
+            
+            QString dirToDelete = m_preAnalysisOutputPath;
+            QtConcurrent::run([dirToDelete]() {
+                QDir dir(dirToDelete);
+                if (dir.exists()) {
+                    dir.removeRecursively();
+                }
+            });
         }
         stopPrepLogTimer();
         setisPreAnalysisRunning(false);
@@ -115,14 +130,160 @@ void MainViewController::setupDockerPrepRunner()
         if (exitCode == 0) {
             qDebug() << QStringLiteral("DeepPrep 运行成功！");
             appendPreAnalysisLog(QStringLiteral("\n>>> DeepPrep 运行成功！\n"));
+            writeMetadataFile(m_preAnalysisOutputPath, m_currentProcessingPairs);
         } else {
             qDebug() << QStringLiteral("DeepPrep 运行失败！") << message;
             appendPreAnalysisLog(QStringLiteral("\n>>> DeepPrep 运行失败！%1\n").arg(message));
+            appendPreAnalysisLog(QStringLiteral(">>> 正在异步删除失败的输出目录...\n"));
+
+            QString dirToDelete = m_preAnalysisOutputPath;
+            QtConcurrent::run([dirToDelete]() {
+                QDir dir(dirToDelete);
+                if (dir.exists()) {
+                    dir.removeRecursively();
+                }
+            });
         }
         stopPrepLogTimer();
         setisPreAnalysisRunning(false);
         appendPreAnalysisLog(QStringLiteral("\n========== 预处理完成 ==========\n"));
     });
+}
+
+void MainViewController::clearPrepOutputsOnFailure(const QString& outputDir, bool isFmriPrep)
+{
+    const QString runnerName = isFmriPrep ? QStringLiteral("fMRIPrep") : QStringLiteral("DeepPrep");
+    const QString absOut = QFileInfo(outputDir).absoluteFilePath();
+
+    if (absOut.trimmed().isEmpty()) {
+        appendPreAnalysisLog(QStringLiteral("\n>>> 清理跳过：输出目录为空\n"));
+        return;
+    }
+
+    QDir out(absOut);
+    if (!out.exists()) {
+        appendPreAnalysisLog(QStringLiteral("\n>>> 清理跳过：输出目录不存在：%1\n").arg(absOut));
+        return;
+    }
+
+    appendPreAnalysisLog(QStringLiteral("\n>>> %1 失败：开始清理输出目录（仅清理预处理产物）\n").arg(runnerName));
+    appendPreAnalysisLog(QStringLiteral(">>> 输出目录：%1\n").arg(absOut));
+
+    // 仅删除已知产物，避免误删用户其他文件
+    const QStringList dirsToRemove = {
+        "work", "logs", "sourcedata", "WorkDir", "BOLD", "QC", "Recon"
+    };
+
+    int removedDirs = 0;
+    for (const QString& d : dirsToRemove) {
+        const QString p = out.filePath(d);
+        QDir dir(p);
+        if (!dir.exists()) continue;
+        if (dir.removeRecursively()) {
+            removedDirs++;
+            appendPreAnalysisLog(QStringLiteral(">>> 已删除目录：%1\n").arg(p));
+        } else {
+            appendPreAnalysisLog(QStringLiteral(">>> 删除目录失败：%1\n").arg(p));
+        }
+    }
+
+    // 删除 sub-* 结果目录（被试输出）
+    int removedSubDirs = 0;
+    const QStringList entries = out.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    for (const QString& e : entries) {
+        if (!e.startsWith("sub-")) continue;
+        const QString p = out.filePath(e);
+        QDir dir(p);
+        if (dir.exists() && dir.removeRecursively()) {
+            removedSubDirs++;
+            appendPreAnalysisLog(QStringLiteral(">>> 已删除被试目录：%1\n").arg(p));
+        } else {
+            appendPreAnalysisLog(QStringLiteral(">>> 删除被试目录失败：%1\n").arg(p));
+        }
+    }
+
+    // 删除日志/报告类文件（保守删除：只删我们已知会生成的）
+    int removedFiles = 0;
+    const QStringList patterns = {
+        "*fmriprep-docker.log",
+        "*deepprep-docker.log",
+        "*.html",
+        "desc-*_dseg.tsv",
+        ".bidsignore"
+    };
+
+    for (const QString& pat : patterns) {
+        const QStringList files = out.entryList(QStringList() << pat, QDir::Files, QDir::Name);
+        for (const QString& f : files) {
+            const QString p = out.filePath(f);
+            if (QFile::remove(p)) {
+                removedFiles++;
+                appendPreAnalysisLog(QStringLiteral(">>> 已删除文件：%1\n").arg(p));
+            } else {
+                appendPreAnalysisLog(QStringLiteral(">>> 删除文件失败：%1\n").arg(p));
+            }
+        }
+    }
+
+    appendPreAnalysisLog(QStringLiteral(">>> 清理完成：删除目录=%1（其中 sub-*=%2），删除文件=%3\n")
+                         .arg(removedDirs + removedSubDirs)
+                         .arg(removedSubDirs)
+                         .arg(removedFiles));
+}
+
+void MainViewController::writeMetadataFile(const QString& outputDir, const QList<MriPairResult>& pairs)
+{
+    QString filePath = QDir(outputDir).filePath("metadata.json");
+    
+    QJsonObject root;
+    root["processDate"] = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+    root["method"] = (m_preAnalysisMethod == 0) ? "fmriprep" : "deepprep";
+    
+    QJsonArray subjectsArr;
+    for (const auto& pair : pairs) {
+        QJsonObject sub;
+        sub["patientName"] = pair.patientName;
+        sub["patientId"] = pair.patientId;
+        sub["patientSex"] = pair.patientSex;
+        sub["patientBirthDate"] = pair.patientBirthDate;
+        sub["studyDate"] = pair.studyDate;
+        sub["t1SeriesDesc"] = pair.t1SeriesDesc;
+        sub["boldSeriesDesc"] = pair.boldSeriesDesc;
+        subjectsArr.append(sub);
+    }
+    root["subjects"] = subjectsArr;
+    
+    QJsonDocument doc(root);
+    QFile file(filePath);
+    if (file.open(QIODevice::WriteOnly)) {
+        file.write(doc.toJson());
+        file.close();
+        appendPreAnalysisLog(QStringLiteral(">>> 已生成映射文件：metadata.json\n"));
+    } else {
+        appendPreAnalysisLog(QStringLiteral(">>> 错误：无法生成映射文件\n"));
+    }
+}
+
+QVariantMap MainViewController::readMetadataFile(const QString& outputDir)
+{
+    QString filePath = QDir(outputDir).filePath("metadata.json");
+    QVariantMap result;
+    
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "Cannot open metadata file:" << filePath;
+        return result;
+    }
+    
+    QByteArray data = file.readAll();
+    file.close();
+    
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    if (!doc.isNull()) {
+        result = doc.toVariant().toMap();
+    }
+    
+    return result;
 }
 
 void MainViewController::calculateKidney() {
@@ -1883,17 +2044,37 @@ void MainViewController::startPreAnalysis(int method, const QString& bidsPath, c
         qWarning() << "No MRI pairs selected for analysis";
         return;
     }
+
+    // 保存当前正在处理的配对信息（用于成功后写元数据）
+    m_currentProcessingPairs = checkedResults;
+
+    // 1. 生成带时间戳的输出路径
+    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+    QString finalOutputPath = outputPath;
+    if (finalOutputPath.endsWith("/") || finalOutputPath.endsWith("\\")) {
+        finalOutputPath.chop(1);
+    }
+    finalOutputPath += "_" + timestamp;
+
+    // 2. 判断目录状态
+    QDir dir(finalOutputPath);
+    if (dir.exists()) {
+        QStringList entries = dir.entryList(QDir::NoDotAndDotDot | QDir::AllEntries);
+        if (!entries.isEmpty()) {
+            appendPreAnalysisLog(QStringLiteral("Warning: 输出目录已存在且不为空：%1\n").arg(finalOutputPath));
+        }
+    }
     
     qDebug() << "Starting pre-analysis with" << checkedResults.size() << "selected pairs";
     qDebug() << "Method:" << (method == 0 ? "fmriprep" : "deepprep");
     qDebug() << "BIDS Path:" << bidsPath;
-    qDebug() << "Output Path:" << outputPath;
+    qDebug() << "Output Path:" << finalOutputPath;
     qDebug() << "License File:" << licenseFile;
     
     // 保存参数，用于BIDS转换完成后启动fmriprep/deepprep
     m_preAnalysisMethod = method;
     m_preAnalysisBidsPath = bidsPath;
-    m_preAnalysisOutputPath = outputPath;
+    m_preAnalysisOutputPath = finalOutputPath; // 使用带时间戳的路径
     m_preAnalysisLicenseFile = licenseFile;
     
     // 清空统一日志，准备显示
@@ -1903,8 +2084,9 @@ void MainViewController::startPreAnalysis(int method, const QString& bidsPath, c
     // 添加开始日志
     QString methodName = (method == 0) ? "fmriprep" : "deepprep";
     appendPreAnalysisLog(QStringLiteral("========== 开始预处理 ==========\n"));
+    appendPreAnalysisLog(QStringLiteral("方法: %1\n").arg(methodName));
     appendPreAnalysisLog(QStringLiteral("BIDS 目录: %1\n").arg(bidsPath));
-    appendPreAnalysisLog(QStringLiteral("输出目录: %1\n").arg(outputPath));
+    appendPreAnalysisLog(QStringLiteral("输出目录: %1\n").arg(finalOutputPath));
     appendPreAnalysisLog(QStringLiteral("License 文件: %1\n\n").arg(licenseFile));
     appendPreAnalysisLog(QStringLiteral(">>> 开始 BIDS 转换...\n"));
     
