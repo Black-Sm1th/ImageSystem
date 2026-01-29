@@ -33,6 +33,7 @@ struct MriSeriesInfo {
     enum Type { Unknown, T1W, BOLD };
     Type type = Unknown;
 };
+Q_DECLARE_METATYPE(MriSeriesInfo)
 
 /**
  * @brief 配对结果结构体
@@ -56,6 +57,8 @@ struct MriPairResult {
     
     bool isComplete() const { return !t1Path.isEmpty() && !boldPath.isEmpty(); }
 };
+Q_DECLARE_METATYPE(MriPairResult)
+Q_DECLARE_METATYPE(QList<MriPairResult>)
 
 /**
  * @brief 扫描进度信息
@@ -69,6 +72,7 @@ struct ScanProgress {
     QString currentFolder;      // 当前正在扫描的文件夹
     float percentage() const { return totalFolders > 0 ? (float)scannedFolders / totalFolders : 0; }
 };
+Q_DECLARE_METATYPE(ScanProgress)
 
 /**
  * @brief 批量 MRI 扫描器

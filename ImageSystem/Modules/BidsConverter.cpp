@@ -1,4 +1,4 @@
-#include "BidsConverter.h"
+﻿#include "BidsConverter.h"
 
 #include <QDir>
 #include <QFile>
@@ -34,6 +34,11 @@ static QString g_dcmdjpegPath;
 BidsConverter::BidsConverter(QObject* parent)
     : QObject(parent)
 {
+    // 注册自定义类型，用于跨线程信号队列连接
+    qRegisterMetaType<BidsConversionProgress>("BidsConversionProgress");
+    qRegisterMetaType<BidsSubjectResult>("BidsSubjectResult");
+    qRegisterMetaType<QList<BidsSubjectResult>>("QList<BidsSubjectResult>");
+
     m_dcm2niixPath = findDcm2niixPath();
 }
 
@@ -156,6 +161,16 @@ bool BidsConverter::createSubjectDirectories(const QString& subjectId)
 
 bool BidsConverter::createDatasetDescription()
 {
+    QDir outputDir(m_outputDir);
+
+    // Create main output directory if not exists
+    if (!outputDir.exists()) {
+        if (!outputDir.mkpath(".")) {
+            qWarning() << "Failed to create output directory:" << m_outputDir;
+            return false;
+        }
+    }
+
     QString descPath = m_outputDir + "/dataset_description.json";
     
     // Check if already exists

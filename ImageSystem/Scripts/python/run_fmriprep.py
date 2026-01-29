@@ -110,7 +110,7 @@ def check_image(image):
     return bool(ret.stdout)
 
 def run_fmriprep_docker(bids_dir, output_dir,
-                        image: str = 'nipreps/fmriprep:24.1.1',
+                        image: str = 'nipreps/fmriprep:latest',
                         fs_license_file: str = None,
                         subjects: list = None,
                         skip_bids_validation: bool = False,
@@ -282,8 +282,8 @@ Examples:
                         help="FreeSurfer license file path")
     
     # Optional
-    parser.add_argument('--image', default='nipreps/fmriprep:24.1.1',
-                        help="Docker image (default: nipreps/fmriprep:24.1.1)")
+    parser.add_argument('--image', default='nipreps/fmriprep:latest',
+                        help="Docker image (default: nipreps/fmriprep:latest)")
     parser.add_argument('--subjects', nargs='+', type=str, default=None,
                         help="Specific subjects (overrides TSV)")
     parser.add_argument('--skip_bids_validation', action='store_true',

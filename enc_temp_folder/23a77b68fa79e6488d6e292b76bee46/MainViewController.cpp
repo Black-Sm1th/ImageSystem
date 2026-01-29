@@ -1902,7 +1902,7 @@ void MainViewController::startPreAnalysis(int method, const QString& bidsPath, c
     
     // 添加开始日志
     QString methodName = (method == 0) ? "fmriprep" : "deepprep";
-    appendPreAnalysisLog(QStringLiteral("========== 开始预处理 ==========\n"));
+    appendPreAnalysisLog(QStringLiteral("========== 开始预处理 (%1) ==========\n").arg(methodName));
     appendPreAnalysisLog(QStringLiteral("BIDS 目录: %1\n").arg(bidsPath));
     appendPreAnalysisLog(QStringLiteral("输出目录: %1\n").arg(outputPath));
     appendPreAnalysisLog(QStringLiteral("License 文件: %1\n\n").arg(licenseFile));
@@ -1978,7 +1978,7 @@ void MainViewController::startFmriprepAfterBids()
     m_prepLogReadPos = 0;
     
     qDebug() << "Starting fMRIPrep via DockerPrepRunner";
-    appendPreAnalysisLog(QStringLiteral("启动 预处理方法...\n\n"));
+    appendPreAnalysisLog(QStringLiteral("使用 DockerPrepRunner 启动 fMRIPrep...\n\n"));
     
     startPrepLogTimer(m_prepLogFilePath);
     
