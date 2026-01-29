@@ -78,7 +78,7 @@ class MainViewController : public QObject
         QUICK_PROPERTY(bool, isPreAnalysisRunning)
 public:
     Q_INVOKABLE void calculateKidney();
-    Q_INVOKABLE void importBrainData(const QString& url);
+    Q_INVOKABLE void importBrainData(const QString& url, const QString& subjectId = "sub-01");
     Q_INVOKABLE void selectBrainRegion(int row);
     Q_INVOKABLE void scanFolder(const QString& inputDir);
     Q_INVOKABLE void startPreAnalysis(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile);

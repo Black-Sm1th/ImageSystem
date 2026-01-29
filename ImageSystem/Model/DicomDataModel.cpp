@@ -1,6 +1,7 @@
 ﻿#include "DicomDataModel.h"
 #include <vtkImageSliceMapper.h>
 #include <QFile>
+#include <QDir>
 #include <QProcess>
 #include <unordered_map>
 #include <unordered_set>
@@ -291,7 +292,7 @@ bool DicomDataModel::loadDicomDirectory(const QString& path) {
     return true;
 }
 
-void DicomDataModel::loadSegBrainDirectory(const QString& path)
+void DicomDataModel::loadSegBrainDirectory(const QString& path, const QString& subjectId)
 {
     if (path.isEmpty()) {
         emit segLoadingFinished(false, QStringLiteral("分割路径为空"));
@@ -307,9 +308,12 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
         dirPath = dirPath.mid(8);
     }
     
+    // 使用传入的subjectId（默认为sub-01）
+    QString subId = subjectId.isEmpty() ? "sub-01" : subjectId;
+    
     // 首先尝试fMRIPrep格式的路径
-    QString mriDirPath = dirPath + "/sourcedata/freesurfer/sub-01/mri";
-    m_statsDir = dirPath + "/sourcedata/freesurfer/sub-01/stats";
+    QString mriDirPath = dirPath + "/sourcedata/freesurfer/" + subId + "/mri";
+    m_statsDir = dirPath + "/sourcedata/freesurfer/" + subId + "/stats";
     QString mgzPath = mriDirPath + "/aparc+aseg.mgz";
     QString niiPath = mriDirPath + "/aparc+aseg.nii.gz";
     QString origMgzPath = mriDirPath + "/T1.mgz";
@@ -319,10 +323,10 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path)
     // 如果fMRIPrep格式不存在，尝试DeepPrep格式
     if (!QFile::exists(mgzPath) && !QFile::exists(niiPath)) {
         qDebug() << QStringLiteral("未找到fMRIPrep格式的分割文件，尝试DeepPrep格式...");
-        mriDirPath = dirPath + "/Recon/fsaverage/mri";
+        mriDirPath = dirPath + "/Recon/" + subId + "/mri";
         mgzPath = mriDirPath + "/aparc+aseg.mgz";
         niiPath = mriDirPath + "/aparc+aseg.nii.gz";
-        m_statsDir = dirPath + "/Recon/fsaverage/stats";
+        m_statsDir = dirPath + "/Recon/" + subId + "/stats";
         
         if (QFile::exists(mgzPath) || QFile::exists(niiPath)) {
             qDebug() << QStringLiteral("检测到DeepPrep格式的分割文件!");
@@ -558,6 +562,19 @@ void DicomDataModel::finalizeSegDataLoad(std::unique_ptr<BrainRegionVisualizer> 
     setSegAxialSlice(m_segDims[2] / 2);
     setSegSagittalSlice(m_segDims[0] / 2);
     setSegCoronalSlice(m_segDims[1] / 2);
+}
+
+QStringList DicomDataModel::listSubFolders(const QString& path)
+{
+    QStringList result;
+    QDir dir(path);
+    
+    if (!dir.exists()) {
+        return result;
+    }
+    
+    QStringList entries = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    return entries;
 }
 
 void DicomDataModel::setRegionVisible(int row, bool visible)

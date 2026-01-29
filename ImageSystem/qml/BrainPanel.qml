@@ -35,6 +35,10 @@ Rectangle {
     // PDF 生成状态管理
     property int pdfGenerationState: 0  // 0: 默认, 1: 生成中, 2: 完成
     
+    // 当前选中的被试ID
+    property string currentSubjectId: ""
+    property var subjectsList: []
+    
     // 监听 currentIndex 变化，重置 PDF 状态
     onCurrentIndexChanged: {
         pdfGenerationState = 0
@@ -68,15 +72,40 @@ Rectangle {
         isDeepprepOutput = $MainViewController.isDeepprepOutput(path)
     }
 
-    function startUnifiedImports(url, normalizedPath) {
+    // 扫描 output 文件夹下的 sub-* 子文件夹
+    function scanSubjectsInOutput(outputPath) {
+        var subjects = []
+        // 检查主目录和 QC 目录（DeepPrep结构）
+        var checkPaths = [outputPath, outputPath + "/QC"]
+        
+        for (var i = 0; i < checkPaths.length; i++) {
+            var checkPath = checkPaths[i]
+            var folders = $DicomDataModel.listSubFolders(checkPath)
+            if (folders && folders.length > 0) {
+                for (var j = 0; j < folders.length; j++) {
+                    var folder = folders[j]
+                    if (folder.indexOf("sub-") === 0 && subjects.indexOf(folder) === -1) {
+                        subjects.push(folder)
+                    }
+                }
+            }
+        }
+        
+        // 排序
+        subjects.sort()
+        return subjects
+    }
+
+    function startUnifiedImports(url, normalizedPath, subjectId) {
         selectedOutputPath = normalizedPath
         outputDetailDir.text = normalizedPath
+        currentSubjectId = subjectId
         detectOutputType(normalizedPath)
         resetBatchProgress()
         completePreprocessStep()
         // 同步触发脑区分割与脑网络分析
-        $DicomDataModel.loadSegBrainDirectory(url)
-        $MainViewController.importBrainData(url)
+        $DicomDataModel.loadSegBrainDirectory(url, subjectId)
+        $MainViewController.importBrainData(url, subjectId)
         // 默认展示分割结果预览
         segBtnMouseArea.clicked(Qt.LeftButton)
     }
@@ -141,55 +170,27 @@ Rectangle {
             }
             // 统一为正斜杠，方便字符串处理
             path = path.replace(/\\/g, "/")
+            
+            // 更新路径显示
+            outputDetailDir.text = path
+            selectedOutputPath = path
+            
+            // 检测输出类型
             detectOutputType(path)
-            startUnifiedImports(url, path)
+            
+            // 扫描 sub-* 文件夹
+            var subjects = scanSubjectsInOutput(path)
+            subjectsList = subjects
+            patientComboBox.model = subjects
+            if(patientComboBox.model.length > 0){
+                patientComboBox.selectedText = subjects[0]
+                patientComboBox.selectedIndices = [0]
+                patientComboBox.selectionChanged([0], [subjects[0]])
+            }else if(subjects.length === 0){
+                messageManager.warning(qsTr("未在该文件夹中找到被试数据"), 2000)
+            }
         }
     }
-
-    // FileDialog {
-    //     id: inputDirDialog
-    //     title: qsTr("选择输入文件夹")
-    //     selectFolder: true
-    //     onAccepted: {
-    //         if (fileUrls.length === 0)
-    //             return
-
-    //         var url = fileUrls[0].toString()
-    //         var path = url
-    //         if (path.startsWith("file:///")) {
-    //             path = path.substring("file:///".length)
-    //         }
-    //         // 统一为正斜杠，方便字符串处理
-    //         path = path.replace(/\\/g, "/")
-
-    //         inputDirDeep.text = path
-
-    //         var lastSlash = path.lastIndexOf("/")
-    //         var baseDir = lastSlash >= 0 ? path.substring(0, lastSlash + 1) : path
-    //         bidsDirDeep.text = baseDir + "Bids"
-    //         outputDirDeep.text = baseDir + "Output_deepprep"
-    //     }
-    // }
-
-    // FileDialog {
-    //     id: licenseFileDialogDeep
-    //     title: qsTr("选择license")
-    //     onAccepted: {
-    //         if (fileUrls.length === 0)
-    //             return
-
-    //         var url = fileUrls[0].toString()
-    //         var path = url
-    //         if (path.startsWith("file:///")) {
-    //             path = path.substring("file:///".length)
-    //         }
-    //         // 统一为正斜杠，方便字符串处理
-    //         path = path.replace(/\\/g, "/")
-
-    //         licenseFileDeep.text = path
-    //     }
-    // }
-
     FileDialog {
         id: niiGzDialog
         title: "选择 NII.GZ 文件"
@@ -2422,6 +2423,32 @@ Rectangle {
                             }
                         }
                     }
+                    Row{
+                        height: 38
+                        spacing: 10
+                        Label {
+                            id: label6
+                            text: qsTr("数据列表：")
+                            color: "#80FFFFFF"
+                            font.pixelSize: 16
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        CustomComboBox {
+                            id: patientComboBox
+                            width: preDetailCol.width - label6.width - 10
+                            model: []
+                            onSelectionChanged: {
+                                var subjectId = selectedItems[0]
+                                if (outputDetailDir.text !== "") {
+                                    currentSubjectId = subjectId
+                                    var path = outputDetailDir.text
+                                    var subjectUrl = "file:///" + path
+                                    detectOutputType(path)
+                                    startUnifiedImports(subjectUrl, path, currentSubjectId)
+                                }
+                            }
+                        }
+                    }
                     Rectangle{
                         width: parent.width
                         color: "transparent"
@@ -2470,12 +2497,12 @@ Rectangle {
                             onExited: segmentationBtn.isHovered = false
                             
                             onClicked: {
-                                if(outputDetailDir.text === ""){
+                                if(outputDetailDir.text === "" || currentSubjectId === ""){
                                     return
                                 }
                                 preShowResultIndex = 0
-                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
-                                var fileName = isDeepprepOutput ? "sub-01_desc-volparc_T1w.svg" : "sub-01_dseg.svg"
+                                var basePath = isDeepprepOutput ? "/QC/" + currentSubjectId + "/figures/" : "/" + currentSubjectId + "/figures/"
+                                var fileName = isDeepprepOutput ? currentSubjectId + "_desc-volparc_T1w.svg" : currentSubjectId + "_dseg.svg"
                                 preResult.url = outputDetailDir.text + basePath + fileName
                             }
                         }
@@ -2517,12 +2544,12 @@ Rectangle {
                             onExited: regBtn.isHovered = false
                             
                             onClicked: {
-                                if(outputDetailDir.text === ""){
+                                if(outputDetailDir.text === "" || currentSubjectId === ""){
                                     return
                                 }
                                 preShowResultIndex = 1
-                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
-                                var fileName = isDeepprepOutput ? "sub-01_task-rest_desc-coreg_bold.svg" : "sub-01_space-MNI152NLin2009cAsym_T1w.svg"
+                                var basePath = isDeepprepOutput ? "/QC/" + currentSubjectId + "/figures/" : "/" + currentSubjectId + "/figures/"
+                                var fileName = isDeepprepOutput ? currentSubjectId + "_task-rest_desc-coreg_bold.svg" : currentSubjectId + "_space-MNI152NLin2009cAsym_T1w.svg"
                                 preResult.url = outputDetailDir.text + basePath + fileName
                             }
                         }
@@ -2574,12 +2601,12 @@ Rectangle {
                             onExited: mniBtn.isHovered = false
                             
                             onClicked: {
-                                if(outputDetailDir.text === ""){
+                                if(outputDetailDir.text === "" || currentSubjectId === ""){
                                     return
                                 }
                                 preShowResultIndex = 2
-                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
-                                var fileName = isDeepprepOutput ? "sub-01_desc-T1toMNI152_combine.svg" : "sub-01_space-MNI152NLin2009cAsym_T1w.svg"
+                                var basePath = isDeepprepOutput ? "/QC/" + currentSubjectId + "/figures/" : "/" + currentSubjectId + "/figures/"
+                                var fileName = isDeepprepOutput ? currentSubjectId + "_desc-T1toMNI152_combine.svg" : currentSubjectId + "_space-MNI152NLin2009cAsym_T1w.svg"
                                 preResult.url = outputDetailDir.text + basePath + fileName
                             }
                         }
@@ -2631,12 +2658,12 @@ Rectangle {
                             onExited: t1FunBtn.isHovered = false
                             
                             onClicked: {
-                                if(outputDetailDir.text === ""){
+                                if(outputDetailDir.text === "" || currentSubjectId === ""){
                                     return
                                 }
                                 preShowResultIndex = 3
-                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
-                                var fileName = "sub-01_task-rest_desc-coreg_bold.svg"
+                                var basePath = isDeepprepOutput ? "/QC/" + currentSubjectId + "/figures/" : "/" + currentSubjectId + "/figures/"
+                                var fileName = currentSubjectId + "_task-rest_desc-coreg_bold.svg"
                                 preResult.url = outputDetailDir.text + basePath + fileName
                             }
                         }
@@ -2678,12 +2705,12 @@ Rectangle {
                             onExited: boldBtn.isHovered = false
                             
                             onClicked: {
-                                if(outputDetailDir.text === ""){
+                                if(outputDetailDir.text === "" || currentSubjectId === ""){
                                     return
                                 }
                                 preShowResultIndex = 4
-                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
-                                var fileName = isDeepprepOutput ? "sub-01_task-rest_desc-carpet_bold.svg" : "sub-01_task-rest_desc-carpetplot_bold.svg"
+                                var basePath = isDeepprepOutput ? "/QC/" + currentSubjectId + "/figures/" : "/" + currentSubjectId + "/figures/"
+                                var fileName = isDeepprepOutput ? currentSubjectId + "_task-rest_desc-carpet_bold.svg" : currentSubjectId + "_task-rest_desc-carpetplot_bold.svg"
                                 preResult.url = outputDetailDir.text + basePath + fileName
                             }
                         }
@@ -2735,12 +2762,12 @@ Rectangle {
                             onExited: corticalBtn.isHovered = false
                             
                             onClicked: {
-                                if(outputDetailDir.text === ""){
+                                if(outputDetailDir.text === "" || currentSubjectId === ""){
                                     return
                                 }
                                 preShowResultIndex = 5
-                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
-                                var fileName = isDeepprepOutput ? "sub-01_desc-surfparc_T1w.svg" : "sub-01_task-rest_desc-rois_bold.svg"
+                                var basePath = isDeepprepOutput ? "/QC/" + currentSubjectId + "/figures/" : "/" + currentSubjectId + "/figures/"
+                                var fileName = isDeepprepOutput ? currentSubjectId + "_desc-surfparc_T1w.svg" : currentSubjectId + "_task-rest_desc-rois_bold.svg"
                                 preResult.url = outputDetailDir.text + basePath + fileName
                             }
                         }
@@ -2782,12 +2809,12 @@ Rectangle {
                             onExited: tsnrBtn.isHovered = false
                             
                             onClicked: {
-                                if(outputDetailDir.text === ""){
+                                if(outputDetailDir.text === "" || currentSubjectId === ""){
                                     return
                                 }
                                 preShowResultIndex = 6
-                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
-                                var fileName = isDeepprepOutput ? "sub-01_task-rest_bold_desc-tsnr_bold.svg" : "sub-01_task-rest_desc-compcorvar_bold.svg"
+                                var basePath = isDeepprepOutput ? "/QC/" + currentSubjectId + "/figures/" : "/" + currentSubjectId + "/figures/"
+                                var fileName = isDeepprepOutput ? currentSubjectId + "_task-rest_bold_desc-tsnr_bold.svg" : currentSubjectId + "_task-rest_desc-compcorvar_bold.svg"
                                 preResult.url = outputDetailDir.text + basePath + fileName
                             }
                         }
@@ -2828,12 +2855,12 @@ Rectangle {
                             onExited: surfaceBtn.isHovered = false
                             
                             onClicked: {
-                                if(outputDetailDir.text === ""){
+                                if(outputDetailDir.text === "" || currentSubjectId === ""){
                                     return
                                 }
                                 preShowResultIndex = 7
-                                var basePath = isDeepprepOutput ? "/QC/sub-01/figures/" : "/sub-01/figures/"
-                                var fileName = isDeepprepOutput ? "sub-01_desc-volsurf_T1w.svg" : "sub-01_task-rest_desc-confoundcorr_bold.svg"
+                                var basePath = isDeepprepOutput ? "/QC/" + currentSubjectId + "/figures/" : "/" + currentSubjectId + "/figures/"
+                                var fileName = isDeepprepOutput ? currentSubjectId + "_desc-volsurf_T1w.svg" : currentSubjectId + "_task-rest_desc-confoundcorr_bold.svg"
                                 preResult.url = outputDetailDir.text + basePath + fileName
                             }
                         }

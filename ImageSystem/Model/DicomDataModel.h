@@ -112,7 +112,10 @@ public:
     Q_INVOKABLE void resetAllInteractions();
     Q_INVOKABLE bool loadDicomDirectory(const QString& path);
 
-    Q_INVOKABLE void loadSegBrainDirectory(const QString& path);
+    Q_INVOKABLE void loadSegBrainDirectory(const QString& path, const QString& subjectId = "sub-01");
+    
+    // 列出指定目录下的所有子文件夹
+    Q_INVOKABLE QStringList listSubFolders(const QString& path);
     
     // 设置脑区可见性
     Q_INVOKABLE void setRegionVisible(int row, bool visible);
