@@ -363,7 +363,7 @@ void MainViewController::calculateKidney() {
     process->start(pythonPath, arguments);
 }
 
-void MainViewController::importBrainData(const QString& url)
+void MainViewController::importBrainData(const QString& url, const QString& subjectId)
 {
     if (url.isEmpty()) {
         qDebug() << QStringLiteral("路径为空");
@@ -376,6 +376,10 @@ void MainViewController::importBrainData(const QString& url)
         dirPath = dirPath.mid(8);
     }
     
+    // 使用传入的 subjectId，默认为 "sub-01"
+    QString subId = subjectId.isEmpty() ? "sub-01" : subjectId;
+    qDebug() << QStringLiteral("导入脑数据，被试ID:") << subId;
+    
     QDir baseDir(dirPath);
     if (!baseDir.exists()) {
         qDebug() << QStringLiteral("路径不存在: ") << dirPath;
@@ -384,7 +388,7 @@ void MainViewController::importBrainData(const QString& url)
     }
     
     // ========== 逻辑一：检查是否存在完整的输出结果 ==========
-    QDir outputDir(baseDir.filePath("outputDir"));
+    QDir outputDir(baseDir.filePath("outputDir/" + subjectId));
     if (outputDir.exists()) {
         bool hasAllFiles = true;
         
@@ -434,14 +438,14 @@ void MainViewController::importBrainData(const QString& url)
     }
     
     // ========== 逻辑二：检查原始数据文件是否存在 ==========
-    // 首先检查fMRIPrep格式
-    QString boldPath = baseDir.filePath("sub-01/func/sub-01_task-rest_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz");
-    QString confoundsPath = baseDir.filePath("sub-01/func/sub-01_task-rest_desc-confounds_timeseries.tsv");
-    
+    // 首先检查fMRIPrep格式，使用动态被试ID
+    QString boldPath = baseDir.filePath(subId + "/func/" + subId + "_task-rest_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold.nii.gz");
+    QString confoundsPath = baseDir.filePath(subId + "/func/" + subId + "_task-rest_desc-confounds_timeseries.tsv");
+    qDebug() << QFile::exists(boldPath) << QFile::exists(confoundsPath);
     // 如果fMRIPrep格式不存在，检查DeepPrep格式
     if (!QFile::exists(boldPath) || !QFile::exists(confoundsPath)) {
-        boldPath = baseDir.filePath("BOLD/sub-01/func/sub-01_task-rest_space-MNI152NLin6Asym_res-02_desc-preproc_bold.nii.gz");
-        confoundsPath = baseDir.filePath("BOLD/sub-01/func/sub-01_task-rest_desc-confounds_timeseries.tsv");
+        boldPath = baseDir.filePath("BOLD/" + subId + "/func/" + subId + "_task-rest_space-MNI152NLin6Asym_res-02_desc-preproc_bold.nii.gz");
+        confoundsPath = baseDir.filePath("BOLD/" + subId + "/func/" + subId + "_task-rest_desc-confounds_timeseries.tsv");
         if (QFile::exists(boldPath) && QFile::exists(confoundsPath)) {
             qDebug() << QStringLiteral("检测到DeepPrep格式的脑功能数据文件!!!");
         }
@@ -451,7 +455,7 @@ void MainViewController::importBrainData(const QString& url)
         // ========== 符合逻辑二：原始数据文件存在，需要处理 ==========
         qDebug() << QStringLiteral("检测到原始脑功能数据文件!!!");
         // 创建输出目录
-        QString outputDir = baseDir.filePath("outputDir");
+        QString outputDir = baseDir.filePath("outputDir/" + subjectId);
         QDir outputDirObj(outputDir);
         if (!outputDirObj.exists()) {
             if (!outputDirObj.mkpath(".")) {
@@ -1950,10 +1954,29 @@ bool MainViewController::isDeepprepOutput(const QString& outputPath)
     // 检查DeepPrep特有的目录结构
     QDir outputDir(path);
     
+    // 辅助函数：检查目录下是否存在任何以 sub- 开头的子目录，并且该子目录下存在指定的子路径
+    auto hasSubDirWithPath = [&outputDir](const QString& parentDir, const QString& subPath) -> bool {
+        QDir parent(outputDir.filePath(parentDir));
+        if (!parent.exists()) {
+            return false;
+        }
+        QStringList subDirs = parent.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+        for (const QString& subDir : subDirs) {
+            if (subDir.startsWith("sub-")) {
+                QDir subjectDir(parent.filePath(subDir));
+                if (subjectDir.exists(subPath)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    
     // DeepPrep有QC、BOLD、Recon这三个主要文件夹
-    bool hasQC = outputDir.exists("QC/sub-01/figures");
-    bool hasBOLD = outputDir.exists("BOLD/sub-01/func");
-    bool hasRecon = outputDir.exists("Recon/fsaverage/mri");
+    bool hasQC = hasSubDirWithPath("QC", "figures");
+    bool hasBOLD = hasSubDirWithPath("BOLD", "func");
+    bool hasRecon = outputDir.exists("Recon") && 
+                   (outputDir.exists("Recon/fsaverage/mri") || hasSubDirWithPath("Recon", "mri"));
     
     // 如果至少有两个特征目录存在，就认为是DeepPrep输出
     int score = (hasQC ? 1 : 0) + (hasBOLD ? 1 : 0) + (hasRecon ? 1 : 0);
