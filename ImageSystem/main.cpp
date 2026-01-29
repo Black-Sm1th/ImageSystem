@@ -148,8 +148,8 @@ void testFullBidsConversion(const QString& inputDir, const QString& outputDir)
     // ========== Step 1: Scan and Pair ==========
     qDebug() << "========== Step 1: Scanning and Pairing ==========\n";
     
-    BatchMriScanner scanner;
-    QList<MriPairResult> pairs = scanner.scanSync(inputDir, 5);
+    BatchMriScanner * scanner = new BatchMriScanner();
+    QList<MriPairResult> pairs = scanner->scanSync(inputDir, 5);
     
     if (pairs.isEmpty()) {
         qWarning() << "No paired T1W/BOLD data found! Exiting.";

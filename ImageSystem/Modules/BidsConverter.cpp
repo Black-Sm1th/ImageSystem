@@ -516,6 +516,17 @@ void BidsConverter::performConversion(const QList<MriPairResult>& pairs)
     m_results.clear();
     m_usedSubjectIds.clear();
     
+    // Ensure output directory exists before creating dataset files
+    QDir outputDir(m_outputDir);
+    if (!outputDir.exists()) {
+        if (!outputDir.mkpath(".")) {
+            qWarning() << "Failed to create output directory:" << m_outputDir;
+            emit conversionError("Failed to create output directory: " + m_outputDir);
+            return;
+        }
+        qDebug() << "Created output directory:" << m_outputDir;
+    }
+    
     // Create dataset description
     createDatasetDescription();
     

@@ -9,3 +9,4 @@
 ImageSystem/Scripts/*.exe
 ImageSystem/Scripts/model
 ImageSystem/AppData
+/ImageSystem/Tests
