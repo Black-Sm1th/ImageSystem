@@ -148,8 +148,8 @@ void testFullBidsConversion(const QString& inputDir, const QString& outputDir)
     // ========== Step 1: Scan and Pair ==========
     qDebug() << "========== Step 1: Scanning and Pairing ==========\n";
     
-    BatchMriScanner scanner;
-    QList<MriPairResult> pairs = scanner.scanSync(inputDir, 5);
+    BatchMriScanner * scanner = new BatchMriScanner();
+    QList<MriPairResult> pairs = scanner->scanSync(inputDir, 5);
     
     if (pairs.isEmpty()) {
         qWarning() << "No paired T1W/BOLD data found! Exiting.";
@@ -284,7 +284,7 @@ void testFullBidsConversion(const QString& inputDir, const QString& outputDir)
 
 int main(int argc, char* argv[])
 {
-    system("chcp 65001");
+    //system("chcp 65001");
     QQuickVTKItem::setGraphicsApi();
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -309,7 +309,7 @@ int main(int argc, char* argv[])
     // 或者只测试扫描功能
     // testBatchMriScan("D:/brain_datasets");
 
-    testFullBidsConversion("C:/temp/brain_datasets","C:/temp");
+    //testFullBidsConversion("C:/temp/brain_datasets","C:/temp");
 
     // 安装全局键盘监听（不依赖焦点）
     //app.installEventFilter(new GlobalKeyFilter(&app));

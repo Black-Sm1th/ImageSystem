@@ -181,10 +181,10 @@ def run_fmriprep_docker(bids_dir, output_dir,
     
     # Participant labels
     if subjects:
-        # fMRIPrep accepts multiple --participant-label arguments or space-separated
+        # fMRIPrep requires single --participant-label with space-separated values
         labels = [s.replace('sub-', '').strip() for s in subjects]
-        for label in labels:
-            command.extend(['--participant-label', label])
+        command.append('--participant-label')
+        command.extend(labels)  # Add all labels as separate arguments after --participant-label
         print(f"Passing to fMRIPrep: --participant-label {' '.join(labels)}")
     else:
         print("No --participant-label -> fMRIPrep will process ALL subjects in /data")
