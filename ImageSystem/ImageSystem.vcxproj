@@ -119,6 +119,7 @@
     <ClCompile Include="Modules\BrainNetworkData.cpp" />
     <ClCompile Include="Modules\BrainMetrics.cpp" />
     <ClCompile Include="Modules\BrainRegionVisualizer.cpp" />
+    <ClCompile Include="Modules\DockerPrepRunner.cpp" />
     <ClCompile Include="Modules\InteractionState.cpp" />
     <ClCompile Include="Modules\SliceVtkItemBase.cpp" />
     <ClCompile Include="ViewController\KnowledgeChatManager.cpp" />
@@ -148,6 +149,7 @@
     <ClInclude Include="Modules\BrainMetrics.h" />
     <ClInclude Include="Modules\BrainRegionVisualizer.h" />
     <ClInclude Include="Modules\CommonFunc.h" />
+    <QtMoc Include="Modules\DockerPrepRunner.h" />
     <ClInclude Include="Modules\InteractionState.h" />
     <QtMoc Include="ViewController\MainViewController.h" />
     <QtMoc Include="Model\DicomDataModel.h" />

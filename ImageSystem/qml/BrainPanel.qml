@@ -1666,466 +1666,7 @@ Rectangle {
                         }
                     }
                 }
-                // Column{
-                //     id: fmriprepCol
-                //     width: parent.width
-                //     spacing: 12
-                //     visible: preAnalysis.currentTabIndex === 0
-                //     // 四个标签的最大宽度，保持对齐
-                //     property int maxLabelWidth: Math.max(
-                //                                     Math.max(label1.implicitWidth, label2.implicitWidth),
-                //                                     Math.max(label3.implicitWidth, label4.implicitWidth))
-                //     Row{
-                //         height: 38
-                //         spacing: 10
-                //         Label {
-                //             id:label1
-                //             text: qsTr("输入Dicom文件夹：")
-                //             font.pixelSize: 16
-                //             color: "#80FFFFFF"
-                //             anchors.verticalCenter: parent.verticalCenter
-                //             width: fmriprepCol.maxLabelWidth
-                //         }
-                //         SingleLineTextInput{
-                //             id: dicomDir
-                //             width: fmriprepCol.width - label1.width - 60 - 20
-                //             height: 38
-                //             inputRadius: 4
-                //             backgroundColor: "#14FFFFFF"
-                //         }
-                //         CustomButton{
-                //             width: 60
-                //             height: 36
-                //             buttonRadius: 4
-                //             fontSize: 14
-                //             text: qsTr("导入")
-                //             anchors.verticalCenter: parent.verticalCenter
-                //             onClicked: {
-                //                 preFileDialog.open()
-                //             }
-                //         }
-                //     }
-                //     Row{
-                //         height: 38
-                //         spacing: 10
-                //         Label {
-                //             id:label2
-                //             text: qsTr("输出Bids文件夹：")
-                //             font.pixelSize: 16
-                //             color: "#80FFFFFF"
-                //             anchors.verticalCenter: parent.verticalCenter
-                //             width: fmriprepCol.maxLabelWidth
-                //         }
-                //         SingleLineTextInput{
-                //             id: bidsDir
-                //             width: fmriprepCol.width - label2.width - 10
-                //             height: 38
-                //             inputRadius: 4
-                //             backgroundColor: "#14FFFFFF"
-                //         }
-                //     }
-                //     Row{
-                //         height: 38
-                //         spacing: 10
-                //         Label {
-                //             id:label3
-                //             text: qsTr("输出Output文件夹：")
-                //             font.pixelSize: 16
-                //             color: "#80FFFFFF"
-                //             anchors.verticalCenter: parent.verticalCenter
-                //             width: fmriprepCol.maxLabelWidth
-                //         }
-                //         SingleLineTextInput{
-                //             id: outputDir
-                //             width: fmriprepCol.width - label3.width - 10
-                //             height: 38
-                //             inputRadius: 4
-                //             backgroundColor: "#14FFFFFF"
-                //         }
-                //     }
-                //     Row{
-                //         height: 38
-                //         spacing: 10
-                //         Label {
-                //             id:label4
-                //             text: qsTr("license文件地址：")
-                //             font.pixelSize: 16
-                //             color: "#80FFFFFF"
-                //             anchors.verticalCenter: parent.verticalCenter
-                //             width: fmriprepCol.maxLabelWidth
-                //         }
-                //         SingleLineTextInput{
-                //             id: licenseFile
-                //             width: fmriprepCol.width - label4.width - 60 - 20
-                //             height: 38
-                //             inputRadius: 4
-                //             backgroundColor: "#14FFFFFF"
-                //         }
-                //         CustomButton{
-                //             width: 60
-                //             height: 36
-                //             buttonRadius: 4
-                //             fontSize: 14
-                //             text: qsTr("导入")
-                //             anchors.verticalCenter: parent.verticalCenter
-                //             onClicked: {
-                //                 licenseFileDialog.open()
-                //             }
-                //         }
-                //     }
-                //     Row{
-                //         height: 30
-                //         spacing: 8
-                //         CheckBox {
-                //             id: freesurferCheckBox
-                //             checked: false
-                //             width: 14
-                //             height: 14
-                //             anchors.verticalCenter: parent.verticalCenter
-                //             indicator: Rectangle {
-                //                 implicitWidth: 14
-                //                 implicitHeight: 14
-                //                 radius: 2
-                //                 anchors.verticalCenter: parent.verticalCenter
-                //                 border.color: freesurferCheckBox.checked ? "#3C7EFF" : "#40000000"
-                //                 border.width: 1
-                //                 color: freesurferCheckBox.checked ? "#3C7EFF" : "#ffffff"
 
-                //                 Image{
-                //                     source: "qrc:/image/vector.png"
-                //                     anchors.centerIn: parent
-                //                     visible: freesurferCheckBox.checked
-                //                 }
-                //                 MouseArea {
-                //                     anchors.fill: parent
-                //                     cursorShape: Qt.PointingHandCursor
-                //                     onClicked: freesurferCheckBox.checked = !freesurferCheckBox.checked
-                //                 }
-                //             }
-                //         }
-                //         Label{
-                //             text: qsTr("使用freesurfer")
-                //             color: "#E5FFFFFF"
-                //             anchors.verticalCenter: parent.verticalCenter
-                //             MouseArea {
-                //                 anchors.fill: parent
-                //                 cursorShape: Qt.PointingHandCursor
-                //                 onClicked: freesurferCheckBox.checked = !freesurferCheckBox.checked
-                //             }
-                //         }
-                //     }
-                //     CustomButton{
-                //         width: parent.width
-                //         height: 48
-                //         text: qsTr("分析")
-                //         onClicked: {
-                //             function warn(msg) {
-                //                 if (messageManager) {
-                //                     messageManager.warning(msg, 2000)
-                //                 } else {
-                //                     console.log(msg)
-                //                 }
-                //             }
-
-                //             var d = dicomDir.text.trim()
-                //             var b = bidsDir.text.trim()
-                //             var o = outputDir.text.trim()
-                //             var l = licenseFile.text.trim()
-
-                //             if (d === "") {
-                //                 warn(qsTr("请输入 Dicom 文件夹路径"))
-                //                 return
-                //             }
-                //             if (b === "") {
-                //                 warn(qsTr("请输入 Bids 文件夹路径"))
-                //                 return
-                //             }
-                //             if (o === "") {
-                //                 warn(qsTr("请输入 Output 文件夹路径"))
-                //                 return
-                //             }
-                //             if (l === "") {
-                //                 warn(qsTr("请输入 license 文件路径"))
-                //                 return
-                //             }
-
-                //             $MainViewController.startfmriprepAnalysis(d, b, o, l, freesurferCheckBox.checked)
-                //         }
-                //     }
-                //     // log 日志展示
-                //     Rectangle {
-                //         width: parent.width
-                //         height: preAnalysis.height - tabContainer.height - 16 - 38 * 4 - 30 - 48 - 6 * 12
-                //         color: "#E016171B"
-                //         radius: 8
-
-                //         // 日志更新Timer，延迟更新避免阻塞动画
-                //         Timer {
-                //             id: logUpdateTimer
-                //             interval: 150 // 150ms后更新，给动画充足时间
-                //             repeat: false
-                //             onTriggered: {
-                //                 logArea.text = $MainViewController.fmriprepLog
-                //             }
-                //         }
-
-                //         // 滚动延迟Timer，避免在更新文本时立即滚动导致卡顿
-                //         Timer {
-                //             id: scrollTimer
-                //             interval: 50
-                //             repeat: false
-                //             onTriggered: {
-                //                 logArea.cursorPosition = logArea.length
-                //                 if (logArea.flickableItem) {
-                //                     var flick = logArea.flickableItem
-                //                     flick.contentY = Math.max(0, flick.contentHeight - flick.height)
-                //                 }
-                //             }
-                //         }
-
-                //         Connections {
-                //             target: $MainViewController
-                //             function onFmriprepLogUpdated() {
-                //                 // 只有当面板可见时才更新日志
-                //                 if (fmriprepCol.visible) {
-                //                     logUpdateTimer.restart()
-                //                 }
-                //             }
-                //         }
-
-                //         ScrollView {
-                //             anchors.fill: parent
-                //             clip: true
-                //             TextArea {
-                //                 id: logArea
-                //                 readOnly: true
-                //                 wrapMode: TextEdit.NoWrap // 禁用自动换行，大幅提升性能
-                //                 font.pixelSize: 14
-                //                 color: "#E5FFFFFF"
-                //                 background: null
-
-                //                 // 面板变为可见时同步日志
-                //                 Component.onCompleted: {
-                //                     text = $MainViewController.fmriprepLog
-                //                 }
-
-                //                 onTextChanged: {
-                //                     scrollTimer.restart()
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }
-                // Column{
-                //     id: deepprepCol
-                //     width: parent.width
-                //     spacing: 12
-                //     visible: preAnalysis.currentTabIndex === 1
-                //     // 四个标签的最大宽度，保持对齐
-                //     property int maxLabelWidth: Math.max(
-                //                                     Math.max(label_dp1.implicitWidth, label_dp2.implicitWidth),
-                //                                     Math.max(label_dp3.implicitWidth, label_dp4.implicitWidth))
-                //     Row{
-                //         height: 38
-                //         spacing: 10
-                //         Label {
-                //             id:label_dp1
-                //             text: qsTr("输入Dicom文件夹：")
-                //             font.pixelSize: 16
-                //             color: "#80FFFFFF"
-                //             anchors.verticalCenter: parent.verticalCenter
-                //             width: deepprepCol.maxLabelWidth
-                //         }
-                //         SingleLineTextInput{
-                //             id: inputDirDeep
-                //             width: fmriprepCol.width - label_dp1.width - 60 - 20
-                //             height: 38
-                //             inputRadius: 4
-                //             backgroundColor: "#14FFFFFF"
-                //         }
-                //         CustomButton{
-                //             width: 60
-                //             height: 36
-                //             buttonRadius: 4
-                //             fontSize: 14
-                //             text: qsTr("导入")
-                //             anchors.verticalCenter: parent.verticalCenter
-                //             onClicked: {
-                //                 inputDirDialog.open()
-                //             }
-                //         }
-                //     }
-                //     Row{
-                //         height: 38
-                //         spacing: 10
-                //         Label {
-                //             id:label_dp2
-                //             text: qsTr("输出Bids文件夹：")
-                //             font.pixelSize: 16
-                //             color: "#80FFFFFF"
-                //             anchors.verticalCenter: parent.verticalCenter
-                //             width: deepprepCol.maxLabelWidth
-                //         }
-                //         SingleLineTextInput{
-                //             id: bidsDirDeep
-                //             width: fmriprepCol.width - label_dp2.width - 10
-                //             height: 38
-                //             inputRadius: 4
-                //             backgroundColor: "#14FFFFFF"
-                //         }
-                //     }
-                //     Row{
-                //         height: 38
-                //         spacing: 10
-                //         Label {
-                //             id:label_dp3
-                //             text: qsTr("输出Output文件夹：")
-                //             font.pixelSize: 16
-                //             color: "#80FFFFFF"
-                //             anchors.verticalCenter: parent.verticalCenter
-                //             width: deepprepCol.maxLabelWidth
-                //         }
-                //         SingleLineTextInput{
-                //             id: outputDirDeep
-                //             width: fmriprepCol.width - label_dp3.width - 10
-                //             height: 38
-                //             inputRadius: 4
-                //             backgroundColor: "#14FFFFFF"
-                //         }
-                //     }
-                //     Row{
-                //         height: 38
-                //         spacing: 10
-                //         Label {
-                //             id:label_dp4
-                //             text: qsTr("license文件地址：")
-                //             font.pixelSize: 16
-                //             color: "#80FFFFFF"
-                //             anchors.verticalCenter: parent.verticalCenter
-                //             width: deepprepCol.maxLabelWidth
-                //         }
-                //         SingleLineTextInput{
-                //             id: licenseFileDeep
-                //             width: fmriprepCol.width - label_dp4.width - 60 - 20
-                //             height: 38
-                //             inputRadius: 4
-                //             backgroundColor: "#14FFFFFF"
-                //         }
-                //         CustomButton{
-                //             width: 60
-                //             height: 36
-                //             buttonRadius: 4
-                //             fontSize: 14
-                //             text: qsTr("导入")
-                //             anchors.verticalCenter: parent.verticalCenter
-                //             onClicked: {
-                //                 licenseFileDialogDeep.open()
-                //             }
-                //         }
-                //     }
-                //     CustomButton{
-                //         width: parent.width
-                //         height: 48
-                //         text: qsTr("分析")
-                //         onClicked: {
-                //             function warn(msg) {
-                //                 if (messageManager) {
-                //                     messageManager.warning(msg, 2000)
-                //                 } else {
-                //                     console.log(msg)
-                //                 }
-                //             }
-
-                //             var i = inputDirDeep.text.trim()
-                //             var b = bidsDirDeep.text.trim()
-                //             var o = outputDirDeep.text.trim()
-                //             var l = licenseFileDeep.text.trim()
-
-                //             if (i === "") {
-                //                 warn(qsTr("请输入 Input 文件夹路径"))
-                //                 return
-                //             }
-                //             if (b === "") {
-                //                 warn(qsTr("请输入 Bids 文件夹路径"))
-                //                 return
-                //             }
-                //             if (o === "") {
-                //                 warn(qsTr("请输入 Output 文件夹路径"))
-                //                 return
-                //             }
-                //             if (l === "") {
-                //                 warn(qsTr("请输入 license 文件路径"))
-                //                 return
-                //             }
-
-                //             $MainViewController.startDeepprepAnalysis(i, b, o, l)
-                //         }
-                //     }
-                //     // log 日志展示
-                //     Rectangle {
-                //         width: parent.width
-                //         height: preAnalysis.height - tabContainer.height - 16 - 38 * 4 - 48 - 5 * 12
-                //         color: "#E016171B"
-                //         radius: 8
-
-                //         // 日志更新Timer，延迟更新避免阻塞动画
-                //         Timer {
-                //             id: logUpdateTimerDeep
-                //             interval: 150 // 150ms后更新，给动画充足时间
-                //             repeat: false
-                //             onTriggered: {
-                //                 logAreaDeep.text = $MainViewController.deepprepLog
-                //             }
-                //         }
-
-                //         // 滚动延迟Timer，避免在更新文本时立即滚动导致卡顿
-                //         Timer {
-                //             id: scrollTimerDeep
-                //             interval: 50
-                //             repeat: false
-                //             onTriggered: {
-                //                 logAreaDeep.cursorPosition = logAreaDeep.length
-                //                 if (logAreaDeep.flickableItem) {
-                //                     var flick = logAreaDeep.flickableItem
-                //                     flick.contentY = Math.max(0, flick.contentHeight - flick.height)
-                //                 }
-                //             }
-                //         }
-
-                //         Connections {
-                //             target: $MainViewController
-                //             function onDeepprepLogUpdated() {
-                //                 // 只有当面板可见时才更新日志
-                //                 if (deepprepCol.visible) {
-                //                     logUpdateTimerDeep.restart()
-                //                 }
-                //             }
-                //         }
-
-                //         ScrollView {
-                //             anchors.fill: parent
-                //             clip: true
-                //             TextArea {
-                //                 id: logAreaDeep
-                //                 readOnly: true
-                //                 wrapMode: TextEdit.NoWrap // 禁用自动换行，大幅提升性能
-                //                 font.pixelSize: 14
-                //                 color: "#E5FFFFFF"
-                //                 background: null
-
-                //                 // 面板变为可见时同步日志
-                //                 Component.onCompleted: {
-                //                     text = $MainViewController.deepprepLog
-                //                 }
-
-                //                 onTextChanged: {
-                //                     // 延迟滚动到底部，避免阻塞渲染
-                //                     scrollTimerDeep.restart()
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }
                 ScrollView{
                     width: parent.width
                     height: preAnalysis.height - 16 - 48
@@ -2143,6 +1684,7 @@ Rectangle {
                         Row{
                             height: 38
                             spacing: 10
+                            visible: !$MainViewController.isPreAnalysisRunning
                             Label {
                                 id:label1
                                 text: qsTr("搜索文件夹：")
@@ -2170,9 +1712,11 @@ Rectangle {
                                 }
                             }
                         }
+
                         CustomButton{
                             width: parent.width
                             height: 48
+                            visible: !$MainViewController.isPreAnalysisRunning
                             text: $MainViewController.isScanning ? qsTr("搜索中...") : qsTr("搜索")
                             enabled: !$MainViewController.isScanning
                             onClicked: {
@@ -2184,7 +1728,7 @@ Rectangle {
                         Column {
                             width: parent.width
                             spacing: 8
-                            visible: $MainViewController.isScanning || $MainViewController.scanProgress > 0
+                            visible: !$MainViewController.isPreAnalysisRunning && ($MainViewController.isScanning || $MainViewController.scanProgress > 0)
 
                             // 进度条背景
                             Rectangle {
@@ -2265,7 +1809,7 @@ Rectangle {
                         Column {
                             width: parent.width
                             spacing: 8
-                            visible: !$MainViewController.isScanning && $MriPairResultModel.resultCount > 0
+                            visible: !$MainViewController.isPreAnalysisRunning && !$MainViewController.isScanning && $MriPairResultModel.resultCount > 0
 
                             // 表格标题和操作栏
                             Row {
@@ -2682,11 +2226,20 @@ Rectangle {
                             }
                         }
                         CustomButton{
-                            visible: !$MainViewController.isScanning && $MriPairResultModel.checkedCount
+                            visible: !$MainViewController.isScanning && ($MriPairResultModel.checkedCount || $MainViewController.isPreAnalysisRunning)
                             width: parent.width
                             height: 48
-                            text: qsTr("分析")
+                            text: $MainViewController.isPreAnalysisRunning ? qsTr("取消预处理") : qsTr("分析")
+                            backgroundColor: $MainViewController.isPreAnalysisRunning ? "#E74C3C" : "#3C7EFF"
                             onClicked: {
+                                if ($MainViewController.isPreAnalysisRunning) {
+                                    // 取消预处理
+                                    $MainViewController.stopFmriprepProcess()
+                                    $MainViewController.stopDeepprepProcess()
+                                    return
+                                }
+                                
+                                // 开始分析
                                 function warn(msg) {
                                     if (messageManager) {
                                         messageManager.warning(msg, 2000)
@@ -2714,6 +2267,123 @@ Rectangle {
                                     return
                                 }
                                 $MainViewController.startPreAnalysis(methodComboBox.selectedIndices[0], b, o, l)
+                            }
+                        }
+
+                        // 预分析日志展示区域
+                        Rectangle {
+                            width: parent.width
+                            height: preAnalysis.height - tabContainer.height - 16 - 38 * 4 - 48 - 5 * 12
+                            color: "#E016171B"
+                            radius: 8
+                            visible: $MainViewController.isPreAnalysisRunning
+
+                            // 日志更新Timer，延迟更新避免阻塞动画
+                            Timer {
+                                id: preAnalysisLogUpdateTimer
+                                interval: 150
+                                repeat: false
+                                onTriggered: {
+                                    preAnalysisLogArea.text = $MainViewController.preAnalysisLog
+                                }
+                            }
+
+                            // 滚动延迟Timer
+                            Timer {
+                                id: preAnalysisScrollTimer
+                                interval: 50
+                                repeat: false
+                                onTriggered: {
+                                    preAnalysisLogArea.cursorPosition = preAnalysisLogArea.length
+                                    if (preAnalysisLogFlickable.contentHeight > preAnalysisLogFlickable.height) {
+                                        preAnalysisLogFlickable.contentY = preAnalysisLogFlickable.contentHeight - preAnalysisLogFlickable.height
+                                    }
+                                }
+                            }
+
+                            Connections {
+                                target: $MainViewController
+                                function onPreAnalysisLogUpdated() {
+                                    preAnalysisLogUpdateTimer.restart()
+                                }
+                            }
+
+                            Column {
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                spacing: 8
+
+                                Row {
+                                    width: parent.width
+                                    spacing: 8
+
+                                    Label {
+                                        text: qsTr("预处理日志")
+                                        font.pixelSize: 14
+                                        font.bold: true
+                                        color: "#FFFFFF"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+
+                                    Item {width: 1; height: 1 }
+
+                                    // 运行状态指示器
+                                    Rectangle {
+                                        width: 8
+                                        height: 8
+                                        radius: 4
+                                        color: $MainViewController.isPreAnalysisRunning ? "#4CAF50" : "#80FFFFFF"
+                                        anchors.verticalCenter: parent.verticalCenter
+
+                                        SequentialAnimation on opacity {
+                                            running: $MainViewController.isPreAnalysisRunning
+                                            loops: Animation.Infinite
+                                            NumberAnimation { to: 0.3; duration: 500 }
+                                            NumberAnimation { to: 1.0; duration: 500 }
+                                        }
+                                    }
+
+                                    Label {
+                                        text: $MainViewController.isPreAnalysisRunning ? qsTr("运行中...") : qsTr("已完成")
+                                        font.pixelSize: 12
+                                        color: $MainViewController.isPreAnalysisRunning ? "#4CAF50" : "#80FFFFFF"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                }
+
+                                Flickable {
+                                    id: preAnalysisLogFlickable
+                                    width: parent.width
+                                    height: parent.height - 30
+                                    contentWidth: width
+                                    contentHeight: preAnalysisLogArea.contentHeight
+                                    clip: true
+                                    boundsBehavior: Flickable.StopAtBounds
+
+                                    ScrollBar.vertical: ScrollBar {
+                                        active: true
+                                        policy: ScrollBar.AsNeeded
+                                    }
+
+                                    TextArea {
+                                        id: preAnalysisLogArea
+                                        width: parent.width
+                                        readOnly: true
+                                        wrapMode: TextArea.Wrap
+                                        font.pixelSize: 14
+                                        color: "#E5FFFFFF"
+                                        background: null
+                                        selectByMouse: true
+
+                                        Component.onCompleted: {
+                                            text = $MainViewController.preAnalysisLog
+                                        }
+
+                                        onTextChanged: {
+                                            preAnalysisScrollTimer.restart()
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

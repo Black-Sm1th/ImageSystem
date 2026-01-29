@@ -8,6 +8,7 @@
 #include "Modules/BatchMriScanner.h"
 #include "Modules/BidsConverter.h"
 #include "Modules/InteractionState.h"
+#include "Modules/DockerPrepRunner.h"
 #include <vtkInteractorStyleImage.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkObjectFactory.h>
@@ -72,23 +73,17 @@ class MainViewController : public QObject
         QUICK_PROPERTY(int, scanPairedCount)
         QUICK_PROPERTY(double, scanProgress)
         QUICK_PROPERTY(QString, scanCurrentFolder)
+        
+        // 预分析状态属性
+        QUICK_PROPERTY(bool, isPreAnalysisRunning)
 public:
     Q_INVOKABLE void calculateKidney();
     Q_INVOKABLE void importBrainData(const QString& url);
     Q_INVOKABLE void selectBrainRegion(int row);
-    Q_INVOKABLE void startfmriprepAnalysis(const QString& dicomDir,
-                                           const QString& bidsDir,
-                                           const QString& outputDir,
-                                           const QString& licenseFile,
-                                           bool useFreesurfer);
+    Q_INVOKABLE void scanFolder(const QString& inputDir);
+    Q_INVOKABLE void startPreAnalysis(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile);
     Q_INVOKABLE void stopFmriprepProcess();
-    Q_INVOKABLE void clearFmriprepLog();
-    Q_INVOKABLE void startDeepprepAnalysis(const QString& inputDir,
-                                           const QString& bidsDir,
-                                           const QString& outputDir,
-                                           const QString& licenseFile);
     Q_INVOKABLE void stopDeepprepProcess();
-    Q_INVOKABLE void clearDeepprepLog();
     Q_INVOKABLE void startAnalysisBrainAge(const QString& path, bool preprocess);
     Q_INVOKABLE void generatePdfReport(const QString& savePath);
     Q_INVOKABLE bool isDeepprepOutput(const QString& outputPath);
@@ -99,12 +94,8 @@ public:
     Q_INVOKABLE void updatePenAnnotationText(int orientation, int index, const QString& text);
     Q_INVOKABLE void deletePenAnnotation(int orientation, int index);
     Q_INVOKABLE void captureViewScreenshot(int viewType, const QString& filePath);
-    Q_INVOKABLE void scanFolder(const QString& inputDir);
-    Q_INVOKABLE void startPreAnalysis(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile);
-    Q_PROPERTY(QString fmriprepLog READ fmriprepLog NOTIFY fmriprepLogUpdated)
-    QString fmriprepLog() const { return m_fmriprepLog; }
-    Q_PROPERTY(QString deepprepLog READ deepprepLog NOTIFY deepprepLogUpdated)
-    QString deepprepLog() const { return m_deepprepLog; }
+    Q_PROPERTY(QString preAnalysisLog READ preAnalysisLog NOTIFY preAnalysisLogUpdated)
+    QString preAnalysisLog() const { return m_preAnalysisLog; }
     // 获取表格模型
     BrainRegionTableModel* getBrainRegionTableModel() const;
     BrainSegmentationTableModel* getBrainSegmentationTableModel() const;
@@ -114,8 +105,7 @@ signals:
     void brainAnalysisStarted();
     void brainAnalysisFinished(bool success);
     void networkTableIndexChanged(int index);
-    void fmriprepLogUpdated();
-    void deepprepLogUpdated();
+    void preAnalysisLogUpdated();
     void annotationCreated(double screenX, double screenY, int annotationIndex, int orientation, int annotationType);
 
 public slots:
@@ -127,30 +117,35 @@ public slots:
 private:
     bool loadOutputData(const QString& path);
     void processBrainNetworkAnalysis(const QString& boldPath, const QString& confoundsPath, const QString& outputDir);
-    void appendFmriprepLog(const QString& text);
-    void startLogTimer(const QString& logFilePath);
-    void stopLogTimer();
-    void appendDeepprepLog(const QString& text);
-    void startDeepprepLogTimer(const QString& logFilePath);
-    void stopDeepprepLogTimer();
+    void startPrepLogTimer(const QString& logFilePath);  // 启动日志轮询
+    void stopPrepLogTimer();                              // 停止日志轮询
+    void startFmriprepAfterBids();   // BIDS转换完成后启动fmriprep
+    void startDeepprepAfterBids();   // BIDS转换完成后启动deepprep
+    void appendPreAnalysisLog(const QString& text);  // 追加统一预分析日志
+    void clearPreAnalysisLog();                       // 清空统一预分析日志
+    void setupDockerPrepRunner();    // 初始化 DockerPrepRunner
     BidsConverter* m_bidsConverter;
     BrainRegionTableModel* m_brainRegionTableModel;
     BrainSegmentationTableModel* m_brainSegmentationTableModel;
     MriPairResultModel* m_mriPairResultModel;
     BatchMriScanner* m_mriScanner;
-    QPointer<QProcess> m_fmriprepProcess;
-    qint64 m_fmriprepPid = -1;
-    QString m_fmriprepLog;
-    QString m_fmriprepLogFilePath;
-    qint64 m_fmriprepLogReadPos = 0;
-    QTimer* m_fmriprepLogTimer = nullptr;
-    QTimer* m_fmriprepLogUpdateTimer = nullptr; // 节流Timer，避免频繁更新UI
-    QPointer<QProcess> m_deepprepProcess;
-    qint64 m_deepprepPid = -1;
-    QString m_deepprepLog;
-    QString m_deepprepLogFilePath;
-    qint64 m_deepprepLogReadPos = 0;
-    QTimer* m_deepprepLogTimer = nullptr;
-    QTimer* m_deepprepLogUpdateTimer = nullptr; // 节流Timer，避免频繁更新UI
+    
+    // Docker 预处理运行器
+    DockerPrepRunner* m_dockerPrepRunner = nullptr;
+    
+    // 日志文件轮询相关（用于读取 Docker 输出日志）
+    QString m_prepLogFilePath;
+    qint64 m_prepLogReadPos = 0;
+    QTimer* m_prepLogTimer = nullptr;
+    
+    // 预分析参数，用于在BIDS转换完成后启动fmriprep/deepprep
+    int m_preAnalysisMethod = 0;       // 0: fmriprep, 1: deepprep
+    QString m_preAnalysisBidsPath;
+    QString m_preAnalysisOutputPath;
+    QString m_preAnalysisLicenseFile;
+    
+    // 统一预分析日志
+    QString m_preAnalysisLog;
+    QTimer* m_preAnalysisLogUpdateTimer = nullptr;  // 节流Timer
 };
 
