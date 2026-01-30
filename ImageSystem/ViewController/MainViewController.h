@@ -74,7 +74,7 @@ class MainViewController : public QObject
         QUICK_PROPERTY(int, scanPairedCount)
         QUICK_PROPERTY(double, scanProgress)
         QUICK_PROPERTY(QString, scanCurrentFolder)
-        
+
         // 预分析状态属性
         QUICK_PROPERTY(bool, isPreAnalysisRunning)
 public:
@@ -96,12 +96,12 @@ public:
     Q_INVOKABLE void deletePenAnnotation(int orientation, int index);
     Q_INVOKABLE void captureViewScreenshot(int viewType, const QString& filePath);
     Q_PROPERTY(QString preAnalysisLog READ preAnalysisLog NOTIFY preAnalysisLogUpdated)
-    QString preAnalysisLog() const { return m_preAnalysisLog; }
+        QString preAnalysisLog() const { return m_preAnalysisLog; }
     // 获取表格模型
     BrainRegionTableModel* getBrainRegionTableModel() const;
     BrainSegmentationTableModel* getBrainSegmentationTableModel() const;
     MriPairResultModel* getMriPairResultModel() const;
-    
+
 signals:
     void brainAnalysisStarted();
     void brainAnalysisFinished(bool success);
@@ -122,6 +122,12 @@ private:
     void stopPrepLogTimer();                              // 停止日志轮询
     void startFmriprepAfterBids();   // BIDS转换完成后启动fmriprep
     void startDeepprepAfterBids();   // BIDS转换完成后启动deepprep
+    void clearPrepOutputsOnFailure(const QString& outputDir, bool isFmriPrep);
+    
+    // 映射文件相关
+    void writeMetadataFile(const QString& outputDir, const QList<MriPairResult>& pairs);
+    QVariantMap readMetadataFile(const QString& outputDir);
+    
     void appendPreAnalysisLog(const QString& text);  // 追加统一预分析日志
     void clearPreAnalysisLog();                       // 清空统一预分析日志
     void setupDockerPrepRunner();    // 初始化 DockerPrepRunner
@@ -131,21 +137,22 @@ private:
     BrainSegmentationTableModel* m_brainSegmentationTableModel;
     MriPairResultModel* m_mriPairResultModel;
     BatchMriScanner* m_mriScanner;
-    
+
     // Docker 预处理运行器
     DockerPrepRunner* m_dockerPrepRunner = nullptr;
-    
+
     // 日志文件轮询相关（用于读取 Docker 输出日志）
     QString m_prepLogFilePath;
     qint64 m_prepLogReadPos = 0;
     QTimer* m_prepLogTimer = nullptr;
-    
+
     // 预分析参数，用于在BIDS转换完成后启动fmriprep/deepprep
     int m_preAnalysisMethod = 0;       // 0: fmriprep, 1: deepprep
     QString m_preAnalysisBidsPath;
     QString m_preAnalysisOutputPath;
     QString m_preAnalysisLicenseFile;
-    
+    QList<MriPairResult> m_currentProcessingPairs; // 记录当前正在处理的配对信息
+
     // 统一预分析日志
     QString m_preAnalysisLog;
     QTimer* m_preAnalysisLogUpdateTimer = nullptr;  // 节流Timer
