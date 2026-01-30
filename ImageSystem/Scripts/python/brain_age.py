@@ -1,16 +1,19 @@
 """
 一个简易的 Windows 端辅助脚本：
-1) 接收 DICOM 文件夹或 .nii/.nii.gz 文件/文件夹作为输入；
+1) 接收一个或多个 DICOM 文件夹或 .nii/.nii.gz 文件/文件夹作为输入；
 2) 如有需要，将 DICOM 转为 .nii.gz，并确保符合容器要求的目录结构；
 3) 绑定临时工作目录到容器的 /usr/data，调用已构建好的 deepbrain 镜像完成推理；
 4) 将输出的年龄预测结果复制到指定位置并打印。
 
 依赖项：
 - 已安装 Docker（并已构建/拉取 deepbrain 镜像）；
-- 若输入为 DICOM，需要本机可执行的 dcm2niix（https://github.com/rordenlab/dcm2niix）。
+- 若输入为 DICOM，需要本机可执行的 dcm2niix（https://github.com/rordenlab/dcm2niix）；
+- 若 DICOM 为 JPEG 压缩格式，需要 pydicom 及解码库：pip install pydicom pylibjpeg pylibjpeg-libjpeg
 
 用法示例：
-python run_brain_age.py --input E:/my_dcm_folder --output E:/result/Prediction.csv --preprocess
+python brain_age.py --input E:/my_dcm_folder --output E:/result/Prediction.csv --preprocess
+python brain_age.py --input E:/dcm_folder1 E:/dcm_folder2 --output E:/result/Prediction.csv --preprocess
+python brain_age.py --input E:/dcm_folder1 E:/dcm_folder2 --ids patient001 patient002 --output E:/result/Prediction.csv --preprocess
 """
 
 import argparse
@@ -21,6 +24,18 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+
+# JPEG 压缩的 DICOM Transfer Syntax UIDs
+COMPRESSED_TRANSFER_SYNTAXES = {
+    "1.2.840.10008.1.2.4.50",   # JPEG Baseline
+    "1.2.840.10008.1.2.4.51",   # JPEG Extended
+    "1.2.840.10008.1.2.4.57",   # JPEG Lossless
+    "1.2.840.10008.1.2.4.70",   # JPEG Lossless SV1
+    "1.2.840.10008.1.2.4.80",   # JPEG-LS Lossless
+    "1.2.840.10008.1.2.4.81",   # JPEG-LS Near Lossless
+    "1.2.840.10008.1.2.4.90",   # JPEG 2000 Lossless
+    "1.2.840.10008.1.2.4.91",   # JPEG 2000
+}
 
 DEFAULT_MODEL = Path("model/DBN_model.h5")
 
@@ -56,10 +71,77 @@ def compress_nii_to_gz(src: Path, dst_dir: Path) -> Path:
     return dst
 
 
+def is_compressed_dicom(dcm_path: Path) -> bool:
+    """检查 DICOM 文件是否使用了压缩传输语法。"""
+    try:
+        import pydicom
+        ds = pydicom.dcmread(dcm_path, stop_before_pixels=True)
+        transfer_syntax = str(ds.file_meta.TransferSyntaxUID)
+        return transfer_syntax in COMPRESSED_TRANSFER_SYNTAXES
+    except Exception:
+        return False
+
+
+def decompress_dicom_folder(dicom_dir: Path, output_dir: Path) -> Path:
+    """
+    将压缩的 DICOM 文件解压到新目录。
+    返回解压后的目录路径（如果无需解压则返回原目录）。
+    """
+    try:
+        import pydicom
+        from pydicom.uid import ExplicitVRLittleEndian
+    except ImportError:
+        raise RuntimeError(
+            "需要安装 pydicom 及解码库来处理压缩的 DICOM 文件：\n"
+            "pip install pydicom pylibjpeg pylibjpeg-libjpeg"
+        )
+
+    dcm_files = sorted(dicom_dir.rglob("*.dcm"))
+    if not dcm_files:
+        # 尝试查找没有扩展名的 DICOM 文件
+        dcm_files = [f for f in dicom_dir.iterdir() if f.is_file()]
+    
+    if not dcm_files:
+        return dicom_dir
+
+    # 检查第一个文件是否需要解压
+    if not is_compressed_dicom(dcm_files[0]):
+        print(f"  DICOM 文件无需解压: {dicom_dir.name}")
+        return dicom_dir
+
+    print(f"  检测到压缩的 DICOM 文件，正在解压: {dicom_dir.name}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    decompressed_count = 0
+    for dcm_file in dcm_files:
+        try:
+            ds = pydicom.dcmread(dcm_file)
+            # 解压像素数据
+            ds.decompress()
+            # 设置为未压缩的传输语法
+            ds.file_meta.TransferSyntaxUID = ExplicitVRLittleEndian
+            # 保存到新位置
+            output_path = output_dir / dcm_file.name
+            ds.save_as(output_path)
+            decompressed_count += 1
+        except Exception as e:
+            print(f"  警告: 无法解压文件 {dcm_file.name}: {e}")
+            # 尝试直接复制原文件
+            shutil.copyfile(dcm_file, output_dir / dcm_file.name)
+    
+    print(f"  已解压 {decompressed_count}/{len(dcm_files)} 个文件")
+    return output_dir
+
+
 def convert_dicom_to_nifti(dicom_dir: Path, work_dir: Path) -> list[Path]:
-    """使用 dcm2niix 将 DICOM 转换为 .nii.gz。"""
+    """使用 dcm2niix 将 DICOM 转换为 .nii.gz，自动处理压缩的 DICOM。"""
     out_dir = work_dir / "dcm2niix_out"
     out_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 先尝试解压 DICOM 文件（如果需要）
+    decompressed_dir = work_dir / "decompressed_dicom"
+    actual_dicom_dir = decompress_dicom_folder(dicom_dir, decompressed_dir)
+    
     try:
         run_cmd(
             [
@@ -70,7 +152,7 @@ def convert_dicom_to_nifti(dicom_dir: Path, work_dir: Path) -> list[Path]:
                 "%p_%s",  # 文件名：序列名_序列号
                 "-o",
                 str(out_dir),
-                str(dicom_dir),
+                str(actual_dicom_dir),
             ]
         )
     except FileNotFoundError as exc:  # pragma: no cover - 环境相关
@@ -141,8 +223,23 @@ def prepare_workdir(
     output_dir.mkdir(parents=True, exist_ok=True)
     models_dir.mkdir(parents=True, exist_ok=True)
 
+    # 使用字典跟踪文件名，避免重复覆盖
+    used_names: dict[str, int] = {}
     for f in nifti_files:
-        shutil.copyfile(f, image_dir / f.name)
+        base_name = f.stem  # 去掉 .nii.gz
+        if base_name.endswith(".nii"):
+            base_name = base_name[:-4]  # 处理 .nii.gz 的情况
+        
+        # 检查是否有重复文件名
+        if f.name in used_names:
+            used_names[f.name] += 1
+            # 添加序号后缀来区分
+            new_name = f"{base_name}_{used_names[f.name]}.nii.gz"
+        else:
+            used_names[f.name] = 0
+            new_name = f.name
+        
+        shutil.copyfile(f, image_dir / new_name)
 
     model_path = model_path.resolve()
     if not model_path.exists():
@@ -196,7 +293,14 @@ def main() -> None:
     parser.add_argument(
         "--input",
         required=True,
-        help="DICOM 文件夹，或 .nii/.nii.gz 文件/文件夹路径",
+        nargs="+",
+        help="一个或多个 DICOM 文件夹，或 .nii/.nii.gz 文件/文件夹路径",
+    )
+    parser.add_argument(
+        "--ids",
+        nargs="+",
+        default=None,
+        help="自定义 ID 列表，与 --input 一一对应（不指定则使用输入文件夹名）",
     )
     parser.add_argument(
         "--output",
@@ -232,13 +336,24 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    input_path = Path(args.input).expanduser().resolve()
+    input_paths = [Path(p).expanduser().resolve() for p in args.input]
     model_path = (
         Path(args.model).expanduser().resolve()
         if args.model
         else DEFAULT_MODEL.resolve()
     )
     output_path = Path(args.output).expanduser().resolve()
+
+    # 处理自定义 ID
+    if args.ids:
+        if len(args.ids) != len(input_paths):
+            raise RuntimeError(
+                f"--ids 数量 ({len(args.ids)}) 必须与 --input 数量 ({len(input_paths)}) 一致"
+            )
+        custom_ids = args.ids
+    else:
+        # 默认使用输入文件夹名作为 ID
+        custom_ids = [p.name for p in input_paths]
 
     ensure_docker_image(args.docker_image)
 
@@ -251,7 +366,30 @@ def main() -> None:
         cleanup_needed = True
 
     try:
-        nifti_files = gather_nifti_inputs(input_path, temp_root / "inputs")
+        # 收集所有输入路径的 nifti 文件，并使用自定义 ID 作为文件名
+        all_nifti_files: list[Path] = []
+        for idx, input_path in enumerate(input_paths):
+            # 为每个输入路径创建独立的子目录，避免文件名冲突
+            input_temp_dir = temp_root / "inputs" / f"input_{idx}"
+            nifti_files = gather_nifti_inputs(input_path, input_temp_dir)
+            
+            # 使用自定义 ID 作为文件名，便于对应原始数据
+            subject_id = custom_ids[idx]
+            renamed_dir = temp_root / "inputs" / f"renamed_{idx}"
+            renamed_dir.mkdir(parents=True, exist_ok=True)
+            
+            for nii_file in nifti_files:
+                # 新文件名格式: {自定义ID}.nii.gz
+                new_name = f"{subject_id}.nii.gz"
+                new_path = renamed_dir / new_name
+                shutil.copyfile(nii_file, new_path)
+                all_nifti_files.append(new_path)
+                print(f"  [{subject_id}] {input_path.name} -> {new_name}")
+        
+        if not all_nifti_files:
+            raise RuntimeError("未从任何输入路径中找到有效的 NIfTI 或 DICOM 文件。")
+        
+        nifti_files = all_nifti_files
         workdir, model_name = prepare_workdir(nifti_files, model_path, temp_root)
         output_csv = run_container(
             workdir=workdir,

@@ -31,6 +31,7 @@
 #include <QTimer.h>
 #include <QPointer.h>
 #include <QFile.h>
+#include <QMap>
 #include <vtkAxisActor2D.h>
 #include <vtkProperty2D.h>
 #include <memory>
@@ -124,6 +125,7 @@ private:
     void appendPreAnalysisLog(const QString& text);  // 追加统一预分析日志
     void clearPreAnalysisLog();                       // 清空统一预分析日志
     void setupDockerPrepRunner();    // 初始化 DockerPrepRunner
+    void startBatchBrainAgePrediction(const QList<MriPairResult>& results, const QString& outputDir);  // 批量脑龄预测
     BidsConverter* m_bidsConverter;
     BrainRegionTableModel* m_brainRegionTableModel;
     BrainSegmentationTableModel* m_brainSegmentationTableModel;
@@ -147,5 +149,12 @@ private:
     // 统一预分析日志
     QString m_preAnalysisLog;
     QTimer* m_preAnalysisLogUpdateTimer = nullptr;  // 节流Timer
+    
+    // 脑龄预测数据缓存（subjectId -> predictedAge）
+    QMap<QString, double> m_brainAgePredictions;
+    QString m_currentBrainAgeDataPath;  // 当前加载的脑龄数据路径
+    
+    // 读取脑龄预测CSV文件
+    bool loadBrainAgePredictions(const QString& basePath);
 };
 
