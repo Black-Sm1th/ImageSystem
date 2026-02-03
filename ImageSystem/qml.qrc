@@ -35,8 +35,6 @@
         <file>image/pdf-title6.png</file>
         <file>image/pdf-title7.png</file>
         <file>image/pdf-title8.png</file>
-        <file>image/fileUpload.png</file>
-        <file>image/fileUpload-pressed.png</file>
         <file>image/brainIcon.png</file>
         <file>image/btnBackground.png</file>
         <file>image/btnBackgroundSelected1.png</file>
@@ -344,5 +342,7 @@
         <file>image/toolScreenshot.png</file>
         <file>image/resetBtn.png</file>
         <file>image/copyBtn.png</file>
+        <file>image/fileUpload.png</file>
+        <file>image/fileUpload-pressed.png</file>
     </qresource>
 </RCC>

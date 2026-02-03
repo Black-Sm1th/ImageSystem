@@ -86,7 +86,7 @@ void KnowledgeChatManager::sendMessage(const QString& message)
 
     auto* apiManager = GET_SINGLETON(ApiManager);
     QString language = "zh"; // 默认中文，可以根据需要调整
-    const QString userId = "2013907133973454850";
+    const QString userId = "2017074164166459394";
 
     apiManager->streamKnowledgeChat(fullMessage, userId, language, {}, m_currentChatId);
 }
@@ -119,7 +119,7 @@ void KnowledgeChatManager::regenerateLastResponse()
     addThinkingMessage();
 
     // 发送API请求
-    const QString userId = "2013907133973454850";
+    const QString userId = "2017074164166459394";
 
     auto* apiManager = GET_SINGLETON(ApiManager);
 

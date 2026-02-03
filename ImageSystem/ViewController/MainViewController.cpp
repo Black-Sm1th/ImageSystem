@@ -2166,33 +2166,25 @@ void MainViewController::startPreAnalysis(int method, const QString& bidsPath, c
     // 保存当前正在处理的配对信息（用于成功后写元数据）
     m_currentProcessingPairs = checkedResults;
 
-    // 1. 生成带时间戳的输出路径
-    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
-    QString finalOutputPath = outputPath;
-    if (finalOutputPath.endsWith("/") || finalOutputPath.endsWith("\\")) {
-        finalOutputPath.chop(1);
-    }
-    finalOutputPath += "_" + timestamp;
-
     // 2. 判断目录状态
-    QDir dir(finalOutputPath);
+    QDir dir(outputPath);
     if (dir.exists()) {
         QStringList entries = dir.entryList(QDir::NoDotAndDotDot | QDir::AllEntries);
         if (!entries.isEmpty()) {
-            appendPreAnalysisLog(QStringLiteral("Warning: 输出目录已存在且不为空：%1\n").arg(finalOutputPath));
+            appendPreAnalysisLog(QStringLiteral("Warning: 输出目录已存在且不为空：%1\n").arg(outputPath));
         }
     }
     
     qDebug() << "Starting pre-analysis with" << checkedResults.size() << "selected pairs";
     qDebug() << "Method:" << (method == 0 ? "fmriprep" : "deepprep");
     qDebug() << "BIDS Path:" << bidsPath;
-    qDebug() << "Output Path:" << finalOutputPath;
+    qDebug() << "Output Path:" << outputPath;
     qDebug() << "License File:" << licenseFile;
     
     // 保存参数，用于BIDS转换完成后启动fmriprep/deepprep
     m_preAnalysisMethod = method;
     m_preAnalysisBidsPath = bidsPath;
-    m_preAnalysisOutputPath = finalOutputPath; // 使用带时间戳的路径
+    m_preAnalysisOutputPath = outputPath; // 使用带时间戳的路径
     m_preAnalysisLicenseFile = licenseFile;
     
     // 清空统一日志，准备显示
@@ -2204,7 +2196,7 @@ void MainViewController::startPreAnalysis(int method, const QString& bidsPath, c
     appendPreAnalysisLog(QStringLiteral("========== 开始预处理 ==========\n"));
     appendPreAnalysisLog(QStringLiteral("方法: %1\n").arg(methodName));
     appendPreAnalysisLog(QStringLiteral("BIDS 目录: %1\n").arg(bidsPath));
-    appendPreAnalysisLog(QStringLiteral("输出目录: %1\n").arg(finalOutputPath));
+    appendPreAnalysisLog(QStringLiteral("输出目录: %1\n").arg(outputPath));
     appendPreAnalysisLog(QStringLiteral("License 文件: %1\n\n").arg(licenseFile));
     
     // 同时启动脑龄预测（使用选中的 T1 路径和患者 ID）

@@ -35,7 +35,7 @@ ApplicationWindow {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 82
+        height: 66
         color: "#CC303338"
         
         FileDialog {
@@ -161,7 +161,7 @@ ApplicationWindow {
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: "肾功能"
-                            color: "#E5FFFFFF"
+                            color: "#FFFFFF"
                             font.pixelSize: 16
                             font.family: "Alibaba PuHuiTi 3.0"
                         }
@@ -273,7 +273,7 @@ ApplicationWindow {
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: "脑功能"
-                            color: "#E5FFFFFF"
+                            color: "#FFFFFF"
                             font.pixelSize: 16
                             font.family: "Alibaba PuHuiTi 3.0"
                         }
@@ -413,9 +413,9 @@ ApplicationWindow {
         
         Rectangle {
             id: rightExpandButton
-            width: (analysisPanelIndex === 2 && (brainpanel.currentIndex === 4 || brainpanel.currentIndex === 5)) ? 0 : (analysisPanelIndex === 2 && (brainpanel.currentIndex === 2 || brainpanel.currentIndex === 3) ? 500 : 400)
+            width: (analysisPanelIndex === 2 && brainpanel.currentIndex === 5) ? 0 : (analysisPanelIndex === 2 && (brainpanel.currentIndex === 2 || brainpanel.currentIndex === 3) ? 500 : 400)
             height: parent.height
-            visible: brainpanel.currentIndex !== 4 && brainpanel.currentIndex !== 5 || analysisPanelIndex !== 2
+            visible: brainpanel.currentIndex !== 5 || analysisPanelIndex !== 2
             color: "#171717"
             anchors.right: parent.right
             Behavior on width {

@@ -11,7 +11,7 @@ ApiManager::ApiManager(QObject *parent)
     : QObject(parent)
     , m_networkManager(new QNetworkAccessManager(this))
     , m_internalBaseUrl("http://10.158.151.15:9898/api")  // 默认内网地址
-    , m_publicBaseUrl("http://36.170.54.6:65114/api")   // 默认公网地址
+    , m_publicBaseUrl("http://111.6.178.34:24603/api")   // 默认公网地址
     , m_usePublicNetwork(true)
 {
     // 从配置文件加载配置
