@@ -365,6 +365,11 @@ void MainViewController::calculateKidney() {
 
 bool MainViewController::loadBrainAgePredictions(const QString& basePath)
 {
+    QString dirPath = basePath;
+    if (dirPath.startsWith("file:///")) {
+        dirPath = dirPath.mid(8);
+    }
+
     // 检查是否已经加载过相同路径的数据
     if (m_currentBrainAgeDataPath == basePath && !m_brainAgePredictions.isEmpty()) {
         return true;
@@ -435,7 +440,7 @@ bool MainViewController::loadBrainAgePredictions(const QString& basePath)
     return !m_brainAgePredictions.isEmpty();
 }
 
-void MainViewController::importBrainData(const QString& url, const QString& subjectId)
+void MainViewController::importBrainData(const QString& url, const QString& subjectId, const QString& patientId)
 {
     if (url.isEmpty()) {
         qDebug() << QStringLiteral("路径为空");
@@ -459,27 +464,13 @@ void MainViewController::importBrainData(const QString& url, const QString& subj
         return;
     }
     
-    // 尝试加载脑龄预测数据
-    loadBrainAgePredictions(dirPath);
-    
     // 根据 subjectId 查找对应的脑龄预测值
-    if (m_brainAgePredictions.contains(subId)) {
-        double predictedAge = m_brainAgePredictions[subId];
+    if (m_brainAgePredictions.contains(patientId)) {
+        double predictedAge = m_brainAgePredictions[patientId];
         setpredictedBrainAge(predictedAge);
-        qDebug() << QStringLiteral("设置脑龄预测值: %1 -> %2").arg(subId).arg(predictedAge);
+        qDebug() << QStringLiteral("设置脑龄预测值: %1 -> %2").arg(patientId).arg(predictedAge);
     } else {
-        // 尝试用 patientId 匹配（不带 sub- 前缀）
-        QString patientId = subId;
-        if (patientId.startsWith("sub-")) {
-            patientId = patientId.mid(4);
-        }
-        if (m_brainAgePredictions.contains(patientId)) {
-            double predictedAge = m_brainAgePredictions[patientId];
-            setpredictedBrainAge(predictedAge);
-            qDebug() << QStringLiteral("设置脑龄预测值(patientId匹配): %1 -> %2").arg(patientId).arg(predictedAge);
-        } else {
-            qDebug() << QStringLiteral("未找到被试 %1 的脑龄预测数据").arg(subId);
-        }
+        qDebug() << QStringLiteral("未找到被试 %1 的脑龄预测数据").arg(patientId);
     }
     
     // ========== 逻辑一：检查是否存在完整的输出结果 ==========

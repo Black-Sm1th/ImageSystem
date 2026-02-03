@@ -38,6 +38,7 @@ Rectangle {
     // 当前选中的被试ID
     property string currentSubjectId: ""
     property var subjectsList: []
+    property var subjectsMetadata: []  // 存储完整的 metadata subjects 数据
     
     // 监听 currentIndex 变化，重置 PDF 状态
     onCurrentIndexChanged: {
@@ -77,31 +78,7 @@ Rectangle {
         isDeepprepOutput = $MainViewController.isDeepprepOutput(path)
     }
 
-    // 扫描 output 文件夹下的 sub-* 子文件夹
-    function scanSubjectsInOutput(outputPath) {
-        var subjects = []
-        // 检查主目录和 QC 目录（DeepPrep结构）
-        var checkPaths = [outputPath, outputPath + "/QC"]
-        
-        for (var i = 0; i < checkPaths.length; i++) {
-            var checkPath = checkPaths[i]
-            var folders = $DicomDataModel.listSubFolders(checkPath)
-            if (folders && folders.length > 0) {
-                for (var j = 0; j < folders.length; j++) {
-                    var folder = folders[j]
-                    if (folder.indexOf("sub-") === 0 && subjects.indexOf(folder) === -1) {
-                        subjects.push(folder)
-                    }
-                }
-            }
-        }
-        
-        // 排序
-        subjects.sort()
-        return subjects
-    }
-
-    function startUnifiedImports(url, normalizedPath, subjectId) {
+    function startUnifiedImports(url, normalizedPath, subjectId, currentPatientId) {
         selectedOutputPath = normalizedPath
         outputDetailDir.text = normalizedPath
         currentSubjectId = subjectId
@@ -110,7 +87,7 @@ Rectangle {
         completePreprocessStep()
         // 同步触发脑区分割与脑网络分析
         $DicomDataModel.loadSegBrainDirectory(url, subjectId)
-        $MainViewController.importBrainData(url, subjectId)
+        $MainViewController.importBrainData(url, subjectId, currentPatientId)
         // 默认展示分割结果预览
         segBtnMouseArea.clicked(Qt.LeftButton)
     }
@@ -183,15 +160,31 @@ Rectangle {
             // 检测输出类型
             detectOutputType(path)
             
-            // 扫描 sub-* 文件夹
-            var subjects = scanSubjectsInOutput(path)
-            subjectsList = subjects
-            patientComboBox.model = subjects
-            if(patientComboBox.model.length > 0){
-                patientComboBox.selectedText = subjects[0]
-                patientComboBox.selectedIndices = [0]
-                patientComboBox.selectionChanged([0], [subjects[0]])
-            }else if(subjects.length === 0){
+            // 读取 metadata.json 文件
+            var metadata = $MainViewController.readMetadataFile(path)
+            if (metadata && metadata.subjects && metadata.subjects.length > 0) {
+                subjectsMetadata = metadata.subjects
+                // 生成显示列表：patientName(patientId)
+                var displayList = []
+                for (var i = 0; i < metadata.subjects.length; i++) {
+                    var sub = metadata.subjects[i]
+                    displayList.push(sub.patientName + "(" + sub.patientId + ")")
+                }
+                subjectsList = displayList
+                patientComboBox.model = displayList
+                if (displayList.length > 0) {
+                    patientComboBox.selectedText = displayList[0]
+                    patientComboBox.selectedIndices = [0]
+                    // 使用 subjectId 触发选择变更
+                    currentSubjectId = subjectsMetadata[0].subjectId
+                    var subjectUrl = "file:///" + path
+                    $MainViewController.loadBrainAgePredictions(path)
+                    startUnifiedImports(subjectUrl, path, currentSubjectId, subjectsMetadata[0].patientId)
+                }
+            } else {
+                subjectsMetadata = []
+                subjectsList = []
+                patientComboBox.model = []
                 messageManager.warning(qsTr("未在该文件夹中找到被试数据"), 2000)
             }
         }
@@ -2261,13 +2254,14 @@ Rectangle {
                             width: preDetailCol.width - label6.width - 10
                             model: []
                             onSelectionChanged: {
-                                var subjectId = selectedItems[0]
-                                if (outputDetailDir.text !== "") {
-                                    currentSubjectId = subjectId
+                                // 通过索引从 subjectsMetadata 获取对应的 subjectId
+                                var selectedIndex = selectedIndices[0]
+                                if (outputDetailDir.text !== "" && subjectsMetadata.length > selectedIndex) {
+                                    currentSubjectId = subjectsMetadata[selectedIndex].subjectId
                                     var path = outputDetailDir.text
                                     var subjectUrl = "file:///" + path
                                     detectOutputType(path)
-                                    startUnifiedImports(subjectUrl, path, currentSubjectId)
+                                    startUnifiedImports(subjectUrl, path, currentSubjectId, subjectsMetadata[selectedIndex].patientId)
                                 }
                             }
                         }

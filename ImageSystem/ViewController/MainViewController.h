@@ -79,7 +79,7 @@ class MainViewController : public QObject
         QUICK_PROPERTY(bool, isPreAnalysisRunning)
 public:
     Q_INVOKABLE void calculateKidney();
-    Q_INVOKABLE void importBrainData(const QString& url, const QString& subjectId = "sub-01");
+    Q_INVOKABLE void importBrainData(const QString& url, const QString& subjectId = "sub-01", const QString& patientId = "sub-01");
     Q_INVOKABLE void selectBrainRegion(int row);
     Q_INVOKABLE void scanFolder(const QString& inputDir);
     Q_INVOKABLE void startPreAnalysis(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile);
@@ -97,6 +97,9 @@ public:
     Q_INVOKABLE void captureViewScreenshot(int viewType, const QString& filePath);
     Q_PROPERTY(QString preAnalysisLog READ preAnalysisLog NOTIFY preAnalysisLogUpdated)
         QString preAnalysisLog() const { return m_preAnalysisLog; }
+    Q_INVOKABLE QVariantMap readMetadataFile(const QString& outputDir);
+    // 读取脑龄预测CSV文件
+    Q_INVOKABLE bool loadBrainAgePredictions(const QString& basePath);
     // 获取表格模型
     BrainRegionTableModel* getBrainRegionTableModel() const;
     BrainSegmentationTableModel* getBrainSegmentationTableModel() const;
@@ -126,7 +129,6 @@ private:
     
     // 映射文件相关
     void writeMetadataFile(const QString& outputDir, const QList<MriPairResult>& pairs);
-    QVariantMap readMetadataFile(const QString& outputDir);
     
     void appendPreAnalysisLog(const QString& text);  // 追加统一预分析日志
     void clearPreAnalysisLog();                       // 清空统一预分析日志
@@ -161,7 +163,6 @@ private:
     QMap<QString, double> m_brainAgePredictions;
     QString m_currentBrainAgeDataPath;  // 当前加载的脑龄数据路径
     
-    // 读取脑龄预测CSV文件
-    bool loadBrainAgePredictions(const QString& basePath);
+    
 };
 
