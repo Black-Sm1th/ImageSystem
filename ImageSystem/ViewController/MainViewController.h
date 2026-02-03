@@ -85,7 +85,6 @@ public:
     Q_INVOKABLE void startPreAnalysis(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile);
     Q_INVOKABLE void stopFmriprepProcess();
     Q_INVOKABLE void stopDeepprepProcess();
-    Q_INVOKABLE void startAnalysisBrainAge(const QString& path, bool preprocess);
     Q_INVOKABLE void generatePdfReport(const QString& savePath);
     Q_INVOKABLE bool isDeepprepOutput(const QString& outputPath);
     Q_INVOKABLE void updateAnnotationText(int orientation, int index, const QString& text);

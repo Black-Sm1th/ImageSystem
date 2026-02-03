@@ -11,10 +11,8 @@ Rectangle {
     property int currentIndex: 1
     // 三步联合处理状态
     property bool batchProcessing: false
-    property bool preprocessDone: false
     property bool segmentationDone: false
     property bool networkDone: false
-    property int preprocessProgress: 0
     property int segmentationProgress: 0
     property int networkProgress: 0
     property bool networkIndeterminate: false
@@ -52,23 +50,15 @@ Rectangle {
     
     function resetBatchProgress() {
         batchProcessing = true
-        preprocessDone = false
         segmentationDone = false
         networkDone = false
-        preprocessProgress = 0
         segmentationProgress = 0
         networkProgress = 0
         networkIndeterminate = true
     }
 
-    function completePreprocessStep() {
-        preprocessDone = true
-        preprocessProgress = 100
-        tryFinishBatch()
-    }
-
     function tryFinishBatch() {
-        if (preprocessDone && segmentationDone && networkDone) {
+        if (segmentationDone && networkDone) {
             batchProcessing = false
         }
     }
@@ -84,7 +74,6 @@ Rectangle {
         currentSubjectId = subjectId
         detectOutputType(normalizedPath)
         resetBatchProgress()
-        completePreprocessStep()
         // 同步触发脑区分割与脑网络分析
         $DicomDataModel.loadSegBrainDirectory(url, subjectId)
         $MainViewController.importBrainData(url, subjectId, currentPatientId)
@@ -157,9 +146,6 @@ Rectangle {
             outputDetailDir.text = path
             selectedOutputPath = path
             
-            // 检测输出类型
-            detectOutputType(path)
-            
             // 读取 metadata.json 文件
             var metadata = $MainViewController.readMetadataFile(path)
             if (metadata && metadata.subjects && metadata.subjects.length > 0) {
@@ -229,15 +215,16 @@ Rectangle {
         Rectangle {
             anchors.centerIn: parent
             width: 460
-            height: 260
+            height: processCol.height
             color: "#2a2a2a"
             border.color: "#0078d4"
             border.width: 2
             radius: 10
             
             Column {
-                anchors.fill: parent
-                anchors.margins: 20
+                id: processCol
+                width: parent.width
+                padding: 20
                 spacing: 18
                 
                 Label {
@@ -255,50 +242,31 @@ Rectangle {
 
                     Row {
                         spacing: 10
-                        width: parent.width
-                        Label { text: qsTr("预处理结果"); color: "#ffffff"; font.pixelSize: 14; width: 110 }
-                        ProgressBar {
-                            id: preprocessBar
-                            from: 0; to: 100
-                            indeterminate: !preprocessDone && preprocessProgress === 0
-                            value: preprocessProgress
-                            width: parent.width - 130
-                        }
-                    }
-
-                    Row {
-                        spacing: 10
-                        width: parent.width
-                        Label { text: qsTr("脑区分割"); color: "#ffffff"; font.pixelSize: 14; width: 110 }
+                        width: parent.width - 40
+                        Label { text: qsTr("脑区分割"); color: "#ffffff"; font.pixelSize: 16; width: 110 }
                         ProgressBar {
                             id: segBar
                             from: 0; to: 100
                             indeterminate: !segmentationDone && segmentationProgress === 0
                             value: segmentationProgress
                             width: parent.width - 130
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                     }
 
                     Row {
                         spacing: 10
-                        width: parent.width
-                        Label { text: qsTr("脑网络分析"); color: "#ffffff"; font.pixelSize: 14; width: 110 }
+                        width: parent.width - 40
+                        Label { text: qsTr("脑网络分析"); color: "#ffffff"; font.pixelSize: 16; width: 110 }
                         ProgressBar {
                             id: netBar
                             from: 0; to: 100
                             indeterminate: networkIndeterminate
                             value: networkProgress
                             width: parent.width - 130
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                     }
-                }
-                Label {
-                    width: parent.width
-                    text: qsTr("请等待三个步骤全部完成后继续操作")
-                    color: "#cccccc"
-                    font.pixelSize: 12
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.WordWrap
                 }
             }
         }
@@ -2260,7 +2228,6 @@ Rectangle {
                                     currentSubjectId = subjectsMetadata[selectedIndex].subjectId
                                     var path = outputDetailDir.text
                                     var subjectUrl = "file:///" + path
-                                    detectOutputType(path)
                                     startUnifiedImports(subjectUrl, path, currentSubjectId, subjectsMetadata[selectedIndex].patientId)
                                 }
                             }
