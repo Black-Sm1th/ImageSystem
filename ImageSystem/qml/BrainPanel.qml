@@ -196,47 +196,6 @@ Rectangle {
             }
         }
     }
-    FileDialog {
-        id: niiGzDialog
-        title: "选择 NII.GZ 文件"
-        selectMultiple: false
-        // 确保是文件选择模式
-        selectFolder: false
-        nameFilters: ["NIfTI Files (*.nii.gz)", "All Files (*)"]
-        onAccepted: {
-            if (fileUrls.length === 0)
-                return
-
-            var url = fileUrls[0].toString()
-            var path = url
-            if (path.startsWith("file:///")) {
-                path = path.substring("file:///".length)
-            }
-            // 统一为正斜杠，方便字符串处理
-            path = path.replace(/\\/g, "/")
-            brainAgePath.text = path;
-        }
-    }
-
-    FileDialog {
-        id: dcmFolderDialog
-        title: "选择 DCM 文件夹"
-        // 确保是文件夹选择模式
-        selectFolder: true
-        onAccepted: {
-            if (fileUrls.length === 0)
-                return
-
-            var url = fileUrls[0].toString()
-            var path = url
-            if (path.startsWith("file:///")) {
-                path = path.substring("file:///".length)
-            }
-            // 统一为正斜杠，方便字符串处理
-            path = path.replace(/\\/g, "/")
-            brainAgePath.text = path;
-        }
-    }
 
     FileDialog {
         id: pdfSaveDialog

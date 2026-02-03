@@ -139,6 +139,7 @@
     <None Include="qml\main.qml" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="resource.h" />
     <QtMoc Include="Modules\SliceVtkItemBase.h" />
     <QtMoc Include="ViewController\KnowledgeChatManager.h" />
     <QtMoc Include="Modules\BrainNetworkData.h" />
@@ -158,6 +159,9 @@
     <QtMoc Include="Model\MriPairResultModel.h" />
     <ClInclude Include="Modules\Version.h" />
     <ClInclude Include="Module\CommonFunc.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="ImageSystem.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">
