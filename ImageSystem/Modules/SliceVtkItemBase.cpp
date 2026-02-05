@@ -18,6 +18,30 @@
 #include <QPageSize>
 #include <QFont>
 #include <QPainterPath>
+
+namespace {
+    // 获取中文字体路径
+    const char* GetChineseFontPath()
+    {
+        static std::string fontPath;
+        if (fontPath.empty()) {
+            const char* candidates[] = {
+                //"Fonts/AlimamaDaoLiTi.ttf",
+                "C:/Windows/Fonts/msyh.ttc",
+                "C:/Windows/Fonts/simsun.ttc",
+                "C:/Windows/Fonts/simhei.ttf",
+            };
+            for (const char* path : candidates) {
+                if (QFileInfo::exists(QString::fromUtf8(path))) {
+                    fontPath = path;
+                    break;
+                }
+            }
+        }
+        return fontPath.empty() ? nullptr : fontPath.c_str();
+    }
+}
+
 vtkStandardNewMacro(SliceInteractorStyle);
 vtkStandardNewMacro(SliceViewData);
 vtkStandardNewMacro(VolumeViewData);
@@ -537,6 +561,14 @@ void SliceInteractorStyle::UpdateAnnotationText(int index, const std::string& te
         textProp->SetColor(rgb[0], rgb[1], rgb[2]);
         textProp->SetFontSize(16);
         textProp->SetBold(1);
+        
+        // 设置中文字体
+        const char* fontPath = GetChineseFontPath();
+        if (fontPath) {
+            textProp->SetFontFamily(VTK_FONT_FILE);
+            textProp->SetFontFile(fontPath);
+        }
+        
         // 设置文本水平居中对齐
         textProp->SetJustificationToCentered();
         // 设置文本垂直居中对齐
@@ -640,6 +672,14 @@ void SliceInteractorStyle::UpdateCircleAnnotationText(int index, const std::stri
         textProp->SetColor(rgb[0], rgb[1], rgb[2]);
         textProp->SetFontSize(16);
         textProp->SetBold(1);
+        
+        // 设置中文字体
+        const char* fontPath = GetChineseFontPath();
+        if (fontPath) {
+            textProp->SetFontFamily(VTK_FONT_FILE);
+            textProp->SetFontFile(fontPath);
+        }
+        
         textProp->SetJustificationToCentered();
         textProp->SetVerticalJustificationToCentered();
         textActor->PickableOff();
@@ -758,6 +798,14 @@ void SliceInteractorStyle::UpdatePenAnnotationText(int index, const std::string&
         textProp->SetColor(rgb[0], rgb[1], rgb[2]);
         textProp->SetFontSize(16);
         textProp->SetBold(1);
+        
+        // 设置中文字体
+        const char* fontPath = GetChineseFontPath();
+        if (fontPath) {
+            textProp->SetFontFamily(VTK_FONT_FILE);
+            textProp->SetFontFile(fontPath);
+        }
+        
         textProp->SetJustificationToCentered();
         textProp->SetVerticalJustificationToCentered();
         textActor->PickableOff();
