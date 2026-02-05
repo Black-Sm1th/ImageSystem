@@ -11,10 +11,8 @@ Rectangle {
     property int currentIndex: 1
     // 三步联合处理状态
     property bool batchProcessing: false
-    property bool preprocessDone: false
     property bool segmentationDone: false
     property bool networkDone: false
-    property int preprocessProgress: 0
     property int segmentationProgress: 0
     property int networkProgress: 0
     property bool networkIndeterminate: false
@@ -38,31 +36,29 @@ Rectangle {
     // 当前选中的被试ID
     property string currentSubjectId: ""
     property var subjectsList: []
+    property var subjectsMetadata: []  // 存储完整的 metadata subjects 数据
     
     // 监听 currentIndex 变化，重置 PDF 状态
     onCurrentIndexChanged: {
         pdfGenerationState = 0
+        if(currentIndex === 2){
+            $DicomDataModel.setSegDisplayMode($DicomDataModel.showOriginal ? 0 : 2)
+        }else{
+            $DicomDataModel.setSegDisplayMode(1)
+        }
     }
     
     function resetBatchProgress() {
         batchProcessing = true
-        preprocessDone = false
         segmentationDone = false
         networkDone = false
-        preprocessProgress = 0
         segmentationProgress = 0
         networkProgress = 0
         networkIndeterminate = true
     }
 
-    function completePreprocessStep() {
-        preprocessDone = true
-        preprocessProgress = 100
-        tryFinishBatch()
-    }
-
     function tryFinishBatch() {
-        if (preprocessDone && segmentationDone && networkDone) {
+        if (segmentationDone && networkDone) {
             batchProcessing = false
         }
     }
@@ -72,40 +68,15 @@ Rectangle {
         isDeepprepOutput = $MainViewController.isDeepprepOutput(path)
     }
 
-    // 扫描 output 文件夹下的 sub-* 子文件夹
-    function scanSubjectsInOutput(outputPath) {
-        var subjects = []
-        // 检查主目录和 QC 目录（DeepPrep结构）
-        var checkPaths = [outputPath, outputPath + "/QC"]
-        
-        for (var i = 0; i < checkPaths.length; i++) {
-            var checkPath = checkPaths[i]
-            var folders = $DicomDataModel.listSubFolders(checkPath)
-            if (folders && folders.length > 0) {
-                for (var j = 0; j < folders.length; j++) {
-                    var folder = folders[j]
-                    if (folder.indexOf("sub-") === 0 && subjects.indexOf(folder) === -1) {
-                        subjects.push(folder)
-                    }
-                }
-            }
-        }
-        
-        // 排序
-        subjects.sort()
-        return subjects
-    }
-
-    function startUnifiedImports(url, normalizedPath, subjectId) {
+    function startUnifiedImports(url, normalizedPath, subjectId, currentPatientId) {
         selectedOutputPath = normalizedPath
         outputDetailDir.text = normalizedPath
         currentSubjectId = subjectId
         detectOutputType(normalizedPath)
         resetBatchProgress()
-        completePreprocessStep()
         // 同步触发脑区分割与脑网络分析
         $DicomDataModel.loadSegBrainDirectory(url, subjectId)
-        $MainViewController.importBrainData(url, subjectId)
+        $MainViewController.importBrainData(url, subjectId, currentPatientId)
         // 默认展示分割结果预览
         segBtnMouseArea.clicked(Qt.LeftButton)
     }
@@ -131,8 +102,8 @@ Rectangle {
             var lastSlash = path.lastIndexOf("/")
             var baseDir = lastSlash >= 0 ? path.substring(0, lastSlash + 1) : path
             bidsDir.text = baseDir + "Bids"
-            outputDir.text = baseDir + "Output"
-            outputDetailDir.text = baseDir + "Output"
+            outputDir.text = baseDir + "Output" + "_" + Qt.formatDateTime(new Date(), "yyyyMMdd_HHmmss")
+            outputDetailDir.text = baseDir + "Output" + "_" + Qt.formatDateTime(new Date(), "yyyyMMdd_HHmmss")
         }
     }
     
@@ -175,61 +146,33 @@ Rectangle {
             outputDetailDir.text = path
             selectedOutputPath = path
             
-            // 检测输出类型
-            detectOutputType(path)
-            
-            // 扫描 sub-* 文件夹
-            var subjects = scanSubjectsInOutput(path)
-            subjectsList = subjects
-            patientComboBox.model = subjects
-            if(patientComboBox.model.length > 0){
-                patientComboBox.selectedText = subjects[0]
-                patientComboBox.selectedIndices = [0]
-                patientComboBox.selectionChanged([0], [subjects[0]])
-            }else if(subjects.length === 0){
+            // 读取 metadata.json 文件
+            var metadata = $MainViewController.readMetadataFile(path)
+            if (metadata && metadata.subjects && metadata.subjects.length > 0) {
+                subjectsMetadata = metadata.subjects
+                // 生成显示列表：patientName(patientId)
+                var displayList = []
+                for (var i = 0; i < metadata.subjects.length; i++) {
+                    var sub = metadata.subjects[i]
+                    displayList.push(sub.patientName + "(" + sub.patientId + ")")
+                }
+                subjectsList = displayList
+                patientComboBox.model = displayList
+                if (displayList.length > 0) {
+                    patientComboBox.selectedText = displayList[0]
+                    patientComboBox.selectedIndices = [0]
+                    // 使用 subjectId 触发选择变更
+                    currentSubjectId = subjectsMetadata[0].subjectId
+                    var subjectUrl = "file:///" + path
+                    $MainViewController.loadBrainAgePredictions(path)
+                    startUnifiedImports(subjectUrl, path, currentSubjectId, subjectsMetadata[0].patientId)
+                }
+            } else {
+                subjectsMetadata = []
+                subjectsList = []
+                patientComboBox.model = []
                 messageManager.warning(qsTr("未在该文件夹中找到被试数据"), 2000)
             }
-        }
-    }
-    FileDialog {
-        id: niiGzDialog
-        title: "选择 NII.GZ 文件"
-        selectMultiple: false
-        // 确保是文件选择模式
-        selectFolder: false
-        nameFilters: ["NIfTI Files (*.nii.gz)", "All Files (*)"]
-        onAccepted: {
-            if (fileUrls.length === 0)
-                return
-
-            var url = fileUrls[0].toString()
-            var path = url
-            if (path.startsWith("file:///")) {
-                path = path.substring("file:///".length)
-            }
-            // 统一为正斜杠，方便字符串处理
-            path = path.replace(/\\/g, "/")
-            brainAgePath.text = path;
-        }
-    }
-
-    FileDialog {
-        id: dcmFolderDialog
-        title: "选择 DCM 文件夹"
-        // 确保是文件夹选择模式
-        selectFolder: true
-        onAccepted: {
-            if (fileUrls.length === 0)
-                return
-
-            var url = fileUrls[0].toString()
-            var path = url
-            if (path.startsWith("file:///")) {
-                path = path.substring("file:///".length)
-            }
-            // 统一为正斜杠，方便字符串处理
-            path = path.replace(/\\/g, "/")
-            brainAgePath.text = path;
         }
     }
 
@@ -272,15 +215,16 @@ Rectangle {
         Rectangle {
             anchors.centerIn: parent
             width: 460
-            height: 260
+            height: processCol.height
             color: "#2a2a2a"
             border.color: "#0078d4"
             border.width: 2
             radius: 10
             
             Column {
-                anchors.fill: parent
-                anchors.margins: 20
+                id: processCol
+                width: parent.width
+                padding: 20
                 spacing: 18
                 
                 Label {
@@ -298,50 +242,31 @@ Rectangle {
 
                     Row {
                         spacing: 10
-                        width: parent.width
-                        Label { text: qsTr("预处理结果"); color: "#ffffff"; font.pixelSize: 14; width: 110 }
-                        ProgressBar {
-                            id: preprocessBar
-                            from: 0; to: 100
-                            indeterminate: !preprocessDone && preprocessProgress === 0
-                            value: preprocessProgress
-                            width: parent.width - 130
-                        }
-                    }
-
-                    Row {
-                        spacing: 10
-                        width: parent.width
-                        Label { text: qsTr("脑区分割"); color: "#ffffff"; font.pixelSize: 14; width: 110 }
+                        width: parent.width - 40
+                        Label { text: qsTr("脑区分割"); color: "#ffffff"; font.pixelSize: 16; width: 110 }
                         ProgressBar {
                             id: segBar
                             from: 0; to: 100
                             indeterminate: !segmentationDone && segmentationProgress === 0
                             value: segmentationProgress
                             width: parent.width - 130
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                     }
 
                     Row {
                         spacing: 10
-                        width: parent.width
-                        Label { text: qsTr("脑网络分析"); color: "#ffffff"; font.pixelSize: 14; width: 110 }
+                        width: parent.width - 40
+                        Label { text: qsTr("脑网络分析"); color: "#ffffff"; font.pixelSize: 16; width: 110 }
                         ProgressBar {
                             id: netBar
                             from: 0; to: 100
                             indeterminate: networkIndeterminate
                             value: networkProgress
                             width: parent.width - 130
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                     }
-                }
-                Label {
-                    width: parent.width
-                    text: qsTr("请等待三个步骤全部完成后继续操作")
-                    color: "#cccccc"
-                    font.pixelSize: 12
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.WordWrap
                 }
             }
         }
@@ -766,7 +691,7 @@ Rectangle {
                 id: brainSegmentationContainer
                 width: parent.width
                 height: midPanel.height - 16 - 60
-                visible: currentIndex === 2
+                visible: currentIndex === 2 || currentIndex === 4
             }
             Rectangle{
                 id: networkMain
@@ -835,220 +760,79 @@ Rectangle {
                     }
                 }
             }
-            Rectangle{
-                id: aiAnalysisContainer
-                width: parent.width
-                height: midPanel.height - 16 - 60
-                visible: currentIndex === 4
-                color: "transparent"
-                Rectangle{
-                    anchors.left: parent.left
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    anchors.right: aiRightOperatePanel.left
-                    color: "#030D1F"
-                    radius: 12
-                    Column{
-                        width: Math.max(uploadPicture.width, aiButtonGroup.width)
-                        spacing: 48
-                        anchors.centerIn: parent
-                        Image{
-                            id: uploadPicture
-                            width: 306
-                            height: 306
-                            source: "qrc:/image/uploadGif/000.png"
-                            anchors.horizontalCenter: parent.horizontalCenter
-                        }
-                        Label{
-                            id:brainAgePath
-                            text: qsTr("")
-                            color: "#ffffff"
-                            font.pixelSize: 16
-                            visible: text !== ""
-                            width: parent.width - 20
-                            elide: Text.ElideMiddle
-                            onTextChanged: {
-                                // 当重新导入文件时，重置分析结果
-                                if(text !== "") {
-                                    $MainViewController.predictedBrainAge = 0.0
-                                }
-                            }
-                        }
-                        Row{
-                            id: aiButtonGroup
-                            height: 48
-                            spacing: 10
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            CustomButton{
-                                fontSize: 18
-                                text: qsTr("导入nii.gz")
-                                radius: 4
-                                iconSource: "qrc:/image/picture.png"
-                                width: 188
-                                height: 48
-                                onClicked: {
-                                    niiGzDialog.open()
-                                }
-                            }
-                            CustomButton{
-                                fontSize: 16
-                                text: qsTr("导入dcm文件夹")
-                                radius: 4
-                                backgroundColor: "#293C7EFF"
-                                borderColor: "#3C7EFF"
-                                borderWidth: 1
-                                iconSource: "qrc:/image/fold.png"
-                                width: 188
-                                height: 48
-                                onClicked: {
-                                    dcmFolderDialog.open()
-                                }
-                            }
-                        }
-                    }
-                }
-                Rectangle{
-                    id: aiRightOperatePanel
-                    width: 420
-                    color: "transparent"
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    anchors.right: parent.right
-                    Column{
-                        width: parent.width
-                        spacing: 32
-                        anchors.centerIn: parent
-                        Image{
-                            id: analyzePicture
-                            width: 320
-                            height: 320
-                            source: "qrc:/image/brainAgeAnalyze/" + (brainAgeAnimationIndex < 10 ? "00" : brainAgeAnimationIndex < 100 ? "0" : "") + brainAgeAnimationIndex + ".png"
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            
-                            property int brainAgeAnimationIndex: 0
-                            
-                            Timer {
-                                id: brainAgeAnimationTimer
-                                interval: 50
-                                running: $MainViewController.brainAgeProcessing
-                                repeat: true
-                                onTriggered: {
-                                    analyzePicture.brainAgeAnimationIndex = (analyzePicture.brainAgeAnimationIndex + 1) % 150
-                                }
-                            }
-                            
-                            Image{
-                                id: startAnalyzeBtn
-                                anchors.centerIn: parent
-                                source: "qrc:/image/startAnalyzeBtn.png"
-                                visible: !$MainViewController.brainAgeProcessing && $MainViewController.predictedBrainAge <= 0
-                                MouseArea{
-                                    id: analyzeArea
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onPressed: parent.scale = 0.95
-                                    onReleased: parent.scale = 1
-                                    onEntered: parent.scale = 1.05
-                                    onExited: parent.scale = 1
-                                    onClicked: {
-                                        if(brainAgePath.text !== ""){
-                                            $MainViewController.startAnalysisBrainAge(brainAgePath.text, preprocessCheckBox.checked)
-                                        }else{
-                                            messageManager.error("请先选择文件！")
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            // 分析结果显示
-                            Column {
-                                anchors.centerIn: parent
-                                visible: $MainViewController.predictedBrainAge > 0
-                                spacing: 2
-                                Label {
-                                    text: qsTr("预测年龄")
-                                    color: "#ffffff"
-                                    font.pixelSize: 18
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                }
-                                Label {
-                                    text: $MainViewController.predictedBrainAge.toFixed() + " 岁"
-                                    color: "#FFFFFF"
-                                    font.pixelSize: 40
-                                    font.weight: Font.Bold
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                }
-                            }
-                        }
-                        Column{
-                            width: parent.width
-                            height: aiInfoRow1.height + aiInfoRow2.height + 10
-                            spacing: 10
-                            Row{
-                                id: aiInfoRow1
-                                height: 30
-                                spacing: 5
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                CheckBox {
-                                    id: preprocessCheckBox
-                                    checked: true
-                                    width: 16
-                                    height: 16
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    indicator: Rectangle {
-                                        implicitWidth: 16
-                                        implicitHeight: 16
-                                        radius: 4
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        border.color: preprocessCheckBox.checked ? "#006BFF" : "#40000000"
-                                        border.width: 1
-                                        color: preprocessCheckBox.checked ? "#006BFF" : "#ffffff"
-
-                                        Image{
-                                            source: "qrc:/image/vector.png"
-                                            anchors.centerIn: parent
-                                            visible: preprocessCheckBox.checked
-                                        }
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: preprocessCheckBox.checked = !preprocessCheckBox.checked
-                                        }
-                                    }
-                                }
-                                Label{
-                                    text: qsTr("去颅骨+与标准空间对齐")
-                                    color: "#ffffff"
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    MouseArea {
-                                        anchors.fill: parent
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: preprocessCheckBox.checked = !preprocessCheckBox.checked
-                                    }
-                                }
-                            }
-                            Row{
-                                id: aiInfoRow2
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                height: 16
-                                spacing: 4
-                                visible: !preprocessCheckBox.checked
-                                Image{
-                                    source: "qrc:/image/warning.png"
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                                Label{
-                                    text: qsTr("不进行预处理的数据可能会导致模型预测结果误差过大！")
-                                    color: "#B2FFFFFF"
-                                    font.pixelSize: 14
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            // Rectangle{
+            //     id: aiAnalysisContainer
+            //     width: parent.width
+            //     height: midPanel.height - 16 - 60
+            //     visible: currentIndex === 4
+            //     color: "transparent"
+            //     Rectangle{
+            //         anchors.left: parent.left
+            //         anchors.top: parent.top
+            //         anchors.bottom: parent.bottom
+            //         anchors.right: aiRightOperatePanel.left
+            //         color: "#030D1F"
+            //         radius: 12
+            //         Column{
+            //             width: Math.max(uploadPicture.width, aiButtonGroup.width)
+            //             spacing: 48
+            //             anchors.centerIn: parent
+            //             Image{
+            //                 id: uploadPicture
+            //                 width: 306
+            //                 height: 306
+            //                 source: "qrc:/image/uploadGif/000.png"
+            //                 anchors.horizontalCenter: parent.horizontalCenter
+            //             }
+            //             Label{
+            //                 id:brainAgePath
+            //                 text: qsTr("")
+            //                 color: "#ffffff"
+            //                 font.pixelSize: 16
+            //                 visible: text !== ""
+            //                 width: parent.width - 20
+            //                 elide: Text.ElideMiddle
+            //                 onTextChanged: {
+            //                     // 当重新导入文件时，重置分析结果
+            //                     if(text !== "") {
+            //                         $MainViewController.predictedBrainAge = 0.0
+            //                     }
+            //                 }
+            //             }
+            //             Row{
+            //                 id: aiButtonGroup
+            //                 height: 48
+            //                 spacing: 10
+            //                 anchors.horizontalCenter: parent.horizontalCenter
+            //                 CustomButton{
+            //                     fontSize: 18
+            //                     text: qsTr("导入nii.gz")
+            //                     radius: 4
+            //                     iconSource: "qrc:/image/picture.png"
+            //                     width: 188
+            //                     height: 48
+            //                     onClicked: {
+            //                         niiGzDialog.open()
+            //                     }
+            //                 }
+            //                 CustomButton{
+            //                     fontSize: 16
+            //                     text: qsTr("导入dcm文件夹")
+            //                     radius: 4
+            //                     backgroundColor: "#293C7EFF"
+            //                     borderColor: "#3C7EFF"
+            //                     borderWidth: 1
+            //                     iconSource: "qrc:/image/fold.png"
+            //                     width: 188
+            //                     height: 48
+            //                     onClicked: {
+            //                         dcmFolderDialog.open()
+            //                     }
+            //                 }
+            //             }
+            //         }
+            //     }
+            // }
             Rectangle{
                 id: generateReportContainer
                 width: parent.width
@@ -1296,7 +1080,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.top: parent.top
-        width: (rightPanelExpanded && (currentIndex !== 4 && currentIndex !== 5)) ? ((currentIndex === 2 || currentIndex === 3) ? 500 : 400) : 0
+        width: (rightPanelExpanded && currentIndex !== 5) ? ((currentIndex === 2 || currentIndex === 3) ? 500 : 400) : 0
         visible: width > 0
         Behavior on width {
             NumberAnimation { duration: 300; easing.type: Easing.InOutQuad }
@@ -1318,7 +1102,7 @@ Rectangle {
             clip: true
             
             property int currentTabIndex: 0
-            
+
             Column{
                 width: parent.width
                 spacing: 16
@@ -2462,13 +2246,13 @@ Rectangle {
                             width: preDetailCol.width - label6.width - 10
                             model: []
                             onSelectionChanged: {
-                                var subjectId = selectedItems[0]
-                                if (outputDetailDir.text !== "") {
-                                    currentSubjectId = subjectId
+                                // 通过索引从 subjectsMetadata 获取对应的 subjectId
+                                var selectedIndex = selectedIndices[0]
+                                if (outputDetailDir.text !== "" && subjectsMetadata.length > selectedIndex) {
+                                    currentSubjectId = subjectsMetadata[selectedIndex].subjectId
                                     var path = outputDetailDir.text
                                     var subjectUrl = "file:///" + path
-                                    detectOutputType(path)
-                                    startUnifiedImports(subjectUrl, path, currentSubjectId)
+                                    startUnifiedImports(subjectUrl, path, currentSubjectId, subjectsMetadata[selectedIndex].patientId)
                                 }
                             }
                         }
@@ -2488,25 +2272,38 @@ Rectangle {
                         width: btnText0.width + 40
                         height: 36
                         radius: 24
-                        color: "transparent"
+                        border.width: 1
+                        border.color: preShowResultIndex === 0 ? "#3C7EFF" : "#4DFFFFFF"
                         property bool isHovered: false
+                        property bool isSelected: preShowResultIndex === 0
                         
-                        Image {
-                            id: btnImg0
-                            anchors.fill: parent
-                            source: preShowResultIndex === 0 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
-                            opacity: segmentationBtn.isHovered ? 0.8 : 1.0
-                            
-                            Behavior on opacity {
-                                NumberAnimation { duration: 200 }
+                        gradient: Gradient {
+                            orientation: Gradient.Vertical
+                            GradientStop { 
+                                position: 1.0
+                                color: segmentationBtn.isSelected ? "#223D7C" : Qt.rgba(1, 1, 1, 0.04)
                             }
+                            GradientStop { 
+                                position: 0.49
+                                color: segmentationBtn.isSelected ? Qt.rgba(1/255, 34/255, 109/255, 0.8) : Qt.rgba(1, 1, 1, 0.15)
+                            }
+                            GradientStop { 
+                                position: 0.0
+                                color: segmentationBtn.isSelected ? "#223D7C" : Qt.rgba(1, 1, 1, 0.4)
+                            }
+                        }
+                        
+                        opacity: segmentationBtn.isHovered ? 0.8 : 1.0
+                        
+                        Behavior on opacity {
+                            NumberAnimation { duration: 200 }
                         }
                         
                         Text {
                             id: btnText0
                             anchors.centerIn: parent
                             text: qsTr("分割")
-                            color: "#B2FFFFFF"
+                            color: segmentationBtn.isSelected ? "#FFFFFF" : "#B2FFFFFF"
                             font.pixelSize: 14
                             font.family: "Alibaba PuHuiTi 3.0"
                         }
@@ -2536,25 +2333,38 @@ Rectangle {
                         width: btnText1.width + 40
                         height: 36
                         radius: 24
-                        color: "transparent"
+                        border.width: 1
+                        border.color: preShowResultIndex === 1 ? "#3C7EFF" : "#4DFFFFFF"
                         property bool isHovered: false
+                        property bool isSelected: preShowResultIndex === 1
                         
-                        Image {
-                            id: btnImg1
-                            anchors.fill: parent
-                            source: preShowResultIndex === 1 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
-                            opacity: regBtn.isHovered ? 0.8 : 1.0
-                            
-                            Behavior on opacity {
-                                NumberAnimation { duration: 200 }
+                        gradient: Gradient {
+                            orientation: Gradient.Vertical
+                            GradientStop { 
+                                position: 1.0
+                                color: regBtn.isSelected ? "#223D7C" : Qt.rgba(1, 1, 1, 0.04)
                             }
+                            GradientStop { 
+                                position: 0.49
+                                color: regBtn.isSelected ? Qt.rgba(1/255, 34/255, 109/255, 0.8) : Qt.rgba(1, 1, 1, 0.15)
+                            }
+                            GradientStop { 
+                                position: 0.0
+                                color: regBtn.isSelected ? "#223D7C" : Qt.rgba(1, 1, 1, 0.4)
+                            }
+                        }
+                        
+                        opacity: regBtn.isHovered ? 0.8 : 1.0
+                        
+                        Behavior on opacity {
+                            NumberAnimation { duration: 200 }
                         }
                         
                         Text {
                             id: btnText1
                             anchors.centerIn: parent
                             text: qsTr("配准")
-                            color: "#B2FFFFFF"
+                            color: regBtn.isSelected ? "#FFFFFF" : "#B2FFFFFF"
                             font.pixelSize: 14
                             font.family: "Alibaba PuHuiTi 3.0"
                         }
@@ -2593,25 +2403,38 @@ Rectangle {
                         width: btnText2.width + 40
                         height: 36
                         radius: 24
-                        color: "transparent"
+                        border.width: 1
+                        border.color: preShowResultIndex === 2 ? "#3C7EFF" : "#4DFFFFFF"
                         property bool isHovered: false
+                        property bool isSelected: preShowResultIndex === 2
                         
-                        Image {
-                            id: btnImg2
-                            anchors.fill: parent
-                            source: preShowResultIndex === 2 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
-                            opacity: mniBtn.isHovered ? 0.8 : 1.0
-                            
-                            Behavior on opacity {
-                                NumberAnimation { duration: 200 }
+                        gradient: Gradient {
+                            orientation: Gradient.Vertical
+                            GradientStop { 
+                                position: 1.0
+                                color: mniBtn.isSelected ? "#223D7C" : Qt.rgba(1, 1, 1, 0.04)
                             }
+                            GradientStop { 
+                                position: 0.49
+                                color: mniBtn.isSelected ? Qt.rgba(1/255, 34/255, 109/255, 0.8) : Qt.rgba(1, 1, 1, 0.15)
+                            }
+                            GradientStop { 
+                                position: 0.0
+                                color: mniBtn.isSelected ? "#223D7C" : Qt.rgba(1, 1, 1, 0.4)
+                            }
+                        }
+                        
+                        opacity: mniBtn.isHovered ? 0.8 : 1.0
+                        
+                        Behavior on opacity {
+                            NumberAnimation { duration: 200 }
                         }
                         
                         Text {
                             id: btnText2
                             anchors.centerIn: parent
                             text: qsTr("MN152NLin2009cAsym")
-                            color: "#B2FFFFFF"
+                            color: mniBtn.isSelected ? "#FFFFFF" : "#B2FFFFFF"
                             font.pixelSize: 14
                             font.family: "Alibaba PuHuiTi 3.0"
                         }
@@ -2650,25 +2473,38 @@ Rectangle {
                         width: btnText3.width + 40
                         height: 36
                         radius: 24
-                        color: "transparent"
+                        border.width: 1
+                        border.color: preShowResultIndex === 3 ? "#3C7EFF" : "#4DFFFFFF"
                         property bool isHovered: false
+                        property bool isSelected: preShowResultIndex === 3
                         
-                        Image {
-                            id: btnImg3
-                            anchors.fill: parent
-                            source: preShowResultIndex === 3 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
-                            opacity: t1FunBtn.isHovered ? 0.8 : 1.0
-                            
-                            Behavior on opacity {
-                                NumberAnimation { duration: 200 }
+                        gradient: Gradient {
+                            orientation: Gradient.Vertical
+                            GradientStop { 
+                                position: 1.0
+                                color: t1FunBtn.isSelected ? "#223D7C" : Qt.rgba(1, 1, 1, 0.04)
                             }
+                            GradientStop { 
+                                position: 0.49
+                                color: t1FunBtn.isSelected ? Qt.rgba(1/255, 34/255, 109/255, 0.8) : Qt.rgba(1, 1, 1, 0.15)
+                            }
+                            GradientStop { 
+                                position: 0.0
+                                color: t1FunBtn.isSelected ? "#223D7C" : Qt.rgba(1, 1, 1, 0.4)
+                            }
+                        }
+                        
+                        opacity: t1FunBtn.isHovered ? 0.8 : 1.0
+                        
+                        Behavior on opacity {
+                            NumberAnimation { duration: 200 }
                         }
                         
                         Text {
                             id: btnText3
                             anchors.centerIn: parent
                             text: qsTr("T1 to Fun")
-                            color: "#B2FFFFFF"
+                            color: t1FunBtn.isSelected ? "#FFFFFF" : "#B2FFFFFF"
                             font.pixelSize: 14
                             font.family: "Alibaba PuHuiTi 3.0"
                         }
@@ -2697,25 +2533,38 @@ Rectangle {
                         width: btnText4.width + 40
                         height: 36
                         radius: 24
-                        color: "transparent"
+                        border.width: 1
+                        border.color: preShowResultIndex === 4 ? "#3C7EFF" : "#4DFFFFFF"
                         property bool isHovered: false
+                        property bool isSelected: preShowResultIndex === 4
                         
-                        Image {
-                            id: btnImg4
-                            anchors.fill: parent
-                            source: preShowResultIndex === 4 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
-                            opacity: boldBtn.isHovered ? 0.8 : 1.0
-                            
-                            Behavior on opacity {
-                                NumberAnimation { duration: 200 }
+                        gradient: Gradient {
+                            orientation: Gradient.Vertical
+                            GradientStop { 
+                                position: 1.0
+                                color: boldBtn.isSelected ? "#223D7C" : Qt.rgba(1, 1, 1, 0.04)
                             }
+                            GradientStop { 
+                                position: 0.49
+                                color: boldBtn.isSelected ? Qt.rgba(1/255, 34/255, 109/255, 0.8) : Qt.rgba(1, 1, 1, 0.15)
+                            }
+                            GradientStop { 
+                                position: 0.0
+                                color: boldBtn.isSelected ? "#223D7C" : Qt.rgba(1, 1, 1, 0.4)
+                            }
+                        }
+                        
+                        opacity: boldBtn.isHovered ? 0.8 : 1.0
+                        
+                        Behavior on opacity {
+                            NumberAnimation { duration: 200 }
                         }
                         
                         Text {
                             id: btnText4
                             anchors.centerIn: parent
                             text: qsTr("BOLD总结")
-                            color: "#B2FFFFFF"
+                            color: boldBtn.isSelected ? "#FFFFFF" : "#B2FFFFFF"
                             font.pixelSize: 14
                             font.family: "Alibaba PuHuiTi 3.0"
                         }
@@ -2754,25 +2603,38 @@ Rectangle {
                         width: btnText5.width + 40
                         height: 36
                         radius: 24
-                        color: "transparent"
+                        border.width: 1
+                        border.color: preShowResultIndex === 5 ? "#3C7EFF" : "#4DFFFFFF"
                         property bool isHovered: false
+                        property bool isSelected: preShowResultIndex === 5
                         
-                        Image {
-                            id: btnImg5
-                            anchors.fill: parent
-                            source: preShowResultIndex === 5 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
-                            opacity: corticalBtn.isHovered ? 0.8 : 1.0
-                            
-                            Behavior on opacity {
-                                NumberAnimation { duration: 200 }
+                        gradient: Gradient {
+                            orientation: Gradient.Vertical
+                            GradientStop { 
+                                position: 1.0
+                                color: corticalBtn.isSelected ? "#223D7C" : Qt.rgba(1, 1, 1, 0.04)
                             }
+                            GradientStop { 
+                                position: 0.49
+                                color: corticalBtn.isSelected ? Qt.rgba(1/255, 34/255, 109/255, 0.8) : Qt.rgba(1, 1, 1, 0.15)
+                            }
+                            GradientStop { 
+                                position: 0.0
+                                color: corticalBtn.isSelected ? "#223D7C" : Qt.rgba(1, 1, 1, 0.4)
+                            }
+                        }
+                        
+                        opacity: corticalBtn.isHovered ? 0.8 : 1.0
+                        
+                        Behavior on opacity {
+                            NumberAnimation { duration: 200 }
                         }
                         
                         Text {
                             id: btnText5
                             anchors.centerIn: parent
                             text: isDeepprepOutput ? qsTr("皮层表面") : qsTr("CompCor脑区")
-                            color: "#B2FFFFFF"
+                            color: corticalBtn.isSelected ? "#FFFFFF" : "#B2FFFFFF"
                             font.pixelSize: 14
                             font.family: "Alibaba PuHuiTi 3.0"
                         }
@@ -2801,25 +2663,38 @@ Rectangle {
                         width: btnText6.width + 40
                         height: 36
                         radius: 24
-                        color: "transparent"
+                        border.width: 1
+                        border.color: preShowResultIndex === 6 ? "#3C7EFF" : "#4DFFFFFF"
                         property bool isHovered: false
+                        property bool isSelected: preShowResultIndex === 6
                         
-                        Image {
-                            id: btnImg6
-                            anchors.fill: parent
-                            source: preShowResultIndex === 6 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
-                            opacity: tsnrBtn.isHovered ? 0.8 : 1.0
-                            
-                            Behavior on opacity {
-                                NumberAnimation { duration: 200 }
+                        gradient: Gradient {
+                            orientation: Gradient.Vertical
+                            GradientStop { 
+                                position: 1.0
+                                color: tsnrBtn.isSelected ? "#223D7C" : Qt.rgba(1, 1, 1, 0.04)
                             }
+                            GradientStop { 
+                                position: 0.49
+                                color: tsnrBtn.isSelected ? Qt.rgba(1/255, 34/255, 109/255, 0.8) : Qt.rgba(1, 1, 1, 0.15)
+                            }
+                            GradientStop { 
+                                position: 0.0
+                                color: tsnrBtn.isSelected ? "#223D7C" : Qt.rgba(1, 1, 1, 0.4)
+                            }
+                        }
+                        
+                        opacity: tsnrBtn.isHovered ? 0.8 : 1.0
+                        
+                        Behavior on opacity {
+                            NumberAnimation { duration: 200 }
                         }
                         
                         Text {
                             id: btnText6
                             anchors.centerIn: parent
                             text: isDeepprepOutput ? qsTr("时间信噪比") : qsTr("方差")
-                            color: "#B2FFFFFF"
+                            color: tsnrBtn.isSelected ? "#FFFFFF" : "#B2FFFFFF"
                             font.pixelSize: 14
                             font.family: "Alibaba PuHuiTi 3.0"
                         }
@@ -2848,24 +2723,38 @@ Rectangle {
                         width: btnText7.width + 40
                         height: 36
                         radius: 24
-                        color: "transparent"
+                        border.width: 1
+                        border.color: preShowResultIndex === 7 ? "#3C7EFF" : "#4DFFFFFF"
                         property bool isHovered: false
+                        property bool isSelected: preShowResultIndex === 7
                         
-                        Image {
-                            id: btnImg7
-                            anchors.fill: parent
-                            source: preShowResultIndex === 7 ? "qrc:/image/preBtnBackgroundSelected.png" : "qrc:/image/preBtnBackground.png"
-                            opacity: surfaceBtn.isHovered ? 0.8 : 1.0
-                            Behavior on opacity {
-                                NumberAnimation { duration: 200 }
+                        gradient: Gradient {
+                            orientation: Gradient.Vertical
+                            GradientStop { 
+                                position: 1.0
+                                color: surfaceBtn.isSelected ? "#223D7C" : Qt.rgba(1, 1, 1, 0.04)
                             }
+                            GradientStop { 
+                                position: 0.49
+                                color: surfaceBtn.isSelected ? Qt.rgba(1/255, 34/255, 109/255, 0.8) : Qt.rgba(1, 1, 1, 0.15)
+                            }
+                            GradientStop { 
+                                position: 0.0
+                                color: surfaceBtn.isSelected ? "#223D7C" : Qt.rgba(1, 1, 1, 0.4)
+                            }
+                        }
+                        
+                        opacity: surfaceBtn.isHovered ? 0.8 : 1.0
+                        
+                        Behavior on opacity {
+                            NumberAnimation { duration: 200 }
                         }
                         
                         Text {
                             id: btnText7
                             anchors.centerIn: parent
                             text: isDeepprepOutput ? qsTr("表面重建") : qsTr("干扰回归变量相关性")
-                            color: "#B2FFFFFF"
+                            color: surfaceBtn.isSelected ? "#FFFFFF" : "#B2FFFFFF"
                             font.pixelSize: 14
                             font.family: "Alibaba PuHuiTi 3.0"
                         }
@@ -3727,6 +3616,58 @@ Rectangle {
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+        Rectangle{
+            id: aiRightOperatePanel
+            anchors.fill: parent
+            anchors.rightMargin: 16
+            anchors.leftMargin: 16
+            anchors.topMargin: 22
+            anchors.bottomMargin: 22
+            color: "transparent"
+            visible: currentIndex === 4
+            clip: true
+            Column{
+                width: parent.width
+                spacing: 32
+                anchors.centerIn: parent
+                Image{
+                    id: analyzePicture
+                    width: 320
+                    height: 320
+                    source: "qrc:/image/brainAgeAnalyze/000.png"
+                    anchors.horizontalCenter: parent.horizontalCenter
+
+                    Text{
+                        anchors.centerIn: parent
+                        text: qsTr("请先上传数据")
+                        font.pixelSize: 16
+                        font.weight: Font.Bold
+                        color: "#ffffff"
+                        visible: !$MainViewController.brainAgeProcessing && $MainViewController.predictedBrainAge <= 0
+                    }
+
+                    // 分析结果显示
+                    Column {
+                        anchors.centerIn: parent
+                        visible: $MainViewController.predictedBrainAge > 0
+                        spacing: 2
+                        Label {
+                            text: qsTr("预测年龄")
+                            color: "#ffffff"
+                            font.pixelSize: 18
+                            anchors.horizontalCenter: parent.horizontalCenter
+                        }
+                        Label {
+                            text: $MainViewController.predictedBrainAge.toFixed() + " 岁"
+                            color: "#FFFFFF"
+                            font.pixelSize: 40
+                            font.weight: Font.Bold
+                            anchors.horizontalCenter: parent.horizontalCenter
                         }
                     }
                 }

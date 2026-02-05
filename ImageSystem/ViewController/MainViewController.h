@@ -32,6 +32,7 @@
 #include <QTimer.h>
 #include <QPointer.h>
 #include <QFile.h>
+#include <QMap>
 #include <vtkAxisActor2D.h>
 #include <vtkProperty2D.h>
 #include <memory>
@@ -79,13 +80,12 @@ class MainViewController : public QObject
         QUICK_PROPERTY(bool, isPreAnalysisRunning)
 public:
     Q_INVOKABLE void calculateKidney();
-    Q_INVOKABLE void importBrainData(const QString& url, const QString& subjectId = "sub-01");
+    Q_INVOKABLE void importBrainData(const QString& url, const QString& subjectId = "sub-01", const QString& patientId = "sub-01");
     Q_INVOKABLE void selectBrainRegion(int row);
     Q_INVOKABLE void scanFolder(const QString& inputDir);
     Q_INVOKABLE void startPreAnalysis(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile);
     Q_INVOKABLE void stopFmriprepProcess();
     Q_INVOKABLE void stopDeepprepProcess();
-    Q_INVOKABLE void startAnalysisBrainAge(const QString& path, bool preprocess);
     Q_INVOKABLE void generatePdfReport(const QString& savePath);
     Q_INVOKABLE bool isDeepprepOutput(const QString& outputPath);
     Q_INVOKABLE void updateAnnotationText(int orientation, int index, const QString& text);
@@ -98,6 +98,9 @@ public:
     Q_INVOKABLE QString estimateProcessingTime(int method, int subjectCount);
     Q_PROPERTY(QString preAnalysisLog READ preAnalysisLog NOTIFY preAnalysisLogUpdated)
         QString preAnalysisLog() const { return m_preAnalysisLog; }
+    Q_INVOKABLE QVariantMap readMetadataFile(const QString& outputDir);
+    // 读取脑龄预测CSV文件
+    Q_INVOKABLE bool loadBrainAgePredictions(const QString& basePath);
     // 获取表格模型
     BrainRegionTableModel* getBrainRegionTableModel() const;
     BrainSegmentationTableModel* getBrainSegmentationTableModel() const;
@@ -127,11 +130,11 @@ private:
     
     // 映射文件相关
     void writeMetadataFile(const QString& outputDir, const QList<MriPairResult>& pairs);
-    QVariantMap readMetadataFile(const QString& outputDir);
     
     void appendPreAnalysisLog(const QString& text);  // 追加统一预分析日志
     void clearPreAnalysisLog();                       // 清空统一预分析日志
     void setupDockerPrepRunner();    // 初始化 DockerPrepRunner
+    void startBatchBrainAgePrediction(const QList<MriPairResult>& results, const QString& outputDir);  // 批量脑龄预测
     BidsConverter* m_bidsConverter;
     BrainRegionTableModel* m_brainRegionTableModel;
     BrainSegmentationTableModel* m_brainSegmentationTableModel;
@@ -161,5 +164,11 @@ private:
     // 统一预分析日志
     QString m_preAnalysisLog;
     QTimer* m_preAnalysisLogUpdateTimer = nullptr;  // 节流Timer
+    
+    // 脑龄预测数据缓存（subjectId -> predictedAge）
+    QMap<QString, double> m_brainAgePredictions;
+    QString m_currentBrainAgeDataPath;  // 当前加载的脑龄数据路径
+    
+    
 };
 

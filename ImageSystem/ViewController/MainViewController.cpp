@@ -564,7 +564,84 @@ void MainViewController::calculateKidney() {
     process->start(pythonPath, arguments);
 }
 
-void MainViewController::importBrainData(const QString& url, const QString& subjectId)
+bool MainViewController::loadBrainAgePredictions(const QString& basePath)
+{
+    QString dirPath = basePath;
+    if (dirPath.startsWith("file:///")) {
+        dirPath = dirPath.mid(8);
+    }
+
+    // 检查是否已经加载过相同路径的数据
+    if (m_currentBrainAgeDataPath == basePath && !m_brainAgePredictions.isEmpty()) {
+        return true;
+    }
+    
+    // 查找 BatchPrediction.csv 文件
+    QString csvPath = basePath + "/BatchPrediction.csv";
+    QFile file(csvPath);
+    
+    if (!file.exists()) {
+        qDebug() << QStringLiteral("脑龄预测文件不存在:") << csvPath;
+        return false;
+    }
+    
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qDebug() << QStringLiteral("无法打开脑龄预测文件:") << csvPath;
+        return false;
+    }
+    
+    m_brainAgePredictions.clear();
+    m_currentBrainAgeDataPath = basePath;
+    
+    QTextStream in(&file);
+    bool isHeader = true;
+    int idColumn = -1;
+    int ageColumn = -1;
+    
+    while (!in.atEnd()) {
+        QString line = in.readLine().trimmed();
+        if (line.isEmpty()) continue;
+        
+        QStringList fields = line.split(',');
+        
+        if (isHeader) {
+            // 解析表头，找到 ID 和 Pred_Age 列的位置
+            for (int i = 0; i < fields.size(); ++i) {
+                QString header = fields[i].trimmed().toLower();
+                if (header == "id") {
+                    idColumn = i;
+                } else if (header == "pred_age") {
+                    ageColumn = i;
+                }
+            }
+            isHeader = false;
+            
+            if (idColumn < 0 || ageColumn < 0) {
+                qDebug() << QStringLiteral("脑龄预测文件格式错误，未找到 ID 或 Pred_Age 列");
+                file.close();
+                return false;
+            }
+            continue;
+        }
+        
+        // 解析数据行
+        if (fields.size() > idColumn && fields.size() > ageColumn) {
+            QString id = fields[idColumn].trimmed();
+            bool ok;
+            double age = fields[ageColumn].trimmed().toDouble(&ok);
+            if (ok && !id.isEmpty()) {
+                m_brainAgePredictions[id] = age;
+                qDebug() << QStringLiteral("加载脑龄预测: %1 -> %2").arg(id).arg(age);
+            }
+        }
+    }
+    
+    file.close();
+    qDebug() << QStringLiteral("共加载 %1 条脑龄预测数据").arg(m_brainAgePredictions.size());
+    return !m_brainAgePredictions.isEmpty();
+}
+
+void MainViewController::importBrainData(const QString& url, const QString& subjectId, const QString& patientId)
 {
     if (url.isEmpty()) {
         qDebug() << QStringLiteral("路径为空");
@@ -586,6 +663,15 @@ void MainViewController::importBrainData(const QString& url, const QString& subj
         qDebug() << QStringLiteral("路径不存在: ") << dirPath;
         emit brainAnalysisFinished(false);
         return;
+    }
+    
+    // 根据 subjectId 查找对应的脑龄预测值
+    if (m_brainAgePredictions.contains(patientId)) {
+        double predictedAge = m_brainAgePredictions[patientId];
+        setpredictedBrainAge(predictedAge);
+        qDebug() << QStringLiteral("设置脑龄预测值: %1 -> %2").arg(patientId).arg(predictedAge);
+    } else {
+        qDebug() << QStringLiteral("未找到被试 %1 的脑龄预测数据").arg(patientId);
     }
     
     // ========== 逻辑一：检查是否存在完整的输出结果 ==========
@@ -741,113 +827,6 @@ BrainSegmentationTableModel* MainViewController::getBrainSegmentationTableModel(
 MriPairResultModel* MainViewController::getMriPairResultModel() const
 {
     return m_mriPairResultModel;
-}
-
-void MainViewController::startAnalysisBrainAge(const QString& path, bool preprocess)
-{
-    if (path.isEmpty()) {
-        qDebug() << QStringLiteral("路径为空");
-        return;
-    }
-
-    QString inputPath = path;
-    if (inputPath.startsWith("file:///")) {
-        inputPath = inputPath.mid(8);
-    }
-    inputPath = QDir::toNativeSeparators(inputPath);
-
-    if (!QFileInfo::exists(inputPath)) {
-        qDebug() << QStringLiteral("路径不存在: %1").arg(inputPath);
-        return;
-    }
-
-    // 清空上一次的结果
-    setpredictedBrainAge(0.0);
-    setbrainAgeProcessing(true);
-
-    const QString exePath = QStringLiteral("Scripts/brain_age.exe");
-    const QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
-    const QString outputPath = QStringLiteral("AppData/brain_age/Prediction_%1.csv").arg(timestamp);
-    const QString modelPath = QStringLiteral("Scripts/model/DBN_model.h5");
-    QStringList arguments;
-
-    arguments << "--input" << inputPath
-        << "--output" << outputPath
-        << "--model" << modelPath
-        << "--docker-image" << "deepbrain";
-    if (preprocess) {
-        arguments << "--preprocess";
-    }
-    QProcess* process = new QProcess(this);
-
-    connect(process, &QProcess::errorOccurred, this, [=](QProcess::ProcessError error) {
-        Q_UNUSED(error);
-        qDebug() << QStringLiteral("脑龄预测任务启动失败: %1").arg(process->errorString());
-        setbrainAgeProcessing(false);
-        process->deleteLater();
-    });
-
-    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-        [=](int exitCode, QProcess::ExitStatus exitStatus) {
-            const QString stdOut = QString::fromUtf8(process->readAllStandardOutput());
-            const QString stdErr = QString::fromUtf8(process->readAllStandardError());
-
-            if (exitStatus == QProcess::NormalExit && exitCode == 0) {
-                bool ok = false;
-                double predictedAge = 0.0;
-
-                // 优先从标准输出解析
-                QRegularExpression re(QStringLiteral("Pred_Age\\s*=\\s*([\\d\\.]+)"));
-                QRegularExpressionMatch match = re.match(stdOut);
-                if (match.hasMatch()) {
-                    predictedAge = match.captured(1).toDouble(&ok);
-                }
-
-                // 如果 stdout 没解析到，则尝试读取 csv
-                if (!ok) {
-                    QFile csvFile(outputPath);
-                    if (csvFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                        QTextStream ts(&csvFile);
-                        while (!ts.atEnd()) {
-                            const QString line = ts.readLine().trimmed();
-                            if (line.isEmpty() || line.toLower().startsWith("id"))
-                                continue;
-                            const QStringList parts = line.split(',', Qt::KeepEmptyParts);
-                            if (parts.size() >= 2) {
-                                QString ageStr = parts[1].trimmed();
-                                ageStr.remove('"');
-                                predictedAge = ageStr.toDouble(&ok);
-                                if (ok) break;
-                            }
-                        }
-                    }
-                }
-
-                if (ok) {
-                    setpredictedBrainAge(predictedAge);
-                    qDebug() << QStringLiteral("脑龄预测完成，Pred_Age =") << predictedAge;
-                } else {
-                    qDebug() << QStringLiteral("脑龄预测完成，但未能解析结果。\n输出文件: %1\n输出信息: %2")
-                                  .arg(outputPath, stdOut);
-                }
-
-                if (!stdErr.isEmpty()) {
-                    qWarning() << QStringLiteral("脑龄预测警告/错误输出:") << stdErr;
-                }
-            } else {
-                const QString errOutput = stdErr.isEmpty() ? process->errorString() : stdErr;
-                qDebug() << QStringLiteral("脑龄预测失败！\n错误代码: %1\n%2")
-                              .arg(exitCode)
-                              .arg(errOutput);
-            }
-
-            setbrainAgeProcessing(false);
-            process->deleteLater();
-        });
-
-    qDebug() << QStringLiteral("启动脑龄预测程序:") << exePath;
-    qDebug() << QStringLiteral("参数:") << arguments;
-    process->start(exePath, arguments);
 }
 
 void MainViewController::startPrepLogTimer(const QString& logFilePath)
@@ -2323,33 +2302,25 @@ void MainViewController::startPreAnalysis(int method, const QString& bidsPath, c
     // 保存当前正在处理的配对信息（用于成功后写元数据）
     m_currentProcessingPairs = checkedResults;
 
-    // 1. 生成带时间戳的输出路径
-    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
-    QString finalOutputPath = outputPath;
-    if (finalOutputPath.endsWith("/") || finalOutputPath.endsWith("\\")) {
-        finalOutputPath.chop(1);
-    }
-    finalOutputPath += "_" + timestamp;
-
     // 2. 判断目录状态
-    QDir dir(finalOutputPath);
+    QDir dir(outputPath);
     if (dir.exists()) {
         QStringList entries = dir.entryList(QDir::NoDotAndDotDot | QDir::AllEntries);
         if (!entries.isEmpty()) {
-            appendPreAnalysisLog(QStringLiteral("Warning: 输出目录已存在且不为空：%1\n").arg(finalOutputPath));
+            appendPreAnalysisLog(QStringLiteral("Warning: 输出目录已存在且不为空：%1\n").arg(outputPath));
         }
     }
     
     qDebug() << "Starting pre-analysis with" << checkedResults.size() << "selected pairs";
     qDebug() << "Method:" << (method == 0 ? "fmriprep" : "deepprep");
     qDebug() << "BIDS Path:" << bidsPath;
-    qDebug() << "Output Path:" << finalOutputPath;
+    qDebug() << "Output Path:" << outputPath;
     qDebug() << "License File:" << licenseFile;
     
     // 保存参数，用于BIDS转换完成后启动fmriprep/deepprep
     m_preAnalysisMethod = method;
     m_preAnalysisBidsPath = bidsPath;
-    m_preAnalysisOutputPath = finalOutputPath; // 使用带时间戳的路径
+    m_preAnalysisOutputPath = outputPath; // 使用带时间戳的路径
     m_preAnalysisLicenseFile = licenseFile;
     
     // 清空统一日志，准备显示
@@ -2361,8 +2332,12 @@ void MainViewController::startPreAnalysis(int method, const QString& bidsPath, c
     appendPreAnalysisLog(QStringLiteral("========== 开始预处理 ==========\n"));
     appendPreAnalysisLog(QStringLiteral("方法: %1\n").arg(methodName));
     appendPreAnalysisLog(QStringLiteral("BIDS 目录: %1\n").arg(bidsPath));
-    appendPreAnalysisLog(QStringLiteral("输出目录: %1\n").arg(finalOutputPath));
+    appendPreAnalysisLog(QStringLiteral("输出目录: %1\n").arg(outputPath));
     appendPreAnalysisLog(QStringLiteral("License 文件: %1\n\n").arg(licenseFile));
+    
+    // 同时启动脑龄预测（使用选中的 T1 路径和患者 ID）
+    startBatchBrainAgePrediction(checkedResults, outputPath);
+    
     appendPreAnalysisLog(QStringLiteral(">>> 开始 BIDS 转换...\n"));
     
     // 设置 BIDS 转换器参数
@@ -2372,6 +2347,82 @@ void MainViewController::startPreAnalysis(int method, const QString& bidsPath, c
     
     // 启动转换，传入选中的结果
     m_bidsConverter->startConversion(checkedResults);
+}
+
+void MainViewController::startBatchBrainAgePrediction(const QList<MriPairResult>& results, const QString& outputDir)
+{
+    // 过滤出有 T1 路径的结果
+    QStringList t1Paths;
+    QStringList patientIds;
+    
+    for (const auto& result : results) {
+        if (!result.t1Path.isEmpty()) {
+            t1Paths << QDir::toNativeSeparators(result.t1Path);
+            patientIds << result.patientId;
+        }
+    }
+    
+    if (t1Paths.isEmpty()) {
+        appendPreAnalysisLog(QStringLiteral(">>> 警告: 没有有效的 T1 数据用于脑龄预测\n\n"));
+        return;
+    }
+    
+    appendPreAnalysisLog(QStringLiteral(">>> 开始脑龄预测 (共 %1 个被试)...\n").arg(t1Paths.size()));
+    
+    // 构建输出路径
+    const QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+    const QString outputPath = outputDir +  "/BatchPrediction.csv";
+    const QString modelPath = QStringLiteral("Scripts/model/DBN_model.h5");
+    const QString exePath = QStringLiteral("Scripts/brain_age.exe");
+    
+    // 构建参数列表
+    QStringList arguments;
+    arguments << "--input";
+    arguments << t1Paths;
+    arguments << "--ids";
+    arguments << patientIds;
+    arguments << "--output" << outputPath;
+    arguments << "--model" << modelPath;
+    arguments << "--docker-image" << "deepbrain";
+    arguments << "--preprocess";  // 开启预处理
+    
+    qDebug() << "Starting batch brain age prediction:";
+    qDebug() << "  T1 Paths:" << t1Paths;
+    qDebug() << "  Patient IDs:" << patientIds;
+    qDebug() << "  Output:" << outputPath;
+    
+    // 启动脑龄预测进程
+    QProcess* process = new QProcess(this);
+    
+    connect(process, &QProcess::errorOccurred, this, [=](QProcess::ProcessError error) {
+        Q_UNUSED(error);
+        appendPreAnalysisLog(QStringLiteral(">>> 脑龄预测启动失败: %1\n\n").arg(process->errorString()));
+        process->deleteLater();
+    });
+    
+    connect(process, &QProcess::readyReadStandardOutput, this, [=]() {
+        QString output = QString::fromLocal8Bit(process->readAllStandardOutput());
+        appendPreAnalysisLog(output);
+    });
+    
+    connect(process, &QProcess::readyReadStandardError, this, [=]() {
+        QString output = QString::fromLocal8Bit(process->readAllStandardError());
+        appendPreAnalysisLog(output);
+    });
+    
+    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        this, [=](int exitCode, QProcess::ExitStatus exitStatus) {
+            Q_UNUSED(exitStatus);
+            if (exitCode == 0) {
+                appendPreAnalysisLog(QStringLiteral("\n>>> 脑龄预测完成，结果保存至: %1\n\n").arg(outputPath));
+                // 可以在这里解析 CSV 并更新 UI
+            } else {
+                appendPreAnalysisLog(QStringLiteral("\n>>> 脑龄预测失败，退出码: %1\n\n").arg(exitCode));
+            }
+            process->deleteLater();
+        });
+    
+    process->start(exePath, arguments);
 }
 
 void MainViewController::onScanProgressUpdated(const ScanProgress& progress) {

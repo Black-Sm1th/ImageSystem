@@ -70,9 +70,6 @@
     <ClCompile Include="ViewController\MainViewController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ViewController\InteractionState.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Modules\BrainNetworkData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -80,6 +77,27 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Modules\DicomNetwork.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\ApiManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\DockerPrepRunner.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\InteractionState.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\SliceVtkItemBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ViewController\KnowledgeChatManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\BatchMriScanner.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\BidsConverter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -96,13 +114,16 @@
     <ClInclude Include="Modules\BrainRegionVisualizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ViewController\InteractionState.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Modules\Version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Modules\DicomNetwork.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\InteractionState.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -125,5 +146,28 @@
     <QtMoc Include="Modules\BrainNetworkData.h">
       <Filter>Header Files</Filter>
     </QtMoc>
+    <QtMoc Include="Modules\SliceVtkItemBase.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="ViewController\KnowledgeChatManager.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="Modules\ApiManager.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="Modules\BatchMriScanner.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="Modules\BidsConverter.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="Modules\DockerPrepRunner.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="ImageSystem.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

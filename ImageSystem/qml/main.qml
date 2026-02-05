@@ -16,6 +16,7 @@ ApplicationWindow {
     property bool showAIPanel: false
     font.family: "Alibaba PuHuiTi 3.0"
     font.pixelSize: 14
+    flags: Qt.Window | Qt.FramelessWindowHint | Qt.WindowMinimizeButtonHint
     // 对话框消息组件
     MessageBox {
         id: dialogMessageBox
@@ -29,13 +30,366 @@ ApplicationWindow {
             dialogMessageBox.showMessage(type, text, 2000)
         }
     }
-    // 顶部功能栏
-    Rectangle {
-        id: topToolbar
+    // 窗口边缘调整大小相关属性
+    property int resizeEdgeSize: 6
+    property int minWindowWidth: 800
+    property int minWindowHeight: 600
+
+    // 左边缘
+    MouseArea {
+        id: leftEdge
+        width: resizeEdgeSize
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.topMargin: resizeEdgeSize
+        anchors.bottomMargin: resizeEdgeSize
+        cursorShape: Qt.SizeHorCursor
+        property point pressPos
+
+        onPressed: pressPos = Qt.point(mouse.x, mouse.y)
+        onPositionChanged: {
+            if (pressed) {
+                var dx = mouse.x - pressPos.x
+                var newWidth = win.width - dx
+                if (newWidth >= minWindowWidth) {
+                    win.x += dx
+                    win.width = newWidth
+                }
+            }
+        }
+    }
+
+    // 右边缘
+    MouseArea {
+        id: rightEdge
+        width: resizeEdgeSize
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.topMargin: resizeEdgeSize
+        anchors.bottomMargin: resizeEdgeSize
+        cursorShape: Qt.SizeHorCursor
+        property point pressPos
+
+        onPressed: pressPos = Qt.point(mouse.x, mouse.y)
+        onPositionChanged: {
+            if (pressed) {
+                var dx = mouse.x - pressPos.x
+                var newWidth = win.width + dx
+                if (newWidth >= minWindowWidth) {
+                    win.width = newWidth
+                }
+            }
+        }
+    }
+
+    // 上边缘
+    MouseArea {
+        id: topEdge
+        height: resizeEdgeSize
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 82
+        anchors.leftMargin: resizeEdgeSize
+        anchors.rightMargin: resizeEdgeSize
+        cursorShape: Qt.SizeVerCursor
+        z: 100  // 确保在标题栏之上
+        property point pressPos
+
+        onPressed: pressPos = Qt.point(mouse.x, mouse.y)
+        onPositionChanged: {
+            if (pressed) {
+                var dy = mouse.y - pressPos.y
+                var newHeight = win.height - dy
+                if (newHeight >= minWindowHeight) {
+                    win.y += dy
+                    win.height = newHeight
+                }
+            }
+        }
+    }
+
+    // 下边缘
+    MouseArea {
+        id: bottomEdge
+        height: resizeEdgeSize
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: resizeEdgeSize
+        anchors.rightMargin: resizeEdgeSize
+        cursorShape: Qt.SizeVerCursor
+        property point pressPos
+
+        onPressed: pressPos = Qt.point(mouse.x, mouse.y)
+        onPositionChanged: {
+            if (pressed) {
+                var dy = mouse.y - pressPos.y
+                var newHeight = win.height + dy
+                if (newHeight >= minWindowHeight) {
+                    win.height = newHeight
+                }
+            }
+        }
+    }
+
+    // 左上角
+    MouseArea {
+        id: topLeftCorner
+        width: resizeEdgeSize
+        height: resizeEdgeSize
+        anchors.left: parent.left
+        anchors.top: parent.top
+        cursorShape: Qt.SizeFDiagCursor
+        z: 100  // 确保在标题栏之上
+        property point pressPos
+
+        onPressed: pressPos = Qt.point(mouse.x, mouse.y)
+        onPositionChanged: {
+            if (pressed) {
+                var dx = mouse.x - pressPos.x
+                var dy = mouse.y - pressPos.y
+                var newWidth = win.width - dx
+                var newHeight = win.height - dy
+                if (newWidth >= minWindowWidth) {
+                    win.x += dx
+                    win.width = newWidth
+                }
+                if (newHeight >= minWindowHeight) {
+                    win.y += dy
+                    win.height = newHeight
+                }
+            }
+        }
+    }
+
+    // 右上角
+    MouseArea {
+        id: topRightCorner
+        width: resizeEdgeSize
+        height: resizeEdgeSize
+        anchors.right: parent.right
+        anchors.top: parent.top
+        cursorShape: Qt.SizeBDiagCursor
+        z: 100  // 确保在标题栏之上
+        property point pressPos
+
+        onPressed: pressPos = Qt.point(mouse.x, mouse.y)
+        onPositionChanged: {
+            if (pressed) {
+                var dx = mouse.x - pressPos.x
+                var dy = mouse.y - pressPos.y
+                var newWidth = win.width + dx
+                var newHeight = win.height - dy
+                if (newWidth >= minWindowWidth) {
+                    win.width = newWidth
+                }
+                if (newHeight >= minWindowHeight) {
+                    win.y += dy
+                    win.height = newHeight
+                }
+            }
+        }
+    }
+
+    // 左下角
+    MouseArea {
+        id: bottomLeftCorner
+        width: resizeEdgeSize
+        height: resizeEdgeSize
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        cursorShape: Qt.SizeBDiagCursor
+        property point pressPos
+
+        onPressed: pressPos = Qt.point(mouse.x, mouse.y)
+        onPositionChanged: {
+            if (pressed) {
+                var dx = mouse.x - pressPos.x
+                var dy = mouse.y - pressPos.y
+                var newWidth = win.width - dx
+                var newHeight = win.height + dy
+                if (newWidth >= minWindowWidth) {
+                    win.x += dx
+                    win.width = newWidth
+                }
+                if (newHeight >= minWindowHeight) {
+                    win.height = newHeight
+                }
+            }
+        }
+    }
+
+    // 右下角
+    MouseArea {
+        id: bottomRightCorner
+        width: resizeEdgeSize
+        height: resizeEdgeSize
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        cursorShape: Qt.SizeFDiagCursor
+        property point pressPos
+
+        onPressed: pressPos = Qt.point(mouse.x, mouse.y)
+        onPositionChanged: {
+            if (pressed) {
+                var dx = mouse.x - pressPos.x
+                var dy = mouse.y - pressPos.y
+                var newWidth = win.width + dx
+                var newHeight = win.height + dy
+                if (newWidth >= minWindowWidth) {
+                    win.width = newWidth
+                }
+                if (newHeight >= minWindowHeight) {
+                    win.height = newHeight
+                }
+            }
+        }
+    }
+    // 自定义标题栏
+    Rectangle {
+        id: customTitleBar
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 32
+        color: "#5F656D"
+
+        // 拖动区域 - 允许拖动窗口
+        MouseArea {
+            id: titleBarDragArea
+            anchors.fill: parent
+            anchors.rightMargin: windowControlButtons.width
+
+            property point clickPos
+
+            onPressed: {
+                clickPos = Qt.point(mouse.x, mouse.y)
+            }
+
+            onPositionChanged: {
+                if (pressed) {
+                    var delta = Qt.point(mouse.x - clickPos.x, mouse.y - clickPos.y)
+                    win.x += delta.x
+                    win.y += delta.y
+                }
+            }
+
+            // 双击最大化/还原
+            onDoubleClicked: {
+                if (win.visibility === Window.Maximized) {
+                    win.showNormal()
+                } else {
+                    win.showMaximized()
+                }
+            }
+        }
+
+        // 左侧：应用图标和标题
+        Row {
+            anchors.left: parent.left
+            anchors.leftMargin: 20
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 8
+
+            Text {
+                text: "DICOM 医学影像查看器"
+                color: "#B2FFFFFF"
+                font.pixelSize: 14
+                font.weight: Font.Medium
+                font.family: "Alibaba PuHuiTi 3.0"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+
+        // 右侧：窗口控制按钮
+        Row {
+            id: windowControlButtons
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+
+            // 最小化按钮
+            Rectangle {
+                width: 46
+                height: parent.height
+                color: minimizeArea.containsMouse ? "#3C3C3C" : "transparent"
+
+                Text {
+                    text: "—"
+                    color: "#FFFFFF"
+                    font.pixelSize: 12
+                    anchors.centerIn: parent
+                }
+
+                MouseArea {
+                    id: minimizeArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: win.showMinimized()
+                }
+            }
+
+            // 最大化/还原按钮
+            Rectangle {
+                width: 46
+                height: parent.height
+                color: maximizeArea.containsMouse ? "#3C3C3C" : "transparent"
+
+                Text {
+                    text: win.visibility === Window.Maximized ? "❐" : "☐"
+                    color: "#FFFFFF"
+                    font.pixelSize: 12
+                    anchors.centerIn: parent
+                }
+
+                MouseArea {
+                    id: maximizeArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (win.visibility === Window.Maximized) {
+                            win.showNormal()
+                        } else {
+                            win.showMaximized()
+                        }
+                    }
+                }
+            }
+
+            // 关闭按钮
+            Rectangle {
+                width: 46
+                height: parent.height
+                color: closeArea.containsMouse ? "#E81123" : "transparent"
+
+                Text {
+                    text: "✕"
+                    color: "#FFFFFF"
+                    font.pixelSize: 12
+                    anchors.centerIn: parent
+                }
+
+                MouseArea {
+                    id: closeArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Qt.quit()
+                }
+            }
+        }
+    }
+    // 顶部功能栏
+    Rectangle {
+        id: topToolbar
+        anchors.top: customTitleBar.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 66
         color: "#CC303338"
         
         FileDialog {
@@ -108,7 +462,7 @@ ApplicationWindow {
                 anchors.verticalCenter: parent.verticalCenter
                 text: $DicomDataModel.hasData ? $DicomDataModel.dicomInfo : "未加载 DICOM 数据"
                 color: "#80FFFFFF"
-                font.pixelSize: 12
+                font.pixelSize: 10
                 elide: Text.ElideRight
             }
         }
@@ -161,7 +515,7 @@ ApplicationWindow {
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: "肾功能"
-                            color: "#E5FFFFFF"
+                            color: "#FFFFFF"
                             font.pixelSize: 16
                             font.family: "Alibaba PuHuiTi 3.0"
                         }
@@ -273,7 +627,7 @@ ApplicationWindow {
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: "脑功能"
-                            color: "#E5FFFFFF"
+                            color: "#FFFFFF"
                             font.pixelSize: 16
                             font.family: "Alibaba PuHuiTi 3.0"
                         }
@@ -413,9 +767,9 @@ ApplicationWindow {
         
         Rectangle {
             id: rightExpandButton
-            width: (analysisPanelIndex === 2 && (brainpanel.currentIndex === 4 || brainpanel.currentIndex === 5)) ? 0 : (analysisPanelIndex === 2 && (brainpanel.currentIndex === 2 || brainpanel.currentIndex === 3) ? 500 : 400)
+            width: (analysisPanelIndex === 2 && brainpanel.currentIndex === 5) ? 0 : (analysisPanelIndex === 2 && (brainpanel.currentIndex === 2 || brainpanel.currentIndex === 3) ? 500 : 400)
             height: parent.height
-            visible: brainpanel.currentIndex !== 4 && brainpanel.currentIndex !== 5 || analysisPanelIndex !== 2
+            visible: brainpanel.currentIndex !== 5 || analysisPanelIndex !== 2
             color: "#171717"
             anchors.right: parent.right
             Behavior on width {
