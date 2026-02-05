@@ -85,11 +85,6 @@ MainViewController::MainViewController(QObject* parent)
                     stopDeepprepProcess();
                 });
     }
-
-    //测试 startBrainRegionProcessing
-    //m_preAnalysisMethod = 1;
-    //m_preAnalysisOutputPath = "C:/temp/Output_20260203_104814";
-    //startBrainRegionProcessing();
 }
 
 void MainViewController::setupDockerPrepRunner()
@@ -232,14 +227,14 @@ void MainViewController::startBrainRegionProcessing()
     }
     
     // 查找颜色表文件
-    QString colorTablePath = QCoreApplication::applicationDirPath() + "/Scripts/tsv/desc-aseg_dseg_with_chinese.tsv";
+    QString colorTablePath = "Scripts/tsv/desc-aseg_dseg_with_chinese.tsv";
     if (!QFileInfo::exists(colorTablePath)) {
         appendPreAnalysisLog(QStringLiteral(">>> 警告: 未找到颜色表文件，将使用默认颜色\n"));
         colorTablePath = "";
     }
     
     // mgz2nii 转换工具路径
-    QString mgz2niiPath = QCoreApplication::applicationDirPath() + "/Scripts/mgz2nii.exe";
+    QString mgz2niiPath = "Scripts/mgz2nii.exe";
     if (!QFileInfo::exists(mgz2niiPath)) {
         appendPreAnalysisLog(QStringLiteral(">>> 错误: 未找到 mgz2nii.exe 转换工具\n"));
         setisPreAnalysisRunning(false);
