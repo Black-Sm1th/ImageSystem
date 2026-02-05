@@ -26,10 +26,10 @@ namespace {
         static std::string fontPath;
         if (fontPath.empty()) {
             const char* candidates[] = {
-                //"Fonts/AlimamaDaoLiTi.ttf",
-                "C:/Windows/Fonts/msyh.ttc",
-                "C:/Windows/Fonts/simsun.ttc",
-                "C:/Windows/Fonts/simhei.ttf",
+                "fonts/AlibabaPuHuiTi-3-55-Regular.ttf",
+                //"C:/Windows/Fonts/msyh.ttc",
+                //"C:/Windows/Fonts/simsun.ttc",
+                //"C:/Windows/Fonts/simhei.ttf",
             };
             for (const char* path : candidates) {
                 if (QFileInfo::exists(QString::fromUtf8(path))) {
