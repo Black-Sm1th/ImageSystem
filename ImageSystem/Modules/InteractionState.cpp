@@ -12,7 +12,7 @@
 #include <vtkRegularPolygonSource.h>
 #include <cmath>
 #include <algorithm>
-
+#include <vtkRenderwindow.h>
 namespace
 {
     vtkRenderer* ResolveRenderer(vtkRenderWindowInteractor* interactor, vtkRenderer* current)

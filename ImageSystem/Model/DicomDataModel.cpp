@@ -1,4 +1,5 @@
 ﻿#include "DicomDataModel.h"
+#include "Modules/BrainRegionProcessor.h"
 #include <vtkImageSliceMapper.h>
 #include <QFile>
 #include <QDir>
@@ -311,6 +312,157 @@ void DicomDataModel::loadSegBrainDirectory(const QString& path, const QString& s
     // 使用传入的subjectId（默认为sub-01）
     QString subId = subjectId.isEmpty() ? "sub-01" : subjectId;
     
+    // ========== 优先检查是否存在已处理的 brain_regions 目录 ==========
+    QString brainRegionsDir = dirPath + "/brain_regions/" + subId;
+    if (BrainRegionProcessor::isAlreadyProcessed(brainRegionsDir)) {
+        qDebug() << QStringLiteral("检测到已处理的脑区数据，直接加载: ") << brainRegionsDir;
+        
+        // 查找原始图像路径（用于三维渲染和二维切片）
+        QString origNiiPath;
+        // 尝试 fMRIPrep 格式
+        QStringList origNiiCandidates = {
+            dirPath + "/sourcedata/freesurfer/" + subId + "/mri/T1.nii.gz",
+            dirPath + "/sourcedata/freesurfer/" + subId + "/mri/T1.nii",
+            // DeepPrep 格式
+            dirPath + "/Recon/" + subId + "/mri/T1.nii.gz",
+            dirPath + "/Recon/" + subId + "/mri/T1.nii",
+        };
+        for (const QString& candidate : origNiiCandidates) {
+            if (QFile::exists(candidate)) {
+                origNiiPath = candidate;
+                qDebug() << QStringLiteral("找到原始图像: ") << origNiiPath;
+                break;
+            }
+        }
+        
+        // 如果没有找到 nii，尝试找 mgz 并转换
+        if (origNiiPath.isEmpty()) {
+            QStringList origMgzCandidates = {
+                dirPath + "/sourcedata/freesurfer/" + subId + "/mri/T1.mgz",
+                dirPath + "/Recon/" + subId + "/mri/T1.mgz",
+            };
+            for (const QString& mgzCandidate : origMgzCandidates) {
+                if (QFile::exists(mgzCandidate)) {
+                    qDebug() << QStringLiteral("找到原始图像 mgz: ") << mgzCandidate;
+                    
+                    // 转换成 nii.gz
+                    QString targetNiiPath = mgzCandidate;
+                    targetNiiPath.replace(".mgz", ".nii.gz");
+                    
+                    QProcess process;
+                    process.setProgram("Scripts/mgz2nii.exe");
+                    process.setArguments({mgzCandidate, targetNiiPath});
+                    
+                    qDebug() << QStringLiteral("开始转换 T1.mgz 到 nii: ") << mgzCandidate << " -> " << targetNiiPath;
+                    process.start();
+                    
+                    if (process.waitForFinished(60000) && 
+                        process.exitStatus() == QProcess::NormalExit && 
+                        process.exitCode() == 0) {
+                        qDebug() << QStringLiteral("T1.mgz 转换成功: ") << targetNiiPath;
+                        origNiiPath = targetNiiPath;
+                    } else {
+                        qWarning() << QStringLiteral("T1.mgz 转换失败，退出代码: ") << process.exitCode();
+                        qWarning() << QStringLiteral("错误输出: ") << process.readAllStandardError();
+                    }
+                    break;
+                }
+            }
+        }
+        
+        if (origNiiPath.isEmpty()) {
+            qWarning() << QStringLiteral("未找到原始图像，三维体渲染和二维切片将不可用");
+        }
+        
+        // 查找分割 NIfTI 图像（用于二维分割叠加）
+        QString segNiiPath;
+        QStringList segNiiCandidates = {
+            dirPath + "/sourcedata/freesurfer/" + subId + "/mri/aparc+aseg.nii.gz",
+            dirPath + "/sourcedata/freesurfer/" + subId + "/mri/aparc+aseg.nii",
+            dirPath + "/Recon/" + subId + "/mri/aparc+aseg.nii.gz",
+            dirPath + "/Recon/" + subId + "/mri/aparc+aseg.nii",
+        };
+        for (const QString& candidate : segNiiCandidates) {
+            if (QFile::exists(candidate)) {
+                segNiiPath = candidate;
+                qDebug() << QStringLiteral("找到分割图像: ") << segNiiPath;
+                break;
+            }
+        }
+        
+        // 如果没有找到 nii，尝试找 mgz 并转换
+        if (segNiiPath.isEmpty()) {
+            QStringList segMgzCandidates = {
+                dirPath + "/sourcedata/freesurfer/" + subId + "/mri/aparc+aseg.mgz",
+                dirPath + "/Recon/" + subId + "/mri/aparc+aseg.mgz",
+            };
+            for (const QString& mgzCandidate : segMgzCandidates) {
+                if (QFile::exists(mgzCandidate)) {
+                    qDebug() << QStringLiteral("找到分割图像 mgz: ") << mgzCandidate;
+                    
+                    // 转换成 nii.gz
+                    QString targetNiiPath = mgzCandidate;
+                    targetNiiPath.replace(".mgz", ".nii.gz");
+                    
+                    QProcess process;
+                    process.setProgram("Scripts/mgz2nii.exe");
+                    process.setArguments({mgzCandidate, targetNiiPath});
+                    
+                    qDebug() << QStringLiteral("开始转换 aparc+aseg.mgz 到 nii: ") << mgzCandidate << " -> " << targetNiiPath;
+                    process.start();
+                    
+                    if (process.waitForFinished(60000) && 
+                        process.exitStatus() == QProcess::NormalExit && 
+                        process.exitCode() == 0) {
+                        qDebug() << QStringLiteral("aparc+aseg.mgz 转换成功: ") << targetNiiPath;
+                        segNiiPath = targetNiiPath;
+                    } else {
+                        qWarning() << QStringLiteral("aparc+aseg.mgz 转换失败，退出代码: ") << process.exitCode();
+                        qWarning() << QStringLiteral("错误输出: ") << process.readAllStandardError();
+                    }
+                    break;
+                }
+            }
+        }
+        
+        // 通知开始
+        emit segLoadingStarted();
+        m_segLoadingInProgress = true;
+        
+        // 从已处理目录加载（快速）- 传入原始图像路径
+        m_pendingRegion = std::make_unique<BrainRegionVisualizer>(brainRegionsDir.toStdString(), origNiiPath.toStdString());
+        
+        // 如果有分割图像，加载用于二维叠加
+        if (!segNiiPath.isEmpty()) {
+            m_pendingRegion->SetSegmentationNiftiPath(segNiiPath.toStdString());
+        }
+        
+        m_pendingRegion->SetProgressCallback([this](int percent, const std::string& message) {
+            QString text = QString::fromStdString(message);
+            QMetaObject::invokeMethod(this, [this, percent, text]() {
+                emit segLoadingProgress(percent, text);
+            }, Qt::QueuedConnection);
+        });
+
+        BrainRegionVisualizer* regionRaw = m_pendingRegion.get();
+        QtConcurrent::run([this, regionRaw]() {
+            bool ok = regionRaw->Initialize();
+            QMetaObject::invokeMethod(this, [this, ok]() {
+                if (!ok) {
+                    m_pendingRegion.reset();
+                    m_segLoadingInProgress = false;
+                    emit segLoadingFinished(false, QStringLiteral("加载已处理的脑区数据失败"));
+                    return;
+                }
+                finalizeSegDataLoad(std::move(m_pendingRegion));
+                m_segLoadingInProgress = false;
+                emit segLoadingFinished(true, QString());
+            }, Qt::QueuedConnection);
+        });
+        return;
+    }
+    
+    // ========== 如果没有已处理数据，走原有流程 ==========
     // 首先尝试fMRIPrep格式的路径
     QString mriDirPath = dirPath + "/sourcedata/freesurfer/" + subId + "/mri";
     m_statsDir = dirPath + "/sourcedata/freesurfer/" + subId + "/stats";

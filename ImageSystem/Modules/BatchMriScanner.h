@@ -55,6 +55,9 @@ struct MriPairResult {
     QString boldSeriesDesc;
     int boldImageCount = 0;
     
+    // BIDS 转换后的受训者ID（如 sub-20260120001）
+    QString subjectId;
+    
     bool isComplete() const { return !t1Path.isEmpty() && !boldPath.isEmpty(); }
 };
 Q_DECLARE_METATYPE(MriPairResult)

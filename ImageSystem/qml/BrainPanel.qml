@@ -2224,6 +2224,30 @@ Rectangle {
                                 id: methodComboBox
                                 width: prepCol.width - prepCol.maxLabelWidth - 10
                                 model: ["传统处理", "深度学习"]
+                                
+                                // 预估处理时间的函数
+                                function updateEstimatedTime() {
+                                    if (selectedIndices.length > 0) {
+                                        var method = selectedIndices[0]  // 0: 传统处理(fmriprep), 1: 深度学习(deepprep)
+                                        var subjectCount = $MriPairResultModel.checkedCount
+                                        var estimatedTime = $MainViewController.estimateProcessingTime(method, subjectCount)
+                                        console.log("预估处理时间:", estimatedTime, "(方法:", method === 0 ? "传统处理" : "深度学习", ", 受训者数量:", subjectCount, ")")
+                                    }
+                                }
+                                
+                                onSelectionChanged: {
+                                    // 选择预处理方式时，预估处理时间
+                                    updateEstimatedTime()
+                                }
+                                
+                                // 监听勾选数量变化
+                                Connections {
+                                    target: $MriPairResultModel
+                                    function onCheckedCountChanged() {
+                                        // 当已选择预处理方式时，勾选数量变化也更新预估时间
+                                        methodComboBox.updateEstimatedTime()
+                                    }
+                                }
                             }
                         }
                         CustomButton{

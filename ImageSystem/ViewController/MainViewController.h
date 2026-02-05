@@ -9,6 +9,7 @@
 #include "Modules/BidsConverter.h"
 #include "Modules/InteractionState.h"
 #include "Modules/DockerPrepRunner.h"
+#include "Modules/BrainRegionProcessor.h"
 #include <vtkInteractorStyleImage.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkObjectFactory.h>
@@ -94,6 +95,7 @@ public:
     Q_INVOKABLE void updatePenAnnotationText(int orientation, int index, const QString& text);
     Q_INVOKABLE void deletePenAnnotation(int orientation, int index);
     Q_INVOKABLE void captureViewScreenshot(int viewType, const QString& filePath);
+    Q_INVOKABLE QString estimateProcessingTime(int method, int subjectCount);
     Q_PROPERTY(QString preAnalysisLog READ preAnalysisLog NOTIFY preAnalysisLogUpdated)
         QString preAnalysisLog() const { return m_preAnalysisLog; }
     // 获取表格模型
@@ -138,6 +140,11 @@ private:
 
     // Docker 预处理运行器
     DockerPrepRunner* m_dockerPrepRunner = nullptr;
+    
+    // 脑区处理器
+    BrainRegionProcessor* m_brainRegionProcessor = nullptr;
+    void setupBrainRegionProcessor();  // 初始化脑区处理器
+    void startBrainRegionProcessing(); // 预处理完成后开始脑区处理
 
     // 日志文件轮询相关（用于读取 Docker 输出日志）
     QString m_prepLogFilePath;

@@ -671,11 +671,18 @@ void DockerPrepRunner::runFmriPrep(const FmriPrepParams& params)
 void DockerPrepRunner::stop()
 {
     if (m_process && m_process->state() != QProcess::NotRunning) {
+        // 断开所有信号连接，避免手动停止时触发回调
+        disconnect(m_process, nullptr, this, nullptr);
+        
         m_process->terminate();
         if (!m_process->waitForFinished(5000)) {
             m_process->kill();
             m_process->waitForFinished(3000);
         }
+        
+        // 清理进程对象
+        m_process->deleteLater();
+        m_process = nullptr;
     }
     
     if (m_logFile) {

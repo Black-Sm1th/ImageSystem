@@ -85,6 +85,11 @@ MainViewController::MainViewController(QObject* parent)
                     stopDeepprepProcess();
                 });
     }
+
+    //测试 startBrainRegionProcessing
+    //m_preAnalysisMethod = 1;
+    //m_preAnalysisOutputPath = "C:/temp/Output_20260203_104814";
+    //startBrainRegionProcessing();
 }
 
 void MainViewController::setupDockerPrepRunner()
@@ -103,10 +108,16 @@ void MainViewController::setupDockerPrepRunner()
     
     // 连接 fMRIPrep 完成信号
     connect(m_dockerPrepRunner, &DockerPrepRunner::fmriPrepFinished, this, [this](int exitCode, const QString& message) {
+        stopPrepLogTimer();
+        
         if (exitCode == 0) {
             qDebug() << QStringLiteral("fMRIPrep 运行成功！");
             appendPreAnalysisLog(QStringLiteral("\n>>> fMRIPrep 运行成功！\n"));
             writeMetadataFile(m_preAnalysisOutputPath, m_currentProcessingPairs);
+            
+            // 开始脑区处理（生成 STL 和元数据）
+            appendPreAnalysisLog(QStringLiteral("\n>>> 开始脑区分割数据处理...\n"));
+            startBrainRegionProcessing();
         } else {
             qDebug() << QStringLiteral("fMRIPrep 运行失败！") << message;
             appendPreAnalysisLog(QStringLiteral("\n>>> fMRIPrep 运行失败！%1\n").arg(message));
@@ -119,18 +130,24 @@ void MainViewController::setupDockerPrepRunner()
                     dir.removeRecursively();
                 }
             });
+            
+            setisPreAnalysisRunning(false);
+            appendPreAnalysisLog(QStringLiteral("\n========== 预处理完成 ==========\n"));
         }
-        stopPrepLogTimer();
-        setisPreAnalysisRunning(false);
-        appendPreAnalysisLog(QStringLiteral("\n========== 预处理完成 ==========\n"));
     });
     
     // 连接 DeepPrep 完成信号
     connect(m_dockerPrepRunner, &DockerPrepRunner::deepPrepFinished, this, [this](int exitCode, const QString& message) {
+        stopPrepLogTimer();
+        
         if (exitCode == 0) {
             qDebug() << QStringLiteral("DeepPrep 运行成功！");
             appendPreAnalysisLog(QStringLiteral("\n>>> DeepPrep 运行成功！\n"));
             writeMetadataFile(m_preAnalysisOutputPath, m_currentProcessingPairs);
+            
+            // 开始脑区处理（生成 STL 和元数据）
+            appendPreAnalysisLog(QStringLiteral("\n>>> 开始脑区分割数据处理...\n"));
+            startBrainRegionProcessing();
         } else {
             qDebug() << QStringLiteral("DeepPrep 运行失败！") << message;
             appendPreAnalysisLog(QStringLiteral("\n>>> DeepPrep 运行失败！%1\n").arg(message));
@@ -143,11 +160,194 @@ void MainViewController::setupDockerPrepRunner()
                     dir.removeRecursively();
                 }
             });
+            
+            setisPreAnalysisRunning(false);
+            appendPreAnalysisLog(QStringLiteral("\n========== 预处理完成 ==========\n"));
         }
-        stopPrepLogTimer();
+    });
+}
+
+void MainViewController::setupBrainRegionProcessor()
+{
+    if (m_brainRegionProcessor) {
+        return;
+    }
+    
+    m_brainRegionProcessor = new BrainRegionProcessor(this);
+    
+    // 设置进度回调（注意：回调在后台线程中执行，需要切换到主线程）
+    m_brainRegionProcessor->setProgressCallback([this](int percent, const QString& message) {
+        QString logText = QStringLiteral(">>> [脑区处理 %1%] %2\n").arg(percent).arg(message);
+        QMetaObject::invokeMethod(this, [this, logText]() {
+            appendPreAnalysisLog(logText);
+        }, Qt::QueuedConnection);
+    });
+    
+    // 连接单个处理完成信号
+    connect(m_brainRegionProcessor, &BrainRegionProcessor::processFinished, this, [this](const ProcessingResult& result) {
+        if (result.success) {
+            appendPreAnalysisLog(QStringLiteral(">>> 被试处理完成: %1, 共 %2 个脑区, %3 个 STL 文件\n")
+                .arg(result.outputDir)
+                .arg(result.regionCount)
+                .arg(result.stlFileCount));
+        } else {
+            appendPreAnalysisLog(QStringLiteral(">>> 被试处理失败: %1\n").arg(result.message));
+        }
+    });
+    
+    // 连接批量处理进度信号
+    connect(m_brainRegionProcessor, &BrainRegionProcessor::batchProgress, this, [this](int current, int total, const QString& subject) {
+        appendPreAnalysisLog(QStringLiteral(">>> 批量处理进度: %1/%2 - %3\n").arg(current + 1).arg(total).arg(subject));
+    });
+    
+    // 连接批量处理完成信号
+    connect(m_brainRegionProcessor, &BrainRegionProcessor::batchFinished, this, [this](int successCount, int failCount) {
+        appendPreAnalysisLog(QStringLiteral("\n>>> 脑区处理完成: 成功 %1 个, 失败 %2 个\n").arg(successCount).arg(failCount));
+        setisPreAnalysisRunning(false);
+        appendPreAnalysisLog(QStringLiteral("\n========== 全部处理完成 ==========\n"));
+    });
+    
+    // 连接错误信号
+    connect(m_brainRegionProcessor, &BrainRegionProcessor::processError, this, [this](const QString& error) {
+        appendPreAnalysisLog(QStringLiteral(">>> 脑区处理错误: %1\n").arg(error));
+    });
+}
+
+void MainViewController::startBrainRegionProcessing()
+{
+    // 确保处理器已初始化
+    setupBrainRegionProcessor();
+    
+    // 查找分割结果文件
+    // fMRIPrep 输出结构：输出文件夹/sourcedata/freesurfer/sub-XXX/mri/aparc+aseg.mgz
+    // DeepPrep 输出结构：输出文件夹/Recon/sub-XXX/mri/aparc+aseg.mgz
+    // 都需要先用 mgz2nii.exe 转换成 nii.gz
+    
+    QDir outputDir(m_preAnalysisOutputPath);
+    if (!outputDir.exists()) {
+        appendPreAnalysisLog(QStringLiteral(">>> 错误: 输出目录不存在\n"));
         setisPreAnalysisRunning(false);
         appendPreAnalysisLog(QStringLiteral("\n========== 预处理完成 ==========\n"));
-    });
+        return;
+    }
+    
+    // 查找颜色表文件
+    QString colorTablePath = QCoreApplication::applicationDirPath() + "/Scripts/tsv/desc-aseg_dseg_with_chinese.tsv";
+    if (!QFileInfo::exists(colorTablePath)) {
+        appendPreAnalysisLog(QStringLiteral(">>> 警告: 未找到颜色表文件，将使用默认颜色\n"));
+        colorTablePath = "";
+    }
+    
+    // mgz2nii 转换工具路径
+    QString mgz2niiPath = QCoreApplication::applicationDirPath() + "/Scripts/mgz2nii.exe";
+    if (!QFileInfo::exists(mgz2niiPath)) {
+        appendPreAnalysisLog(QStringLiteral(">>> 错误: 未找到 mgz2nii.exe 转换工具\n"));
+        setisPreAnalysisRunning(false);
+        appendPreAnalysisLog(QStringLiteral("\n========== 预处理完成 ==========\n"));
+        return;
+    }
+    
+    // 收集所有被试的分割文件
+    QList<std::tuple<QString, QString, QString>> subjects;  // (segPath, rawPath, subjectName)
+    
+    // 根据预分析方法确定搜索路径
+    // fMRIPrep: sourcedata/freesurfer/sub-XXX/mri/
+    // DeepPrep: Recon/sub-XXX/mri/
+    QString basePath;
+    if (m_preAnalysisMethod == 0) {
+        // fMRIPrep
+        basePath = outputDir.filePath("sourcedata/freesurfer");
+    } else {
+        // DeepPrep
+        basePath = outputDir.filePath("Recon");
+    }
+    
+    QDir baseDir(basePath);
+    if (!baseDir.exists()) {
+        appendPreAnalysisLog(QStringLiteral(">>> 错误: 未找到预处理输出目录: %1\n").arg(basePath));
+        setisPreAnalysisRunning(false);
+        appendPreAnalysisLog(QStringLiteral("\n========== 预处理完成 ==========\n"));
+        return;
+    }
+    
+    // 扫描 sub-* 目录
+    QStringList subDirs = baseDir.entryList(QStringList() << "sub-*", QDir::Dirs | QDir::NoDotAndDotDot);
+    
+    for (const QString& subDir : subDirs) {
+        QString mriPath = baseDir.filePath(subDir + "/mri");
+        QString mgzFile = QDir(mriPath).filePath("aparc+aseg.mgz");
+        
+        if (!QFileInfo::exists(mgzFile)) {
+            appendPreAnalysisLog(QStringLiteral(">>> 警告: 未找到被试 %1 的分割文件，跳过\n").arg(subDir));
+            continue;
+        }
+        
+        // 转换 aparc+aseg.mgz 到 nii.gz
+        QString niiFile = QDir(mriPath).filePath("aparc+aseg.nii.gz");
+        
+        if (!QFileInfo::exists(niiFile)) {
+            appendPreAnalysisLog(QStringLiteral(">>> 正在转换 %1 的 aparc+aseg.mgz 文件...\n").arg(subDir));
+            
+            QProcess convertProcess;
+            convertProcess.start(mgz2niiPath, QStringList() << mgzFile << niiFile);
+            
+            if (!convertProcess.waitForFinished(60000)) {  // 60秒超时
+                appendPreAnalysisLog(QStringLiteral(">>> 警告: 被试 %1 的 aparc+aseg.mgz 转换超时，跳过\n").arg(subDir));
+                continue;
+            }
+            
+            if (convertProcess.exitCode() != 0) {
+                appendPreAnalysisLog(QStringLiteral(">>> 警告: 被试 %1 的 aparc+aseg.mgz 转换失败: %2\n")
+                    .arg(subDir).arg(QString::fromUtf8(convertProcess.readAllStandardError())));
+                continue;
+            }
+            
+            if (!QFileInfo::exists(niiFile)) {
+                appendPreAnalysisLog(QStringLiteral(">>> 警告: 被试 %1 转换后的 aparc+aseg.nii.gz 文件不存在，跳过\n").arg(subDir));
+                continue;
+            }
+            
+            appendPreAnalysisLog(QStringLiteral(">>> 转换完成: %1\n").arg(niiFile));
+        }
+        
+        // 同时转换 T1.mgz 到 T1.nii.gz（用于三维渲染和二维切片）
+        QString t1MgzFile = QDir(mriPath).filePath("T1.mgz");
+        QString t1NiiFile = QDir(mriPath).filePath("T1.nii.gz");
+        
+        if (QFileInfo::exists(t1MgzFile) && !QFileInfo::exists(t1NiiFile)) {
+            appendPreAnalysisLog(QStringLiteral(">>> 正在转换 %1 的 T1.mgz 文件...\n").arg(subDir));
+            
+            QProcess convertProcess;
+            convertProcess.start(mgz2niiPath, QStringList() << t1MgzFile << t1NiiFile);
+            
+            if (!convertProcess.waitForFinished(60000)) {  // 60秒超时
+                appendPreAnalysisLog(QStringLiteral(">>> 警告: 被试 %1 的 T1.mgz 转换超时\n").arg(subDir));
+            } else if (convertProcess.exitCode() != 0) {
+                appendPreAnalysisLog(QStringLiteral(">>> 警告: 被试 %1 的 T1.mgz 转换失败: %2\n")
+                    .arg(subDir).arg(QString::fromUtf8(convertProcess.readAllStandardError())));
+            } else if (QFileInfo::exists(t1NiiFile)) {
+                appendPreAnalysisLog(QStringLiteral(">>> T1 转换完成: %1\n").arg(t1NiiFile));
+            }
+        }
+        
+        subjects.append(std::make_tuple(niiFile, QString(), subDir));
+        appendPreAnalysisLog(QStringLiteral(">>> 找到被试: %1\n    分割文件: %2\n").arg(subDir).arg(niiFile));
+    }
+    
+    if (subjects.isEmpty()) {
+        appendPreAnalysisLog(QStringLiteral(">>> 错误: 未找到任何有效的分割文件\n"));
+        setisPreAnalysisRunning(false);
+        appendPreAnalysisLog(QStringLiteral("\n========== 预处理完成 ==========\n"));
+        return;
+    }
+    
+    appendPreAnalysisLog(QStringLiteral("\n>>> 开始批量处理 %1 个被试的脑区数据...\n").arg(subjects.size()));
+    
+    // 设置输出目录（在主输出目录下创建 brain_regions 子目录）
+    QString brainRegionsBaseDir = outputDir.filePath("brain_regions");
+    
+    // 开始批量异步处理
+    m_brainRegionProcessor->processBatchAsync(subjects, colorTablePath, brainRegionsBaseDir);
 }
 
 void MainViewController::clearPrepOutputsOnFailure(const QString& outputDir, bool isFmriPrep)
@@ -242,6 +442,7 @@ void MainViewController::writeMetadataFile(const QString& outputDir, const QList
     QJsonArray subjectsArr;
     for (const auto& pair : pairs) {
         QJsonObject sub;
+        sub["subjectId"] = pair.subjectId;  // 受训者ID（BIDS格式，如 sub-20260120001）
         sub["patientName"] = pair.patientName;
         sub["patientId"] = pair.patientId;
         sub["patientSex"] = pair.patientSex;
@@ -1939,6 +2140,57 @@ void MainViewController::stopDeepprepProcess()
     stopPrepLogTimer();
 }
 
+QString MainViewController::estimateProcessingTime(int method, int subjectCount)
+{
+    if (subjectCount <= 0) {
+        return QStringLiteral("请选择受训者");
+    }
+    
+    double totalMinutes = 0.0;
+    double avgPerSubject = 0.0;
+    
+    if (method == 0) {
+        // fmriprep: 有初始化开销的线性模型（批量处理有效率提升）
+        // 根据实测数据：
+        // 1人: 110分钟（1小时50分钟）
+        // 23人: 1426.7分钟（23小时46分43秒），平均62分钟/人
+        // 拟合公式：T = 50 + 60 * n 分钟
+        const double baseMinutes = 50.0;        // 固定开销
+        const double minutesPerSubject = 60.0;  // 每人处理时间
+        totalMinutes = baseMinutes + minutesPerSubject * subjectCount;
+        avgPerSubject = totalMinutes / subjectCount;
+    } else {
+        // deepprep: 有初始化开销的线性模型（并行处理效率更高）
+        // 根据实测数据：
+        // 1人: 24.5分钟
+        // 8人: 87分钟 (平均10.9分钟/人)
+        // 18人: 195分钟 (平均10.8分钟/人)
+        // 53人: 628分钟 (平均11.9分钟/人)
+        // 拟合公式：T = 13 + 11.5 * n 分钟
+        const double baseMinutes = 13.0;        // 初始化开销
+        const double minutesPerSubject = 11.5;  // 每人处理时间
+        totalMinutes = baseMinutes + minutesPerSubject * subjectCount;
+        avgPerSubject = totalMinutes / subjectCount;
+    }
+    
+    // 转换为时分秒格式
+    int totalSeconds = static_cast<int>(totalMinutes * 60);
+    int hours = totalSeconds / 3600;
+    int minutes = (totalSeconds % 3600) / 60;
+    
+    QString result;
+    if (hours > 0) {
+        result = QStringLiteral("约 %1 小时 %2 分钟").arg(hours).arg(minutes);
+    } else {
+        result = QStringLiteral("约 %1 分钟").arg(minutes);
+    }
+    
+    // 添加平均每人耗时提示
+    int avgMinutes = static_cast<int>(avgPerSubject);
+    result += QStringLiteral(" (平均每人 %1 分钟)").arg(avgMinutes);
+    
+    return result;
+}
 
 bool MainViewController::isDeepprepOutput(const QString& outputPath)
 {
@@ -2153,6 +2405,11 @@ void MainViewController::onConversionFinished(const QList<BidsSubjectResult>& re
     qDebug() << "BIDS conversion finished with" << results.size() << "subjects";
     
     appendPreAnalysisLog(QStringLiteral(">>> BIDS 转换完成，共 %1 个被试\n\n").arg(results.size()));
+    
+    // 将 BIDS 转换结果中的 subjectId 保存到配对信息中
+    for (int i = 0; i < results.size() && i < m_currentProcessingPairs.size(); ++i) {
+        m_currentProcessingPairs[i].subjectId = results[i].subjectId;
+    }
     
     // 根据method值启动对应的预处理程序
     if (m_preAnalysisMethod == 0) {
