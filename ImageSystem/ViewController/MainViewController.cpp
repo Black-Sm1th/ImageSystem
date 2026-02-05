@@ -1416,7 +1416,7 @@ void MainViewController::generatePdfReport(const QString& savePath)
     // 中文名35%, 位置15%, 容积17%, 全脑占比17%, 不对称16%
     segColWidths[0] = (int)(tableAvailableWidth * 0.35);  // 中文名称
     segColWidths[1] = (int)(tableAvailableWidth * 0.15);  // 位置
-    segColWidths[2] = (int)(tableAvailableWidth * 0.17);  // 容积(cm³)
+    segColWidths[2] = (int)(tableAvailableWidth * 0.17);  // 容积(cm^3)
     segColWidths[3] = (int)(tableAvailableWidth * 0.17);  // 全脑占比
     segColWidths[4] = (int)(tableAvailableWidth * 0.16);  // 不对称指数
     
@@ -1424,7 +1424,7 @@ void MainViewController::generatePdfReport(const QString& savePath)
     for (int w : segColWidths) segTotalWidth += w;
     
     QStringList segHeaders = {QStringLiteral("中文名称"), QStringLiteral("位置"), 
-                              QStringLiteral("容积(cm³)"), QStringLiteral("全脑占比"), 
+                              QStringLiteral("容积(mm3)"), QStringLiteral("全脑占比"), 
                               QStringLiteral("不对称指数")};
     
     // 设置表格字体和行高

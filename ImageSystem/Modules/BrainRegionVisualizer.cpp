@@ -277,16 +277,6 @@ bool BrainRegionVisualizer::InitializeFromProcessedDir(const std::string& proces
         return false;
     }
 
-    // 加载切片预览图路径
-    std::string slicesDir = BrainRegionProcessor::getSlicesDir(QString::fromStdString(processedDir)).toStdString();
-    std::filesystem::path slicesPath(slicesDir);
-    if (std::filesystem::exists(slicesPath / "axial_mid.png"))
-        axialMidPngPath_ = (slicesPath / "axial_mid.png").string();
-    if (std::filesystem::exists(slicesPath / "coronal_mid.png"))
-        coronalMidPngPath_ = (slicesPath / "coronal_mid.png").string();
-    if (std::filesystem::exists(slicesPath / "sagittal_mid.png"))
-        sagittalMidPngPath_ = (slicesPath / "sagittal_mid.png").string();
-
     // 构建切片视图（如果有原始图像）
     if (rawImageData_)
     {
