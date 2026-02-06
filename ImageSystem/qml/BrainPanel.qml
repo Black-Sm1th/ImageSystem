@@ -2011,11 +2011,14 @@ Rectangle {
                                 
                                 // 预估处理时间的函数
                                 function updateEstimatedTime() {
-                                    if (selectedIndices.length > 0) {
+                                    if (selectedIndices.length > 0 && $MriPairResultModel.checkedCount > 0) {
                                         var method = selectedIndices[0]  // 0: 传统处理(fmriprep), 1: 深度学习(deepprep)
                                         var subjectCount = $MriPairResultModel.checkedCount
-                                        var estimatedTime = $MainViewController.estimateProcessingTime(method, subjectCount)
-                                        console.log("预估处理时间:", estimatedTime, "(方法:", method === 0 ? "传统处理" : "深度学习", ", 受训者数量:", subjectCount, ")")
+                                        var estimatedTimeStr = $MainViewController.estimateProcessingTime(method, subjectCount)
+                                        estimatedTimeText.text = qsTr("预估处理时间：") + estimatedTimeStr
+                                        estimatedTimeText.visible = true
+                                    } else {
+                                        estimatedTimeText.visible = false
                                     }
                                 }
                                 
@@ -2033,6 +2036,13 @@ Rectangle {
                                     }
                                 }
                             }
+                        }
+                        Label {
+                            id: estimatedTimeText
+                            visible: false
+                            font.pixelSize: 14
+                            color: "#80FFFFFF"
+                            horizontalAlignment: Text.AlignLeft
                         }
                         CustomButton{
                             visible: !$MainViewController.isScanning && ($MriPairResultModel.checkedCount || $MainViewController.isPreAnalysisRunning)
