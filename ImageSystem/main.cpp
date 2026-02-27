@@ -7,6 +7,9 @@
 #include <QEvent>
 #include <QKeyEvent>
 #include <vtkAutoInit.h>
+#include <pybind11/embed.h>
+#include <pybind11/stl.h>
+#include <Windows.h>
 #include "Modules/CommonFunc.h"
 #include "ViewController/MainViewController.h"
 #include "Model/DicomDataModel.h"
@@ -16,6 +19,15 @@
 #include "Modules/BidsConverter.h"
 #include "ViewController/KnowledgeChatManager.h"
 #include "Modules/SliceVtkItemBase.h"
+
+namespace py = pybind11;
+
+static std::wstring GetExePath() {
+    wchar_t buffer[MAX_PATH];
+    GetModuleFileNameW(NULL, buffer, MAX_PATH);
+    std::wstring::size_type pos = std::wstring(buffer).find_last_of(L"\\/");
+    return std::wstring(buffer).substr(0, pos);
+}
 // 全局键盘事件过滤：不依赖 QML focus，把 1-6 写入 DicomDataModel.toolMode
 class GlobalKeyFilter : public QObject
 {
@@ -299,8 +311,11 @@ int main(int argc, char* argv[])
     QSurfaceFormat::setDefaultFormat(format);
     QtWebEngine::initialize();
     QGuiApplication app(argc, argv);
-    
 
+    std::wstring pyHomePath = GetExePath();
+    Py_SetPythonHome(pyHomePath.c_str());
+    py::scoped_interpreter guard{};
+    py::module_::import("sys").attr("path").attr("append")("Scripts");
 
     // ========== 批量扫描并转换为 BIDS 格式 ==========
     // 取消下面注释以运行完整流程测试
@@ -347,5 +362,6 @@ int main(int argc, char* argv[])
     if (engine.rootObjects().isEmpty())
         return -1;
 
+    py::gil_scoped_release release;
     return app.exec();
 }

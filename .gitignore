@@ -9,4 +9,5 @@
 ImageSystem/Scripts/*.exe
 ImageSystem/Scripts/model
 ImageSystem/AppData
+ImageSystem/Scripts/__pycache__
 /ImageSystem/Tests

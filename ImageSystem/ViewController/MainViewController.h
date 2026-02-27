@@ -28,7 +28,6 @@
 #include <vtkColorTransferFunction.h>
 #include <vtkPiecewiseFunction.h>
 #include <vtkVolumeProperty.h>
-#include <QProcess.h>
 #include <QTimer.h>
 #include <QPointer.h>
 #include <QFile.h>

@@ -100,6 +100,9 @@
     <ClCompile Include="Modules\BidsConverter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Modules\BrainRegionProcessor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Module\CommonFunc.h">
@@ -162,6 +165,9 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="Modules\DockerPrepRunner.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="Modules\BrainRegionProcessor.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

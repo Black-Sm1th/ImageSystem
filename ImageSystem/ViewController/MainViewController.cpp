@@ -8,7 +8,6 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QProcess>
 #include <QRegularExpression>
 #include <QTextStream>
 #include <QDirIterator>
@@ -25,6 +24,10 @@
 #include "Model/DicomDataModel.h"
 #include "Modules/SliceVtkItemBase.h"
 #include "Modules/BidsConverter.h"
+#include <pybind11/embed.h>
+#include <pybind11/stl.h>
+
+namespace py = pybind11;
 
 MainViewController::MainViewController(QObject* parent)
     : QObject(parent)
@@ -210,13 +213,12 @@ void MainViewController::setupBrainRegionProcessor()
 
 void MainViewController::startBrainRegionProcessing()
 {
-    // 确保处理器已初始化
     setupBrainRegionProcessor();
     
     // 查找分割结果文件
     // fMRIPrep 输出结构：输出文件夹/sourcedata/freesurfer/sub-XXX/mri/aparc+aseg.mgz
     // DeepPrep 输出结构：输出文件夹/Recon/sub-XXX/mri/aparc+aseg.mgz
-    // 都需要先用 mgz2nii.exe 转换成 nii.gz
+    // 都需要先用 mgz2nii Python 模块转换成 nii.gz
     
     QDir outputDir(m_preAnalysisOutputPath);
     if (!outputDir.exists()) {
@@ -226,34 +228,16 @@ void MainViewController::startBrainRegionProcessing()
         return;
     }
     
-    // 查找颜色表文件
     QString colorTablePath = "Scripts/tsv/desc-aseg_dseg_with_chinese.tsv";
     if (!QFileInfo::exists(colorTablePath)) {
         appendPreAnalysisLog(QStringLiteral(">>> 警告: 未找到颜色表文件，将使用默认颜色\n"));
         colorTablePath = "";
     }
     
-    // mgz2nii 转换工具路径
-    QString mgz2niiPath = "Scripts/mgz2nii.exe";
-    if (!QFileInfo::exists(mgz2niiPath)) {
-        appendPreAnalysisLog(QStringLiteral(">>> 错误: 未找到 mgz2nii.exe 转换工具\n"));
-        setisPreAnalysisRunning(false);
-        appendPreAnalysisLog(QStringLiteral("\n========== 预处理完成 ==========\n"));
-        return;
-    }
-    
-    // 收集所有被试的分割文件
-    QList<std::tuple<QString, QString, QString>> subjects;  // (segPath, rawPath, subjectName)
-    
-    // 根据预分析方法确定搜索路径
-    // fMRIPrep: sourcedata/freesurfer/sub-XXX/mri/
-    // DeepPrep: Recon/sub-XXX/mri/
     QString basePath;
     if (m_preAnalysisMethod == 0) {
-        // fMRIPrep
         basePath = outputDir.filePath("sourcedata/freesurfer");
     } else {
-        // DeepPrep
         basePath = outputDir.filePath("Recon");
     }
     
@@ -264,85 +248,108 @@ void MainViewController::startBrainRegionProcessing()
         appendPreAnalysisLog(QStringLiteral("\n========== 预处理完成 ==========\n"));
         return;
     }
-    
-    // 扫描 sub-* 目录
-    QStringList subDirs = baseDir.entryList(QStringList() << "sub-*", QDir::Dirs | QDir::NoDotAndDotDot);
-    
-    for (const QString& subDir : subDirs) {
-        QString mriPath = baseDir.filePath(subDir + "/mri");
-        QString mgzFile = QDir(mriPath).filePath("aparc+aseg.mgz");
-        
-        if (!QFileInfo::exists(mgzFile)) {
-            appendPreAnalysisLog(QStringLiteral(">>> 警告: 未找到被试 %1 的分割文件，跳过\n").arg(subDir));
-            continue;
-        }
-        
-        // 转换 aparc+aseg.mgz 到 nii.gz
-        QString niiFile = QDir(mriPath).filePath("aparc+aseg.nii.gz");
-        
-        if (!QFileInfo::exists(niiFile)) {
-            appendPreAnalysisLog(QStringLiteral(">>> 正在转换 %1 的 aparc+aseg.mgz 文件...\n").arg(subDir));
-            
-            QProcess convertProcess;
-            convertProcess.start(mgz2niiPath, QStringList() << mgzFile << niiFile);
-            
-            if (!convertProcess.waitForFinished(60000)) {  // 60秒超时
-                appendPreAnalysisLog(QStringLiteral(">>> 警告: 被试 %1 的 aparc+aseg.mgz 转换超时，跳过\n").arg(subDir));
+
+    QString basePathCopy = basePath;
+    QString outputPathCopy = m_preAnalysisOutputPath;
+
+    QtConcurrent::run([=]() {
+        QDir bgBaseDir(basePathCopy);
+        QStringList subDirs = bgBaseDir.entryList(QStringList() << "sub-*", QDir::Dirs | QDir::NoDotAndDotDot);
+        QList<std::tuple<QString, QString, QString>> subjects;
+
+        for (const QString& subDir : subDirs) {
+            QString mriPath = bgBaseDir.filePath(subDir + "/mri");
+            QString mgzFile = QDir(mriPath).filePath("aparc+aseg.mgz");
+
+            if (!QFileInfo::exists(mgzFile)) {
+                QMetaObject::invokeMethod(this, [=]() {
+                    appendPreAnalysisLog(QStringLiteral(">>> 警告: 未找到被试 %1 的分割文件，跳过\n").arg(subDir));
+                }, Qt::QueuedConnection);
                 continue;
             }
-            
-            if (convertProcess.exitCode() != 0) {
-                appendPreAnalysisLog(QStringLiteral(">>> 警告: 被试 %1 的 aparc+aseg.mgz 转换失败: %2\n")
-                    .arg(subDir).arg(QString::fromUtf8(convertProcess.readAllStandardError())));
-                continue;
-            }
-            
+
+            QString niiFile = QDir(mriPath).filePath("aparc+aseg.nii.gz");
+
             if (!QFileInfo::exists(niiFile)) {
-                appendPreAnalysisLog(QStringLiteral(">>> 警告: 被试 %1 转换后的 aparc+aseg.nii.gz 文件不存在，跳过\n").arg(subDir));
-                continue;
+                QMetaObject::invokeMethod(this, [=]() {
+                    appendPreAnalysisLog(QStringLiteral(">>> 正在转换 %1 的 aparc+aseg.mgz 文件...\n").arg(subDir));
+                }, Qt::QueuedConnection);
+
+                bool convertOk = false;
+                try {
+                    py::gil_scoped_acquire acquire;
+                    py::module_ mgz2nii = py::module_::import("mgz2nii");
+                    mgz2nii.attr("mgz_to_nii")(mgzFile.toStdString(), niiFile.toStdString());
+                    convertOk = true;
+                } catch (const py::error_already_set& e) {
+                    QString errMsg = QString::fromUtf8(e.what());
+                    QMetaObject::invokeMethod(this, [=]() {
+                        appendPreAnalysisLog(QStringLiteral(">>> 警告: 被试 %1 的 aparc+aseg.mgz 转换失败: %2\n")
+                            .arg(subDir).arg(errMsg));
+                    }, Qt::QueuedConnection);
+                    continue;
+                }
+
+                if (!convertOk || !QFileInfo::exists(niiFile)) {
+                    QMetaObject::invokeMethod(this, [=]() {
+                        appendPreAnalysisLog(QStringLiteral(">>> 警告: 被试 %1 转换后的 aparc+aseg.nii.gz 文件不存在，跳过\n").arg(subDir));
+                    }, Qt::QueuedConnection);
+                    continue;
+                }
+
+                QMetaObject::invokeMethod(this, [=]() {
+                    appendPreAnalysisLog(QStringLiteral(">>> 转换完成: %1\n").arg(niiFile));
+                }, Qt::QueuedConnection);
             }
-            
-            appendPreAnalysisLog(QStringLiteral(">>> 转换完成: %1\n").arg(niiFile));
-        }
-        
-        // 同时转换 T1.mgz 到 T1.nii.gz（用于三维渲染和二维切片）
-        QString t1MgzFile = QDir(mriPath).filePath("T1.mgz");
-        QString t1NiiFile = QDir(mriPath).filePath("T1.nii.gz");
-        
-        if (QFileInfo::exists(t1MgzFile) && !QFileInfo::exists(t1NiiFile)) {
-            appendPreAnalysisLog(QStringLiteral(">>> 正在转换 %1 的 T1.mgz 文件...\n").arg(subDir));
-            
-            QProcess convertProcess;
-            convertProcess.start(mgz2niiPath, QStringList() << t1MgzFile << t1NiiFile);
-            
-            if (!convertProcess.waitForFinished(60000)) {  // 60秒超时
-                appendPreAnalysisLog(QStringLiteral(">>> 警告: 被试 %1 的 T1.mgz 转换超时\n").arg(subDir));
-            } else if (convertProcess.exitCode() != 0) {
-                appendPreAnalysisLog(QStringLiteral(">>> 警告: 被试 %1 的 T1.mgz 转换失败: %2\n")
-                    .arg(subDir).arg(QString::fromUtf8(convertProcess.readAllStandardError())));
-            } else if (QFileInfo::exists(t1NiiFile)) {
-                appendPreAnalysisLog(QStringLiteral(">>> T1 转换完成: %1\n").arg(t1NiiFile));
+
+            QString t1MgzFile = QDir(mriPath).filePath("T1.mgz");
+            QString t1NiiFile = QDir(mriPath).filePath("T1.nii.gz");
+
+            if (QFileInfo::exists(t1MgzFile) && !QFileInfo::exists(t1NiiFile)) {
+                QMetaObject::invokeMethod(this, [=]() {
+                    appendPreAnalysisLog(QStringLiteral(">>> 正在转换 %1 的 T1.mgz 文件...\n").arg(subDir));
+                }, Qt::QueuedConnection);
+
+                try {
+                    py::gil_scoped_acquire acquire;
+                    py::module_ mgz2nii = py::module_::import("mgz2nii");
+                    mgz2nii.attr("mgz_to_nii")(t1MgzFile.toStdString(), t1NiiFile.toStdString());
+
+                    if (QFileInfo::exists(t1NiiFile)) {
+                        QMetaObject::invokeMethod(this, [=]() {
+                            appendPreAnalysisLog(QStringLiteral(">>> T1 转换完成: %1\n").arg(t1NiiFile));
+                        }, Qt::QueuedConnection);
+                    }
+                } catch (const py::error_already_set& e) {
+                    QString errMsg = QString::fromUtf8(e.what());
+                    QMetaObject::invokeMethod(this, [=]() {
+                        appendPreAnalysisLog(QStringLiteral(">>> 警告: 被试 %1 的 T1.mgz 转换失败: %2\n")
+                            .arg(subDir).arg(errMsg));
+                    }, Qt::QueuedConnection);
+                }
             }
+
+            subjects.append(std::make_tuple(niiFile, QString(), subDir));
+            QMetaObject::invokeMethod(this, [=]() {
+                appendPreAnalysisLog(QStringLiteral(">>> 找到被试: %1\n    分割文件: %2\n").arg(subDir).arg(niiFile));
+            }, Qt::QueuedConnection);
         }
-        
-        subjects.append(std::make_tuple(niiFile, QString(), subDir));
-        appendPreAnalysisLog(QStringLiteral(">>> 找到被试: %1\n    分割文件: %2\n").arg(subDir).arg(niiFile));
-    }
-    
-    if (subjects.isEmpty()) {
-        appendPreAnalysisLog(QStringLiteral(">>> 错误: 未找到任何有效的分割文件\n"));
-        setisPreAnalysisRunning(false);
-        appendPreAnalysisLog(QStringLiteral("\n========== 预处理完成 ==========\n"));
-        return;
-    }
-    
-    appendPreAnalysisLog(QStringLiteral("\n>>> 开始批量处理 %1 个被试的脑区数据...\n").arg(subjects.size()));
-    
-    // 设置输出目录（在主输出目录下创建 brain_regions 子目录）
-    QString brainRegionsBaseDir = outputDir.filePath("brain_regions");
-    
-    // 开始批量异步处理
-    m_brainRegionProcessor->processBatchAsync(subjects, colorTablePath, brainRegionsBaseDir);
+
+        QMetaObject::invokeMethod(this, [=]() {
+            if (subjects.isEmpty()) {
+                appendPreAnalysisLog(QStringLiteral(">>> 错误: 未找到任何有效的分割文件\n"));
+                setisPreAnalysisRunning(false);
+                appendPreAnalysisLog(QStringLiteral("\n========== 预处理完成 ==========\n"));
+                return;
+            }
+
+            appendPreAnalysisLog(QStringLiteral("\n>>> 开始批量处理 %1 个被试的脑区数据...\n").arg(subjects.size()));
+
+            QDir outDir(outputPathCopy);
+            QString brainRegionsBaseDir = outDir.filePath("brain_regions");
+            m_brainRegionProcessor->processBatchAsync(subjects, colorTablePath, brainRegionsBaseDir);
+        }, Qt::QueuedConnection);
+    });
 }
 
 void MainViewController::clearPrepOutputsOnFailure(const QString& outputDir, bool isFmriPrep)
@@ -483,80 +490,48 @@ QVariantMap MainViewController::readMetadataFile(const QString& outputDir)
 }
 
 void MainViewController::calculateKidney() {
-    // 检查所有参数是否已设置
     if (gett2() == -1 || getskin() == -1 || getmicro() == -1 ||
         getsei() == -1 || getader() == -1 || getdisp() == -1) {
         qWarning() << QStringLiteral("部分参数未设置，无法计算");
         return;
     }
 
-    // 构建Python程序路径
-    QString pythonPath = "Scripts/kidney_processor.exe";
-    
-    // 准备参数
-    QStringList arguments;
-    arguments << QString::number(gett2())
-              << QString::number(getskin())
-              << QString::number(getmicro())
-              << QString::number(getsei())
-              << QString::number(getader())
-              << QString::number(getdisp());
+    int T2 = gett2(), skin = getskin(), micro = getmicro();
+    int SEI = getsei(), ADER = getader(), dispersion = getdisp();
 
-    // 创建进程
-    QProcess* process = new QProcess(this);
-    
-    // 连接信号
-    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-        [=](int exitCode, QProcess::ExitStatus exitStatus) {
-            if (exitStatus == QProcess::NormalExit && exitCode == 0) {
-                QString output = QString::fromUtf8(process->readAllStandardOutput());
-                QString error = QString::fromUtf8(process->readAllStandardError());
-                // 解析输出结果
-                QStringList lines = output.split('\n', Qt::SkipEmptyParts);
-                for (const QString& line : lines) {
-                    if (line.contains("result ccls:", Qt::CaseInsensitive)) {
-                        QStringList parts = line.split(':');
-                        if (parts.size() >= 2) {
-                            bool ok;
-                            double value = parts[1].trimmed().toDouble(&ok);
-                            if (ok) {
-                                setcclsResult(value);
-                                qDebug() << QStringLiteral("CCLS结果:") << value;
-                            }
-                        }
-                    } else if (line.contains("result ccrcc:", Qt::CaseInsensitive)) {
-                        QStringList parts = line.split(':');
-                        if (parts.size() >= 2) {
-                            bool ok;
-                            double value = parts[1].trimmed().toDouble(&ok);
-                            if (ok) {
-                                setccrccResult(value);
-                                qDebug() << QStringLiteral("CCRCC结果:") << value;
-                            }
-                        }
-                    }
-                }
-                
-                if (!error.isEmpty()) {
-                    qDebug() << QStringLiteral("错误:") << error;
-                }
-            } else {
-                qWarning() << QStringLiteral("计算失败！退出代码:") << exitCode;
-                qWarning() << QStringLiteral("错误信息:") << QString::fromUtf8(process->readAllStandardError());
-            }
-            process->deleteLater();
-        });
-    
-    connect(process, &QProcess::errorOccurred, [=](QProcess::ProcessError error) {
-        qWarning() << QStringLiteral("进程错误:") << error;
-        qWarning() << QStringLiteral("错误信息:") << process->errorString();
-        process->deleteLater();
+    qDebug() << QStringLiteral("启动肾脏计算 (pybind11), 参数:") << T2 << skin << micro << SEI << ADER << dispersion;
+
+    QtConcurrent::run([=]() {
+        double ccls_value = 0.0;
+        double ccrcc_value = 0.0;
+        bool success = false;
+
+        try {
+            py::gil_scoped_acquire acquire;
+            py::module_ kidney = py::module_::import("kidney_processor");
+
+            py::object ccls_result = kidney.attr("calculate_CCLS")(T2, skin, micro, SEI, ADER, dispersion);
+            ccls_value = ccls_result.cast<double>();
+            qDebug() << QStringLiteral("CCLS结果:") << ccls_value;
+
+            py::object ccrcc_result = kidney.attr("calculate_CCRCC")(T2, skin, micro, SEI, ADER, dispersion, ccls_value);
+            std::string ccrcc_str = ccrcc_result.cast<std::string>();
+            ccrcc_value = std::stod(ccrcc_str);
+            qDebug() << QStringLiteral("CCRCC结果:") << ccrcc_value;
+            success = true;
+        } catch (const py::error_already_set& e) {
+            qWarning() << QStringLiteral("Python 计算错误:") << e.what();
+        } catch (const std::exception& e) {
+            qWarning() << QStringLiteral("计算错误:") << e.what();
+        }
+
+        if (success) {
+            QMetaObject::invokeMethod(this, [=]() {
+                setcclsResult(ccls_value);
+                setccrccResult(ccrcc_value);
+            }, Qt::QueuedConnection);
+        }
     });
-
-    // 启动进程
-    qDebug() << QStringLiteral("启动计算程序:") << pythonPath;
-    qDebug() << QStringLiteral("参数:") << arguments;
-    process->start(pythonPath, arguments);
 }
 
 bool MainViewController::loadBrainAgePredictions(const QString& basePath)
@@ -800,7 +775,6 @@ void MainViewController::selectBrainRegion(int row)
     setcurrentRegionplotsUrl(imagePath);
 }
 
-
 void MainViewController::stopFmriprepProcess()
 {
     if (m_dockerPrepRunner && m_dockerPrepRunner->isRunning()) {
@@ -862,76 +836,55 @@ void MainViewController::stopPrepLogTimer()
 
 void MainViewController::processBrainNetworkAnalysis(const QString& boldPath, const QString& confoundsPath, const QString& outputDir)
 {
-    // 构建 Python 脚本路径
-    QString scriptPath = "Scripts/brain_network.exe";
-    
-    // 准备参数
-    QStringList arguments;
-    arguments << "--bold" << boldPath
-              << "--confounds" << confoundsPath
-              << "--tr" << "2.0"
-              << "--output" << outputDir;
-    
-    // 创建进程
-    QProcess* process = new QProcess(this);
-    
-    // 发出开始信号
     emit brainAnalysisStarted();
-    
-    // 连接完成信号
-    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-        [=](int exitCode, QProcess::ExitStatus exitStatus) {
-            if (exitStatus == QProcess::NormalExit && exitCode == 0) {
-                qDebug() << QStringLiteral("脑网络分析完成！");
-                
-                // 分析成功，加载结果
+
+    qDebug() << QStringLiteral("启动脑网络分析 (pybind11)");
+    qDebug() << QStringLiteral("  BOLD:") << boldPath;
+    qDebug() << QStringLiteral("  Confounds:") << confoundsPath;
+    qDebug() << QStringLiteral("  Output:") << outputDir;
+
+    QtConcurrent::run([=]() {
+        bool success = false;
+        try {
+            py::gil_scoped_acquire acquire;
+            py::module_ brain_network = py::module_::import("brain_network");
+
+            py::module_ sys = py::module_::import("sys");
+            py::list argv;
+            argv.append("brain_network");
+            argv.append("--bold");
+            argv.append(boldPath.toStdString());
+            argv.append("--confounds");
+            argv.append(confoundsPath.toStdString());
+            argv.append("--tr");
+            argv.append("2.0");
+            argv.append("--output");
+            argv.append(outputDir.toStdString());
+            sys.attr("argv") = argv;
+
+            brain_network.attr("main")();
+            success = true;
+            qDebug() << QStringLiteral("脑网络分析完成！");
+        } catch (const py::error_already_set& e) {
+            qWarning() << QStringLiteral("脑网络分析 Python 错误:") << e.what();
+        } catch (const std::exception& e) {
+            qWarning() << QStringLiteral("脑网络分析错误:") << e.what();
+        }
+
+        QMetaObject::invokeMethod(this, [=]() {
+            if (success) {
                 if (loadOutputData(outputDir)) {
                     qDebug() << QStringLiteral("结果加载成功");
                     emit brainAnalysisFinished(true);
                 } else {
                     qWarning() << QStringLiteral("结果加载失败");
-                    qDebug() << QStringLiteral("脑网络分析完成，但加载结果失败");
                     emit brainAnalysisFinished(false);
                 }
             } else {
-                QString errorOutput = QString::fromUtf8(process->readAllStandardError());
-                qWarning() << QStringLiteral("脑网络分析失败！退出代码:") << exitCode;
-                qWarning() << QStringLiteral("错误信息:") << errorOutput;
-                
-                qDebug() << QStringLiteral("脑网络分析失败！错误代码: %1，信息: %2").arg(exitCode).arg(errorOutput.isEmpty() ? QStringLiteral("未知错误") : errorOutput);
                 emit brainAnalysisFinished(false);
             }
-            process->deleteLater();
-        });
-    
-    // 连接错误信号
-    connect(process, &QProcess::errorOccurred, [=](QProcess::ProcessError error) {
-        QString errorMsg;
-        switch (error) {
-            case QProcess::FailedToStart:
-                errorMsg = QStringLiteral("脚本启动失败！请检查脚本路径: ") + scriptPath;
-                break;
-            case QProcess::Crashed:
-                errorMsg = QStringLiteral("脚本运行时崩溃");
-                break;
-            case QProcess::Timedout:
-                errorMsg = QStringLiteral("脚本运行超时");
-                break;
-            default:
-                errorMsg = QStringLiteral("脚本运行错误: ") + process->errorString();
-                break;
-        }
-        
-        qWarning() << QStringLiteral("进程错误:") << errorMsg;
-        qDebug() << errorMsg;
-        emit brainAnalysisFinished(false);
-        process->deleteLater();
+        }, Qt::QueuedConnection);
     });
-    
-    // 启动进程
-    qDebug() << QStringLiteral("启动脑网络分析程序:") << scriptPath;
-    
-    process->start(scriptPath, arguments);
 }
 
 void MainViewController::generatePdfReport(const QString& savePath)
@@ -2346,7 +2299,6 @@ void MainViewController::startPreAnalysis(int method, const QString& bidsPath, c
 
 void MainViewController::startBatchBrainAgePrediction(const QList<MriPairResult>& results, const QString& outputDir)
 {
-    // 过滤出有 T1 路径的结果
     QStringList t1Paths;
     QStringList patientIds;
     
@@ -2364,60 +2316,60 @@ void MainViewController::startBatchBrainAgePrediction(const QList<MriPairResult>
     
     appendPreAnalysisLog(QStringLiteral(">>> 开始脑龄预测 (共 %1 个被试)...\n").arg(t1Paths.size()));
     
-    // 构建输出路径
-    const QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
-    const QString outputPath = outputDir +  "/BatchPrediction.csv";
+    const QString outputPath = outputDir + "/BatchPrediction.csv";
     const QString modelPath = QStringLiteral("Scripts/model/DBN_model.h5");
-    const QString exePath = QStringLiteral("Scripts/brain_age.exe");
     
-    // 构建参数列表
-    QStringList arguments;
-    arguments << "--input";
-    arguments << t1Paths;
-    arguments << "--ids";
-    arguments << patientIds;
-    arguments << "--output" << outputPath;
-    arguments << "--model" << modelPath;
-    arguments << "--docker-image" << "deepbrain";
-    arguments << "--preprocess";  // 开启预处理
-    
-    qDebug() << "Starting batch brain age prediction:";
+    qDebug() << "Starting batch brain age prediction (pybind11):";
     qDebug() << "  T1 Paths:" << t1Paths;
     qDebug() << "  Patient IDs:" << patientIds;
     qDebug() << "  Output:" << outputPath;
-    
-    // 启动脑龄预测进程
-    QProcess* process = new QProcess(this);
-    
-    connect(process, &QProcess::errorOccurred, this, [=](QProcess::ProcessError error) {
-        Q_UNUSED(error);
-        appendPreAnalysisLog(QStringLiteral(">>> 脑龄预测启动失败: %1\n\n").arg(process->errorString()));
-        process->deleteLater();
-    });
-    
-    connect(process, &QProcess::readyReadStandardOutput, this, [=]() {
-        QString output = QString::fromLocal8Bit(process->readAllStandardOutput());
-        appendPreAnalysisLog(output);
-    });
-    
-    connect(process, &QProcess::readyReadStandardError, this, [=]() {
-        QString output = QString::fromLocal8Bit(process->readAllStandardError());
-        appendPreAnalysisLog(output);
-    });
-    
-    connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-        this, [=](int exitCode, QProcess::ExitStatus exitStatus) {
-            Q_UNUSED(exitStatus);
-            if (exitCode == 0) {
-                appendPreAnalysisLog(QStringLiteral("\n>>> 脑龄预测完成，结果保存至: %1\n\n").arg(outputPath));
-                // 可以在这里解析 CSV 并更新 UI
-            } else {
-                appendPreAnalysisLog(QStringLiteral("\n>>> 脑龄预测失败，退出码: %1\n\n").arg(exitCode));
+
+    QtConcurrent::run([=]() {
+        bool success = false;
+        try {
+            py::gil_scoped_acquire acquire;
+            py::module_ brain_age = py::module_::import("brain_age");
+
+            py::module_ sys = py::module_::import("sys");
+            py::list argv;
+            argv.append("brain_age");
+            argv.append("--input");
+            for (const QString& p : t1Paths) {
+                argv.append(p.toStdString());
             }
-            process->deleteLater();
-        });
-    
-    process->start(exePath, arguments);
+            argv.append("--ids");
+            for (const QString& id : patientIds) {
+                argv.append(id.toStdString());
+            }
+            argv.append("--output");
+            argv.append(outputPath.toStdString());
+            argv.append("--model");
+            argv.append(modelPath.toStdString());
+            argv.append("--docker-image");
+            argv.append("deepbrain");
+            argv.append("--preprocess");
+            sys.attr("argv") = argv;
+
+            brain_age.attr("main")();
+            success = true;
+        } catch (const py::error_already_set& e) {
+            QMetaObject::invokeMethod(this, [=]() {
+                appendPreAnalysisLog(QStringLiteral(">>> 脑龄预测 Python 错误: %1\n\n").arg(QString::fromUtf8(e.what())));
+            }, Qt::QueuedConnection);
+        } catch (const std::exception& e) {
+            QMetaObject::invokeMethod(this, [=]() {
+                appendPreAnalysisLog(QStringLiteral(">>> 脑龄预测错误: %1\n\n").arg(QString::fromUtf8(e.what())));
+            }, Qt::QueuedConnection);
+        }
+
+        QMetaObject::invokeMethod(this, [=]() {
+            if (success) {
+                appendPreAnalysisLog(QStringLiteral("\n>>> 脑龄预测完成，结果保存至: %1\n\n").arg(outputPath));
+            } else {
+                appendPreAnalysisLog(QStringLiteral("\n>>> 脑龄预测失败\n\n"));
+            }
+        }, Qt::QueuedConnection);
+    });
 }
 
 void MainViewController::onScanProgressUpdated(const ScanProgress& progress) {
