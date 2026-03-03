@@ -345,5 +345,6 @@
         <file>image/btnBackgroundSelected4.png</file>
         <file>image/aiBtn.png</file>
         <file>icon/icon.ico</file>
+        <file>qml/components/PythonConsole.qml</file>
     </qresource>
 </RCC>

@@ -3,9 +3,11 @@
 ################################################################################
 
 /x64
+/ARM64
 /.vs
 /ImageSystem/build
 /ImageSystem/x64
+/ImageSystem/ARM64
 ImageSystem/Scripts/*.exe
 ImageSystem/Scripts/model
 ImageSystem/AppData

@@ -122,6 +122,7 @@
     <ClCompile Include="Modules\BrainRegionVisualizer.cpp" />
     <ClCompile Include="Modules\DockerPrepRunner.cpp" />
     <ClCompile Include="Modules\InteractionState.cpp" />
+    <ClCompile Include="Modules\PythonConsoleManager.cpp" />
     <ClCompile Include="Modules\SliceVtkItemBase.cpp" />
     <ClCompile Include="ViewController\KnowledgeChatManager.cpp" />
     <ClCompile Include="ViewController\MainViewController.cpp" />
@@ -140,6 +141,7 @@
     <None Include="qml\main.qml" />
   </ItemGroup>
   <ItemGroup>
+    <QtMoc Include="Modules\PythonConsoleManager.h" />
     <ClInclude Include="resource.h" />
     <QtMoc Include="Modules\SliceVtkItemBase.h" />
     <QtMoc Include="ViewController\KnowledgeChatManager.h" />

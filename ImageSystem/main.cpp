@@ -18,6 +18,7 @@
 #include "Modules/BatchMriScanner.h"
 #include "Modules/BidsConverter.h"
 #include "ViewController/KnowledgeChatManager.h"
+#include "Modules/PythonConsoleManager.h"
 #include "Modules/SliceVtkItemBase.h"
 
 namespace py = pybind11;
@@ -354,6 +355,7 @@ int main(int argc, char* argv[])
     engine.rootContext()->setContextProperty("$MriPairResultModel", GET_SINGLETON(MainViewController)->getMriPairResultModel());
 
     engine.rootContext()->setContextProperty("$chatManager", GET_SINGLETON(KnowledgeChatManager));
+    engine.rootContext()->setContextProperty("$PythonConsole", GET_SINGLETON(PythonConsoleManager));
 
     int fontId1 = QFontDatabase::addApplicationFont(":/fonts/AlibabaPuHuiTi-3-55-Regular.ttf");
     int fontId2 = QFontDatabase::addApplicationFont(":/fonts/AlibabaPuHuiTi-3-65-Medium.ttf");

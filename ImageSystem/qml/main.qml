@@ -2068,6 +2068,23 @@ ApplicationWindow {
         }
     }
 
+    // Python 控制台 (Ctrl+P 切换)
+    PythonConsole {
+        id: pythonConsole
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 20
+        width: Math.min(parent.width * 0.7, 900)
+        height: Math.min(parent.height * 0.45, 500)
+        z: 9999
+    }
+
+    Shortcut {
+        sequence: "Ctrl+P"
+        context: Qt.ApplicationShortcut
+        onActivated: pythonConsole.toggle()
+    }
+
     // 连接MainViewController的标注创建信号
     Connections {
         target: $MainViewController
