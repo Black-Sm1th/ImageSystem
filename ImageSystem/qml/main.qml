@@ -10,7 +10,7 @@ ApplicationWindow {
     visible: true
     width: 1920
     height: 1080
-    title: qsTr("DICOM 医学影像查看器")
+    title: qsTr("脑健康影像辅助定量分析系统")
     color: "#000000"
     property int analysisPanelIndex: 0
     property bool showAIPanel: false
@@ -294,7 +294,7 @@ ApplicationWindow {
             spacing: 8
 
             Text {
-                text: "DICOM 医学影像查看器"
+                text: "脑健康影像辅助定量分析系统"
                 color: "#B2FFFFFF"
                 font.pixelSize: 14
                 font.weight: Font.Medium

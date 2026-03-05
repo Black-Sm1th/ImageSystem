@@ -338,7 +338,7 @@ int main(int argc, char* argv[])
 
     QCoreApplication::setOrganizationName("AETHERMIND");
     QCoreApplication::setOrganizationDomain("aethermind.com");
-    QCoreApplication::setApplicationName("ImageSystem");
+    QCoreApplication::setApplicationName("AetherDesk");
     QCoreApplication::setApplicationVersion(VER_VERSION_STR);
 
     QQmlApplicationEngine engine;
