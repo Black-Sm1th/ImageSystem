@@ -937,7 +937,7 @@ void MainViewController::generatePdfReport(const QString& savePath)
     int textY = columnY + title1.height() + 13 + 30; 
     painter.setFont(QFont("Alibaba PuHuiTi 3.0", 15, QFont::Normal));
     painter.setPen(QColor("#273967"));
-    painter.drawText(columnX, textY, QStringLiteral("检测医院:") + QStringLiteral("南京脑科医院"));
+    painter.drawText(columnX, textY, QStringLiteral("检测医院:") + QStringLiteral("xxxxx"));
 
     textY = textY + 50 + 20  + 20;
     painter.setFont(QFont("Alibaba PuHuiTi 3.0", 15, QFont::Medium));
