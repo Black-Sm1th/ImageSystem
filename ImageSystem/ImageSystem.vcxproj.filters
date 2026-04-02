@@ -47,7 +47,7 @@
     <None Include="qml\BrainPanel.qml">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="qml\components\PythonConsole.qml">
+    <None Include="qml\DataStorePanel.qml">
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>
@@ -109,6 +109,12 @@
     <ClCompile Include="Modules\PythonConsoleManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Model\AppDataModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\DatabaseManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Module\CommonFunc.h">
@@ -133,6 +139,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\DatabaseManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -177,6 +186,9 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="Modules\PythonConsoleManager.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="Model\AppDataModel.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>
