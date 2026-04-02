@@ -10,7 +10,8 @@ ApplicationWindow {
     visible: true
     width: 1920
     height: 1080
-    title: qsTr("脑健康影像辅助定量分析系统")
+    //title: qsTr("脑健康影像辅助定量分析系统")AetherDesk
+    title: qsTr("AetherDesk")
     color: "#000000"
     property int analysisPanelIndex: 0
     property bool showAIPanel: false
@@ -21,6 +22,32 @@ ApplicationWindow {
     MessageBox {
         id: dialogMessageBox
         anchors.fill: parent
+    }
+
+    LogWindow {
+        id: logWindow
+    }
+
+    Window {
+        id: dataStoreWindow
+        width: 1824
+        height: 950
+        visible: false
+        title: qsTr("数据上传")
+        color: "#0C1120"
+        flags: Qt.Window | Qt.FramelessWindowHint
+
+        DataStorePanel {
+            anchors.fill: parent
+            messageManager: dialogMessageBox
+            onViewAnalysisRequested: {
+                analysisPanelIndex = 2
+                dataStoreWindow.hide()
+                win.raise()
+                win.requestActivate()
+                brainpanel.loadOutputDirectory(caseInfo.outputPath, caseInfo)
+            }
+        }
     }
     
     // 监听 C++ 层的消息请求
@@ -294,7 +321,7 @@ ApplicationWindow {
             spacing: 8
 
             Text {
-                text: "脑健康影像辅助定量分析系统"
+                text: "AetherDesk"
                 color: "#B2FFFFFF"
                 font.pixelSize: 14
                 font.weight: Font.Medium
@@ -444,7 +471,9 @@ ApplicationWindow {
                     }
 
                     onClicked: {
-                        fileDialog.open()
+                        dataStoreWindow.show()
+                        dataStoreWindow.raise()
+                        dataStoreWindow.requestActivate()
                     }
                 }
             }

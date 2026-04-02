@@ -341,6 +341,7 @@ void BatchMriScanner::performScan(const QString& rootPath, int maxDepth)
             pairMap[pairKey].patientSex = info.patientSex;
             pairMap[pairKey].patientBirthDate = info.patientBirthDate;
             pairMap[pairKey].studyDate = info.studyDate;
+            pairMap[pairKey].t1SeriesUid = info.seriesInstanceUid;
             pairMap[pairKey].t1Path = folder;
             pairMap[pairKey].t1SeriesDesc = info.seriesDescription;
             pairMap[pairKey].t1ImageCount = info.numberOfImages;
@@ -357,6 +358,7 @@ void BatchMriScanner::performScan(const QString& rootPath, int maxDepth)
             pairMap[pairKey].patientSex = info.patientSex;
             pairMap[pairKey].patientBirthDate = info.patientBirthDate;
             pairMap[pairKey].studyDate = info.studyDate;
+            pairMap[pairKey].boldSeriesUid = info.seriesInstanceUid;
             pairMap[pairKey].boldPath = folder;
             pairMap[pairKey].boldSeriesDesc = info.seriesDescription;
             pairMap[pairKey].boldImageCount = info.numberOfImages;

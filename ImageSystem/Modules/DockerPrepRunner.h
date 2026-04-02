@@ -8,6 +8,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QPointer>
+#include <functional>
 
 /**
  * @brief DeepPrep 运行参数结构体
@@ -63,25 +64,17 @@ Q_DECLARE_METATYPE(BidsValidationResult)
 /**
  * @brief Docker 预处理运行器
  * 
- * 用于运行 DeepPrep 和 fMRIPrep Docker 容器
- * 支持：
- * - 检查 Docker 环境
- * - 验证 BIDS 数据结构
- * - 读取 participants.tsv
- * - 异步运行 Docker 容器
+ * 用于运行 DeepPrep / fMRIPrep / Deface / BAP Docker 容器
  */
 class DockerPrepRunner : public QObject
 {
     Q_OBJECT
 
 public:
-    /**
-     * @brief Docker 状态枚举
-     */
     enum DockerStatus {
-        DockerNotFound = -1,    // Docker 未安装
-        DockerNotRunning = 0,   // Docker 守护进程未运行
-        DockerReady = 1         // Docker 就绪
+        DockerNotFound = -1,
+        DockerNotRunning = 0,
+        DockerReady = 1
     };
     Q_ENUM(DockerStatus)
 
@@ -89,145 +82,57 @@ public:
     ~DockerPrepRunner();
 
     // ================== Docker 检查 ==================
-    
-    /**
-     * @brief 检查 Docker 是否可用
-     * @return Docker 状态
-     */
     DockerStatus checkDocker();
-
-    /**
-     * @brief 检查镜像是否存在
-     * @param imageName 镜像名称
-     * @return 是否存在
-     */
     bool checkImage(const QString& imageName);
-
-    /**
-     * @brief 获取 Docker 版本
-     * @return 版本字符串，失败返回空
-     */
     QString getDockerVersion();
 
     // ================== BIDS 操作 ==================
-    
-    /**
-     * @brief 扫描 BIDS 目录中的被试
-     * @param bidsDir BIDS 目录路径
-     * @return 被试 ID 列表（带 sub- 前缀）
-     */
     QStringList scanBidsSubjects(const QString& bidsDir);
-
-    /**
-     * @brief 验证 BIDS 数据结构
-     * @param bidsDir BIDS 目录路径
-     * @return 验证结果
-     */
     BidsValidationResult validateBidsStructure(const QString& bidsDir);
-
-    /**
-     * @brief 从 participants.tsv 读取被试列表
-     * @param bidsDir BIDS 目录路径
-     * @return 被试 ID 列表（带 sub- 前缀），失败返回空列表
-     */
     QStringList readParticipantsTsv(const QString& bidsDir);
 
     // ================== 运行 Docker ==================
-    
-    /**
-     * @brief 异步运行 DeepPrep Docker
-     * @param params 运行参数
-     * 
-     * 结果通过 deepPrepFinished 信号返回
-     */
     void runDeepPrep(const DeepPrepParams& params);
-
-    /**
-     * @brief 异步运行 fMRIPrep Docker
-     * @param params 运行参数
-     * 
-     * 结果通过 fmriPrepFinished 信号返回
-     */
     void runFmriPrep(const FmriPrepParams& params);
 
-    /**
-     * @brief 停止当前运行的 Docker 容器
-     */
-    void stop();
+    // 新增：Deface 和 BAP Docker
+    void runDeface(const QString& bidsDir, const QStringList& subjects = {});
+    void runBap(const QString& bidsDir, const QStringList& subjects = {});
+    void stopDeface();
+    void stopBap();
 
-    /**
-     * @brief 是否正在运行
-     */
+    void stop();
     bool isRunning() const { return m_isRunning; }
 
+    // bap_subjects.txt：相对 BIDS 根 sub-XXX/anat/xxx.nii.gz（deface 用原始；BAP 前改为 *_defaced.nii.gz）
+    static bool generateDefaceSubjectsTxt(const QString& bidsDir, const QStringList& subjects = {});
+    static bool generateBapSubjectsTxtDefaced(const QString& bidsDir, const QStringList& subjects = {});
+
 signals:
-    /**
-     * @brief DeepPrep 完成信号
-     * @param exitCode 退出码（0表示成功）
-     * @param message 完成消息
-     */
     void deepPrepFinished(int exitCode, const QString& message);
-
-    /**
-     * @brief fMRIPrep 完成信号
-     * @param exitCode 退出码（0表示成功）
-     * @param message 完成消息
-     */
     void fmriPrepFinished(int exitCode, const QString& message);
-
-    /**
-     * @brief 输出日志信号
-     * @param line 日志行
-     */
+    void defaceFinished(int exitCode, const QString& message);
+    void bapFinished(int exitCode, const QString& message);
     void outputLog(const QString& line);
-
-    /**
-     * @brief 运行出错信号
-     * @param error 错误信息
-     */
     void runError(const QString& error);
 
 private:
-    /**
-     * @brief 获取 Docker 命令（Windows 不需要 sudo）
-     * @return 命令列表
-     */
     QStringList getDockerCmd() const;
-
-    /**
-     * @brief 构建 DeepPrep Docker 命令
-     * @param params 运行参数
-     * @return 完整命令列表
-     */
     QStringList buildDeepPrepCommand(const DeepPrepParams& params);
-
-    /**
-     * @brief 构建 fMRIPrep Docker 命令
-     * @param params 运行参数
-     * @return 完整命令列表
-     */
     QStringList buildFmriPrepCommand(const FmriPrepParams& params);
-
-    /**
-     * @brief 启动异步 Docker 进程
-     * @param command 命令列表
-     * @param logPath 日志文件路径
-     * @param isDeepPrep 是否为 DeepPrep（用于区分完成信号）
-     */
     void startAsyncProcess(const QStringList& command, const QString& logPath, bool isDeepPrep);
-
-    /**
-     * @brief 确定要处理的被试列表
-     * @param bidsDir BIDS 目录
-     * @param specifiedSubjects 命令行指定的被试
-     * @return 最终被试列表
-     */
+    void startDetachedDockerProcess(QPointer<QProcess>& proc, const QStringList& command,
+                                    const char* taskName,
+                                    std::function<void(int, const QString&)> finishedCb);
     QStringList determineSubjects(const QString& bidsDir, const QStringList& specifiedSubjects);
+    void configureProcess(QProcess* process) const;
 
 private:
     QPointer<QProcess> m_process;
+    QPointer<QProcess> m_defaceProcess;
+    QPointer<QProcess> m_bapProcess;
     QFile* m_logFile = nullptr;
     bool m_isRunning = false;
-    bool m_isDeepPrep = false;  // 标识当前运行的是 DeepPrep 还是 fMRIPrep
+    bool m_isDeepPrep = false;
+    QString m_lastProcessOutput;
 };
-

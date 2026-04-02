@@ -44,6 +44,8 @@ struct MriPairResult {
     QString patientSex;
     QString patientBirthDate;
     QString studyDate;
+    QString t1SeriesUid;
+    QString boldSeriesUid;
     
     // T1W 序列信息
     QString t1Path;
@@ -59,6 +61,7 @@ struct MriPairResult {
     QString subjectId;
     
     bool isComplete() const { return !t1Path.isEmpty() && !boldPath.isEmpty(); }
+    QString primarySeriesUid() const { return !t1SeriesUid.isEmpty() ? t1SeriesUid : boldSeriesUid; }
 };
 Q_DECLARE_METATYPE(MriPairResult)
 Q_DECLARE_METATYPE(QList<MriPairResult>)

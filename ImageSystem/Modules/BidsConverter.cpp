@@ -16,6 +16,8 @@
 #include <QMutex>
 #include <QAtomicInt>
 #include <QElapsedTimer>
+#include <QRegularExpression>
+#include <QSet>
 
 // DCMTK headers for checking compression
 #include "dcmtk/config/osconfig.h"
@@ -26,6 +28,30 @@
 
 // Global dcmdjpeg path (found once, used many times)
 static QString g_dcmdjpegPath;
+
+namespace {
+
+QMap<QString, int> collectExistingSubjectSequences(const QString& outputDir)
+{
+    QMap<QString, int> used;
+    const QDir dir(outputDir);
+    const QStringList entries = dir.entryList(QStringList() << QStringLiteral("sub-*"),
+                                              QDir::Dirs | QDir::NoDotAndDotDot,
+                                              QDir::Name);
+    static const QRegularExpression re(QStringLiteral("^sub-(\\d{8})(\\d+)$"));
+    for (const QString& entry : entries) {
+        const QRegularExpressionMatch match = re.match(entry);
+        if (!match.hasMatch())
+            continue;
+
+        const QString baseId = match.captured(1);
+        const int seq = match.captured(2).toInt();
+        used[baseId] = qMax(used.value(baseId), seq);
+    }
+    return used;
+}
+
+} // namespace
 
 // ============================================================================
 // BidsConverter Implementation
@@ -213,7 +239,33 @@ bool BidsConverter::createDatasetDescription()
 bool BidsConverter::updateParticipantsTsv(const QList<BidsSubjectResult>& results)
 {
     QString tsvPath = m_outputDir + "/participants.tsv";
-    
+
+    QSet<QString> participants;
+    QFile existingFile(tsvPath);
+    if (existingFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&existingFile);
+        bool isHeader = true;
+        while (!in.atEnd()) {
+            const QString line = in.readLine().trimmed();
+            if (line.isEmpty())
+                continue;
+            if (isHeader) {
+                isHeader = false;
+                continue;
+            }
+
+            const QString participantId = line.section('\t', 0, 0).trimmed();
+            if (!participantId.isEmpty())
+                participants.insert(participantId);
+        }
+        existingFile.close();
+    }
+
+    for (const auto& result : results) {
+        if (result.t1Success || result.boldSuccess)
+            participants.insert(result.subjectId);
+    }
+
     QFile file(tsvPath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         qWarning() << "Failed to create participants.tsv";
@@ -226,14 +278,14 @@ bool BidsConverter::updateParticipantsTsv(const QList<BidsSubjectResult>& result
     out << "participant_id\tsex\tage\n";
     
     // Write each subject
-    for (const auto& result : results) {
-        if (result.t1Success || result.boldSuccess) {
-            out << result.subjectId << "\tn/a\tn/a\n";
-        }
+    QStringList orderedParticipants = participants.values();
+    orderedParticipants.sort();
+    for (const QString& participantId : orderedParticipants) {
+        out << participantId << "\tn/a\tn/a\n";
     }
     
     file.close();
-    qDebug() << "Updated participants.tsv with" << results.size() << "subjects";
+    qDebug() << "Updated participants.tsv with" << orderedParticipants.size() << "subjects";
     return true;
 }
 
@@ -514,7 +566,7 @@ void BidsConverter::performConversion(const QList<MriPairResult>& pairs)
     m_progress.totalPairs = pairs.size();
     m_progress.convertedPairs = 0;
     m_results.clear();
-    m_usedSubjectIds.clear();
+    m_usedSubjectIds = collectExistingSubjectSequences(m_outputDir);
     
     // Ensure output directory exists before creating dataset files
     QDir outputDir(m_outputDir);
@@ -712,10 +764,10 @@ void BidsConverter::performConversion(const QList<MriPairResult>& pairs)
     qDebug() << QString("  - Failed:       %1").arg(failedCount);
     if (pairs.size() > 0) {
         double avgSec = totalElapsedMs / (1000.0 * pairs.size());
-        qDebug() << QString("Average: %.1f sec/subject").arg(avgSec);
+        qDebug() << QStringLiteral("Average: %1 sec/subject").arg(avgSec, 0, 'f', 1);
     }
     qDebug() << QString("Output: %1").arg(m_outputDir);
-    qDebug() << "##################################################\n";
+     qDebug() << "##################################################\n";
     
     emit conversionFinished(m_results);
 }

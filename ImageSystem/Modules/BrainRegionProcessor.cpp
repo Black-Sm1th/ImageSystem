@@ -1,5 +1,7 @@
 ﻿#include "BrainRegionProcessor.h"
 
+#include "BrainRegionVisualizer.h"
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -159,6 +161,11 @@ ProcessingResult BrainRegionProcessor::process(
         emit processError(result.message);
         m_isProcessing = false;
         return result;
+    }
+
+    reportProgress(93, "生成脑分割预览图...");
+    if (!generatePreviewImages(segNiftiPath, rawNiftiPath, outputDir)) {
+        qWarning() << "生成脑分割预览图失败:" << outputDir;
     }
 
     // 9. 保存处理信息
@@ -727,6 +734,26 @@ bool BrainRegionProcessor::saveMetadataJson(const QString& outputDir)
     return true;
 }
 
+bool BrainRegionProcessor::generatePreviewImages(const QString& segPath, const QString& rawPath, const QString& outputDir)
+{
+    const QString slicesDir = QDir(outputDir).filePath("slices");
+    if (!QDir().mkpath(slicesDir)) {
+        qWarning() << "无法创建脑分割预览图目录:" << slicesDir;
+        return false;
+    }
+
+    BrainRegionVisualizer visualizer;
+    visualizer.SetSegmentationNiftiPath(segPath.toStdString());
+    if (!visualizer.InitializeFromProcessedDir(outputDir.toStdString(), rawPath.toStdString())) {
+        qWarning() << "BrainRegionVisualizer 初始化失败:" << outputDir;
+        return false;
+    }
+
+    const bool slicesOk = visualizer.GenerateMidSlicePNGs(slicesDir.toStdString());
+    const bool seg3dOk = visualizer.GenerateSegmentation3DPng(slicesDir.toStdString());
+    return slicesOk && seg3dOk;
+}
+
 bool BrainRegionProcessor::saveProcessingInfo(const QString& outputDir, const QString& segPath, const QString& rawPath)
 {
     QString filePath = QDir(outputDir).filePath("processing_info.json");
@@ -738,6 +765,11 @@ bool BrainRegionProcessor::saveProcessingInfo(const QString& outputDir, const QS
     root["rawFile"] = rawPath;
     root["stlDirectory"] = getStlDir(outputDir);
     root["metadataFile"] = QDir(outputDir).filePath("brain_regions_metadata.json");
+    root["slicesDirectory"] = QDir(outputDir).filePath("slices");
+    root["axialMidImage"] = QDir(outputDir).filePath("slices/axial_mid.png");
+    root["coronalMidImage"] = QDir(outputDir).filePath("slices/coronal_mid.png");
+    root["sagittalMidImage"] = QDir(outputDir).filePath("slices/sagittal_mid.png");
+    root["seg3dImage"] = QDir(outputDir).filePath("slices/seg3d_superior.png");
 
     QFile file(filePath);
     if (!file.open(QIODevice::WriteOnly)) {

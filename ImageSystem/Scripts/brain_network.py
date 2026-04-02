@@ -4,10 +4,15 @@
 import os
 import json
 import argparse
+import glob
+import sys
+import tarfile
+from types import SimpleNamespace
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import networkx as nx
+import ssl
 from scipy import signal
 from nilearn import datasets, plotting
 from nilearn.maskers import NiftiLabelsMasker
@@ -20,6 +25,9 @@ matplotlib.use("Agg")
 import warnings
 warnings.filterwarnings("ignore")
 
+# 全局关闭 SSL 验证
+
+ssl._create_default_https_context = ssl._create_unverified_context
 # 设置中文字体支持
 plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'SimSun', 'Arial Unicode MS']  # 支持中文显示
 plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
@@ -86,6 +94,101 @@ AAL116_LABELS = [
     {"zh": "蚓部9", "en": "Vermis_9"}, {"zh": "蚓部10", "en": "Vermis_10"}
 ]
 
+def _candidate_search_dirs():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_dir = os.path.dirname(script_dir)
+    roots = [
+        os.getcwd(),
+        script_dir,
+        project_dir,
+        os.path.dirname(project_dir),
+    ]
+
+    executable = getattr(sys, "executable", "")
+    if executable:
+        roots.append(os.path.dirname(os.path.abspath(executable)))
+
+    unique_roots = []
+    seen = set()
+    for root in roots:
+        if not root:
+            continue
+        normalized = os.path.normcase(os.path.abspath(root))
+        if normalized in seen or not os.path.isdir(root):
+            continue
+        seen.add(normalized)
+        unique_roots.append(os.path.abspath(root))
+    return unique_roots
+
+
+def _find_local_aal_archive():
+    candidate_names = ("aal_for_SPM12.tar.gz",)
+    for root in _candidate_search_dirs():
+        for name in candidate_names:
+            direct_path = os.path.join(root, name)
+            if os.path.isfile(direct_path):
+                return direct_path
+
+            nested_matches = glob.glob(os.path.join(root, "*", name))
+            for match in nested_matches:
+                if os.path.isfile(match):
+                    return match
+    return None
+
+
+def _find_extracted_atlas_file(search_root):
+    nii_candidates = []
+    for pattern in ("**/*.nii", "**/*.nii.gz"):
+        nii_candidates.extend(glob.glob(os.path.join(search_root, pattern), recursive=True))
+
+    if not nii_candidates:
+        return None
+
+    preferred = []
+    fallback = []
+    for path in nii_candidates:
+        name = os.path.basename(path).lower()
+        if "aal" in name:
+            preferred.append(path)
+        else:
+            fallback.append(path)
+
+    chosen = preferred[0] if preferred else fallback[0]
+    return os.path.abspath(chosen)
+
+
+def fetch_aal_atlas():
+    archive_path = _find_local_aal_archive()
+    if not archive_path:
+        searched = "\n".join(f"  - {path}" for path in _candidate_search_dirs())
+        raise RuntimeError(
+            "未找到本地 AAL116 模板压缩包 aal_for_SPM12.tar.gz。\n"
+            "请把它放到运行目录、license.txt 同目录或工程目录。\n"
+            f"已搜索目录:\n{searched}"
+        )
+
+    extract_dir = os.path.join(os.path.dirname(archive_path), "aal_for_SPM12_extracted")
+    atlas_path = _find_extracted_atlas_file(extract_dir)
+    if atlas_path and os.path.isfile(atlas_path):
+        print(f"使用本地 AAL116 模板: {atlas_path}")
+        return SimpleNamespace(maps=atlas_path)
+
+    print(f"找到本地 AAL 压缩包: {archive_path}")
+    print(f"正在解压到: {extract_dir}")
+    os.makedirs(extract_dir, exist_ok=True)
+    with tarfile.open(archive_path, "r:gz") as tar:
+        tar.extractall(path=extract_dir)
+
+    atlas_path = _find_extracted_atlas_file(extract_dir)
+    if not atlas_path:
+        raise RuntimeError(
+            f"已解压 {archive_path}，但未在 {extract_dir} 中找到 .nii 或 .nii.gz atlas 文件。"
+        )
+
+    print(f"使用本地 AAL116 模板: {atlas_path}")
+    return SimpleNamespace(maps=atlas_path)
+
+
 def main():
     parser = argparse.ArgumentParser(description="完全复刻 3D Slicer Neuroimaging 模块真实结果")
     parser.add_argument("--bold", required=True, help="preproc bold.nii.gz")
@@ -99,7 +202,7 @@ def main():
     os.makedirs(plot_dir, exist_ok=True)
 
     print("正在加载 AAL116 模板...")
-    aal = datasets.fetch_atlas_aal(version='SPM12')
+    aal = fetch_aal_atlas()
     atlas_img = aal.maps
     labels = [d["en"] for d in AAL116_LABELS]
 

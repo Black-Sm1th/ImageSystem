@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -33,13 +33,13 @@
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
     <QtInstall>5.15.2_msvc2019_64</QtInstall>
-    <QtModules>quick;concurrent;webengine;webenginewidgets</QtModules>
+    <QtModules>sql;quick;concurrent;webengine;webenginewidgets</QtModules>
     <QtBuildConfig>debug</QtBuildConfig>
     <QtQMLDebugEnable>false</QtQMLDebugEnable>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
     <QtInstall>5.15.2_msvc2019_64</QtInstall>
-    <QtModules>quick;concurrent;webengine;webenginewidgets</QtModules>
+    <QtModules>sql;quick;concurrent;webengine;webenginewidgets</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
   </PropertyGroup>
   <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') or !Exists('$(QtMsBuild)\qt.props')">
@@ -89,7 +89,7 @@
       <Optimization>Disabled</Optimization>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -101,7 +101,7 @@
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>false</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -112,6 +112,7 @@
       <DynamicSource Condition="'$(Configuration)|$(Platform)'=='Release|x64'">input</DynamicSource>
       <QtMocFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(Filename).moc</QtMocFileName>
     </ClCompile>
+    <ClCompile Include="Model\AppDataModel.cpp" />
     <ClCompile Include="Model\DicomDataModel.cpp" />
     <ClCompile Include="Model\BrainRegionTableModel.cpp" />
     <ClCompile Include="Model\BrainSegmentationTableModel.cpp" />
@@ -121,9 +122,11 @@
     <ClCompile Include="Modules\BrainMetrics.cpp" />
     <ClCompile Include="Modules\BrainRegionProcessor.cpp" />
     <ClCompile Include="Modules\BrainRegionVisualizer.cpp" />
+    <ClCompile Include="Modules\DatabaseManager.cpp" />
     <ClCompile Include="Modules\DockerPrepRunner.cpp" />
     <ClCompile Include="Modules\InteractionState.cpp" />
     <ClCompile Include="Modules\PythonConsoleManager.cpp" />
+    <ClCompile Include="Modules\LogManager.cpp" />
     <ClCompile Include="Modules\SliceVtkItemBase.cpp" />
     <ClCompile Include="ViewController\KnowledgeChatManager.cpp" />
     <ClCompile Include="ViewController\MainViewController.cpp" />
@@ -137,12 +140,16 @@
     <None Include="qml\components\CustomButton.qml" />
     <None Include="qml\components\CustomComboBox.qml" />
     <None Include="qml\components\FourViewPanel.qml" />
+    <None Include="qml\DataStorePanel.qml" />
     <None Include="qml\KidneyPanel.qml" />
     <None Include="qml\BrainPanel.qml" />
     <None Include="qml\main.qml" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="Modules\PythonConsoleManager.h" />
+    <QtMoc Include="Modules\LogManager.h" />
+    <QtMoc Include="Model\AppDataModel.h" />
+    <ClInclude Include="Modules\DatabaseManager.h" />
     <ClInclude Include="resource.h" />
     <QtMoc Include="Modules\SliceVtkItemBase.h" />
     <QtMoc Include="ViewController\KnowledgeChatManager.h" />

@@ -2,6 +2,8 @@
 #include <QtGui/QGuiApplication>
 #include <QtWebEngine/QtWebEngine>
 #include <QQmlContext>
+#include <QStandardPaths>
+#include <QDir>
 #include <QFontDatabase>
 #include <QQuickVTKItem.h>
 #include <QEvent>
@@ -13,12 +15,14 @@
 #include "Modules/CommonFunc.h"
 #include "ViewController/MainViewController.h"
 #include "Model/DicomDataModel.h"
+#include "Model/AppDataModel.h"
 #include "Modules/Version.h"
 #include "Modules/DicomNetwork.h"
 #include "Modules/BatchMriScanner.h"
 #include "Modules/BidsConverter.h"
 #include "ViewController/KnowledgeChatManager.h"
 #include "Modules/PythonConsoleManager.h"
+#include "Modules/LogManager.h"
 #include "Modules/SliceVtkItemBase.h"
 
 namespace py = pybind11;
@@ -297,6 +301,7 @@ void testFullBidsConversion(const QString& inputDir, const QString& outputDir)
 
 int main(int argc, char* argv[])
 {
+
     //system("chcp 65001");
     QQuickVTKItem::setGraphicsApi();
 
@@ -313,10 +318,90 @@ int main(int argc, char* argv[])
     QtWebEngine::initialize();
     QGuiApplication app(argc, argv);
 
-    std::wstring pyHomePath = GetExePath();
-    Py_SetPythonHome(pyHomePath.c_str());
+    // ------------------------------------------------------------------------
+    // 方案A：Release/Debug 都优先使用 exeDir/python 作为内置 Python 运行时
+    // 期望结构：
+    //   <exeDir>/python/python3x.dll
+    //   <exeDir>/python/Lib/...
+    //   <exeDir>/python/Lib/site-packages/...
+    //   <exeDir>/Scripts/*.py
+    // ------------------------------------------------------------------------
+    const QString exeDir = QString::fromStdWString(GetExePath());
+    const QString embeddedPyRoot = QDir(exeDir).filePath(QStringLiteral("python"));
+    const bool hasEmbeddedPython = QDir(embeddedPyRoot).exists();
+
+    const QString pyHomeQt = hasEmbeddedPython ? embeddedPyRoot : exeDir;
+    const std::wstring pyHomeW = pyHomeQt.toStdWString();
+
+    // Windows：把 python/ 加入 DLL 搜索路径，避免 .pyd 依赖 DLL 加载失败
+    if (hasEmbeddedPython) {
+        const std::wstring embeddedPyRootW = embeddedPyRoot.toStdWString();
+        SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS | LOAD_LIBRARY_SEARCH_USER_DIRS);
+        AddDllDirectory(embeddedPyRootW.c_str());
+        SetDllDirectoryW(embeddedPyRootW.c_str());
+    }
+
+    qputenv("PYTHONHOME", pyHomeQt.toUtf8());
+    qputenv("PYTHONUTF8", "1");
+    qputenv("PYTHONIOENCODING", "utf-8");
+
+    Py_SetPythonHome(pyHomeW.c_str());
+
+    GET_SINGLETON(LogManager)->appendTimestamped(QStringLiteral("PY"), QStringLiteral("exeDir = %1").arg(exeDir));
+    GET_SINGLETON(LogManager)->appendTimestamped(QStringLiteral("PY"),
+        QStringLiteral("embeddedPyRoot = %1 (exists=%2)")
+            .arg(embeddedPyRoot)
+            .arg(hasEmbeddedPython ? QStringLiteral("true") : QStringLiteral("false")));
+    GET_SINGLETON(LogManager)->appendTimestamped(QStringLiteral("PY"), QStringLiteral("Py_SetPythonHome = %1").arg(pyHomeQt));
+
     py::scoped_interpreter guard{};
-    py::module_::import("sys").attr("path").attr("append")("Scripts");
+
+    // sys.path 注入（按优先级逐个追加，存在即加入）：
+    //   exeDir/Scripts                          —— Release 打包时直接放在 exe 旁边
+    //   exeDir/../../ImageSystem/Scripts         —— Debug/Release 开发时的工程源码结构
+    //   python/Lib, python/Lib/site-packages    —— 内置 Python 运行时
+    try {
+        py::module_ sys = py::module_::import("sys");
+        py::object path = sys.attr("path");
+
+        auto tryAddPath = [&](const QString& dir) {
+            const QString canonical = QDir(dir).absolutePath();
+            if (QDir(canonical).exists()) {
+                path.attr("append")(canonical.toStdString());
+                GET_SINGLETON(LogManager)->appendTimestamped(
+                    QStringLiteral("PY"), QStringLiteral("sys.path += %1 [OK]").arg(canonical));
+            } else {
+                GET_SINGLETON(LogManager)->appendTimestamped(
+                    QStringLiteral("PY"), QStringLiteral("sys.path skip %1 [NOT FOUND]").arg(canonical));
+            }
+        };
+
+        // exeDir/Scripts (Release 打包)
+        tryAddPath(QDir(exeDir).filePath(QStringLiteral("Scripts")));
+
+        // exeDir/../../ImageSystem/Scripts (开发时: x64/Debug -> imageSystem -> ImageSystem/Scripts)
+        tryAddPath(QDir(exeDir).filePath(QStringLiteral("../../ImageSystem/Scripts")));
+
+        // exeDir 本身（有些脚本可能直接放在 exe 目录）
+        tryAddPath(exeDir);
+
+        if (hasEmbeddedPython) {
+            tryAddPath(QDir(embeddedPyRoot).filePath(QStringLiteral("Lib")));
+            tryAddPath(QDir(embeddedPyRoot).filePath(QStringLiteral("Lib/site-packages")));
+        }
+
+        // exeDir/DLLs — Python 内置扩展模块 (_ctypes.pyd, _ssl.pyd 等)
+        tryAddPath(QDir(exeDir).filePath(QStringLiteral("DLLs")));
+
+        // exeDir/Lib/site-packages — Debug/Release 旁边直接放的第三方库
+        tryAddPath(QDir(exeDir).filePath(QStringLiteral("Lib/site-packages")));
+
+    } catch (const std::exception& e) {
+        GET_SINGLETON(LogManager)->appendTimestamped(
+            QStringLiteral("PY"),
+            QStringLiteral("sys.path init failed: %1").arg(QString::fromUtf8(e.what()))
+        );
+    }
 
     // ========== 批量扫描并转换为 BIDS 格式 ==========
     // 取消下面注释以运行完整流程测试
@@ -341,6 +426,12 @@ int main(int argc, char* argv[])
     QCoreApplication::setApplicationName("AetherDesk");
     QCoreApplication::setApplicationVersion(VER_VERSION_STR);
 
+    const QString appDataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir().mkpath(appDataDir);
+    const QString dbPath = QDir(appDataDir).filePath("aetherdesk.db");
+    GET_SINGLETON(MainViewController)->initDatabase(dbPath);
+    GET_SINGLETON(MainViewController)->refreshAppDataModel();
+
     QQmlApplicationEngine engine;
 
     // 将DicomDataManager暴露给QML
@@ -354,13 +445,16 @@ int main(int argc, char* argv[])
     // 将MriPairResultModel暴露给QML
     engine.rootContext()->setContextProperty("$MriPairResultModel", GET_SINGLETON(MainViewController)->getMriPairResultModel());
 
+    engine.rootContext()->setContextProperty("$AppDataModel", GET_SINGLETON(AppDataModel));
     engine.rootContext()->setContextProperty("$chatManager", GET_SINGLETON(KnowledgeChatManager));
     engine.rootContext()->setContextProperty("$PythonConsole", GET_SINGLETON(PythonConsoleManager));
+    engine.rootContext()->setContextProperty("$LogManager", GET_SINGLETON(LogManager));
 
     int fontId1 = QFontDatabase::addApplicationFont(":/fonts/AlibabaPuHuiTi-3-55-Regular.ttf");
     int fontId2 = QFontDatabase::addApplicationFont(":/fonts/AlibabaPuHuiTi-3-65-Medium.ttf");
     int fontId3 = QFontDatabase::addApplicationFont(":/fonts/AlibabaPuHuiTi-3-85-Bold.ttf");
     engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
+    //GET_SINGLETON(MainViewController)->testPostProcessing("D:\\AetherDesk\\OutputResults\\Output_20260331_134842", 1);
     if (engine.rootObjects().isEmpty())
         return -1;
 

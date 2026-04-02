@@ -3,6 +3,7 @@
 #include "Model/BrainRegionTableModel.h"
 #include "Model/BrainSegmentationTableModel.h"
 #include "Model/MriPairResultModel.h"
+#include "Model/AppDataModel.h"
 #include "Modules/CommonFunc.h"
 #include "Modules/DicomNetwork.h"
 #include "Modules/BatchMriScanner.h"
@@ -10,6 +11,7 @@
 #include "Modules/InteractionState.h"
 #include "Modules/DockerPrepRunner.h"
 #include "Modules/BrainRegionProcessor.h"
+#include "Modules/DatabaseManager.h"
 #include <vtkInteractorStyleImage.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkObjectFactory.h>
@@ -83,6 +85,8 @@ public:
     Q_INVOKABLE void selectBrainRegion(int row);
     Q_INVOKABLE void scanFolder(const QString& inputDir);
     Q_INVOKABLE void startPreAnalysis(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile);
+    Q_INVOKABLE QVariantMap defaultProcessingPaths() const;
+    Q_INVOKABLE QString defaultLicenseFilePath() const;
     Q_INVOKABLE void stopFmriprepProcess();
     Q_INVOKABLE void stopDeepprepProcess();
     Q_INVOKABLE void generatePdfReport(const QString& savePath);
@@ -100,7 +104,20 @@ public:
     Q_INVOKABLE QVariantMap readMetadataFile(const QString& outputDir);
     // 读取脑龄预测CSV文件
     Q_INVOKABLE bool loadBrainAgePredictions(const QString& basePath);
-    // 获取表格模型
+    // 数据库相关
+    Q_INVOKABLE bool initDatabase(const QString& dbPath);
+    Q_INVOKABLE bool addCompletedCase(const QString& name, const QString& patientId,
+                                       const QString& examDate, const QString& seriesUid,
+                                       int age, const QString& sex, const QString& checkType,
+                                       const QString& bidsPath, const QString& outputPath);
+    Q_INVOKABLE bool removeCompletedCase(int id);
+    Q_INVOKABLE QVariantList searchCases(const QString& keyword);
+    Q_INVOKABLE void refreshAppDataModel();
+    Q_INVOKABLE bool removeQueuedTask(const QString& name, const QString& examDate, const QString& seriesUid);
+
+    // 测试用：跳过 Docker，直接用已有输出目录跑后处理
+    Q_INVOKABLE void testPostProcessing(const QString& outputDir, int method);
+
     BrainRegionTableModel* getBrainRegionTableModel() const;
     BrainSegmentationTableModel* getBrainSegmentationTableModel() const;
     MriPairResultModel* getMriPairResultModel() const;
@@ -121,11 +138,41 @@ public slots:
 private:
     bool loadOutputData(const QString& path);
     void processBrainNetworkAnalysis(const QString& boldPath, const QString& confoundsPath, const QString& outputDir);
-    void startPrepLogTimer(const QString& logFilePath);  // 启动日志轮询
-    void stopPrepLogTimer();                              // 停止日志轮询
-    void startFmriprepAfterBids();   // BIDS转换完成后启动fmriprep
-    void startDeepprepAfterBids();   // BIDS转换完成后启动deepprep
+    void startPrepLogTimer(const QString& logFilePath);
+    void stopPrepLogTimer();
     void clearPrepOutputsOnFailure(const QString& outputDir, bool isFmriPrep);
+    QString resolveDefaultBidsPath(const QString& bidsPath) const;
+    QString resolveDefaultOutputPath(const QString& outputPath) const;
+
+    void startDefaceAfterBids();
+    void startBapAfterDeface();
+    void startFmriprepAfterBids();
+    void startDeepprepAfterBids();
+    QStringList currentQueueSubjectIds() const;
+    bool applyDefacedDataToCurrentBids();
+    bool persistBrainAgePredictionsToOutput();
+    void processNextInQueue();   // 处理队列中的下一个任务
+    void onDefaceFinished(bool success, const QString& message);
+    void onBrainAgePredictionFinished(bool success);
+    void onPrepFinished(bool success, const QString& message);
+    void startBrainNetworkPostProcessing();
+    void onBrainRegionPostProcessingFinished(bool success, int successCount, int failCount);
+    void onBrainNetworkPostProcessingFinished(bool success);
+    void tryFinishPrepPostProcessing();
+    void tryFinishCurrentQueueItem();
+
+    // 任务队列管理（支持动态追加，资源控制）
+    void addToProcessingQueue(const QList<MriPairResult>& pairs, int method, const QString& bidsPath,
+                              const QString& outputPath, const QString& licenseFile);
+    void addPendingTasks(const QList<MriPairResult>& pairs, int method, const QString& bidsPath,
+                         const QString& outputPath, const QString& status);
+    void removePendingTasks(const QList<MriPairResult>& pairs, int method);
+    void updatePendingTasksStatus(const QList<MriPairResult>& pairs, const QString& status);
+    bool isProcessing() const { return m_isProcessing; }
+    Q_INVOKABLE void startProcessingQueue();  // 开始/恢复队列处理
+    Q_INVOKABLE void pauseProcessingQueue();   // 暂停队列（当前任务完成后暂停）
+    Q_INVOKABLE void clearProcessingQueue();   // 清空队列
+    Q_INVOKABLE int getQueueSize() const { return m_processingQueue.size(); }
     
     // 映射文件相关
     void writeMetadataFile(const QString& outputDir, const QList<MriPairResult>& pairs);
@@ -133,7 +180,6 @@ private:
     void appendPreAnalysisLog(const QString& text);  // 追加统一预分析日志
     void clearPreAnalysisLog();                       // 清空统一预分析日志
     void setupDockerPrepRunner();    // 初始化 DockerPrepRunner
-    void startBatchBrainAgePrediction(const QList<MriPairResult>& results, const QString& outputDir);  // 批量脑龄预测
     BidsConverter* m_bidsConverter;
     BrainRegionTableModel* m_brainRegionTableModel;
     BrainSegmentationTableModel* m_brainSegmentationTableModel;
@@ -166,8 +212,30 @@ private:
     
     // 脑龄预测数据缓存（subjectId -> predictedAge）
     QMap<QString, double> m_brainAgePredictions;
-    QString m_currentBrainAgeDataPath;  // 当前加载的脑龄数据路径
-    
-    
-};
+    QString m_currentBrainAgeDataPath;
 
+    // 数据库
+    DatabaseManager* m_dbManager = nullptr;
+
+    // 处理队列（按批次执行，每个队列项包含一批 subjects）
+    struct QueueItem {
+        int method = 0;
+        QString bidsPath;
+        QString outputPath;
+        QString licenseFile;
+        QList<MriPairResult> pairResults;  // 一个批次内的完整 MRI 配对信息
+    };
+    QList<QueueItem> m_processingQueue;
+    QList<MriPairResult> m_currentQueuePairs;  // 当前正在处理的配对列表
+    bool m_isProcessing = false;
+    bool m_queuePaused = false;
+    QueueItem m_currentItem;
+    bool m_currentPrepDone = false;
+    bool m_currentPrepSuccess = false;
+    bool m_currentBrainAgeDone = false;
+    bool m_currentBrainAgeSuccess = false;
+    bool m_currentBrainRegionDone = false;
+    bool m_currentBrainRegionSuccess = false;
+    bool m_currentBrainNetworkDone = false;
+    bool m_currentBrainNetworkSuccess = false;
+};

@@ -3,6 +3,7 @@
 #include <vtkTransform.h>
 #include <QQuickItemGrabResult>
 #include <QCoreApplication>
+#include <QDate>
 #include <QDateTime>
 #include <QDebug>
 #include <QDir>
@@ -17,9 +18,11 @@
 #include <QFont>
 #include <QPainterPath>
 #include <QtConcurrent/QtConcurrent>
+#include "Modules/LogManager.h"
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QSet>
 #include "Modules/BrainNetworkData.h"
 #include "Model/DicomDataModel.h"
 #include "Modules/SliceVtkItemBase.h"
@@ -28,6 +31,248 @@
 #include <pybind11/stl.h>
 
 namespace py = pybind11;
+
+namespace {
+
+QString managedStorageRoot()
+{
+    return QStringLiteral("D:/AetherDesk");
+}
+
+QString managedInputRoot()
+{
+    return QDir(managedStorageRoot()).filePath(QStringLiteral("InputData"));
+}
+
+QString managedOutputRoot()
+{
+    return QDir(managedStorageRoot()).filePath(QStringLiteral("OutputResults"));
+}
+
+QString normalizedPathOrEmpty(const QString& path)
+{
+    return QDir::fromNativeSeparators(path.trimmed());
+}
+
+void ensureDirectoryExists(const QString& path)
+{
+    if (!path.trimmed().isEmpty())
+        QDir().mkpath(path);
+}
+
+QDate parseDicomDate(const QString& rawDate)
+{
+    const QString text = rawDate.trimmed();
+    if (text.isEmpty())
+        return QDate();
+
+    QDate date = QDate::fromString(text, "yyyyMMdd");
+    if (!date.isValid())
+        date = QDate::fromString(text, "yyyy-MM-dd");
+    if (!date.isValid())
+        date = QDate::fromString(text, Qt::ISODate);
+    return date;
+}
+
+int calculateAgeFromDates(const QString& birthDateText, const QString& examDateText)
+{
+    const QDate birthDate = parseDicomDate(birthDateText);
+    const QDate examDate = parseDicomDate(examDateText);
+    if (!birthDate.isValid() || !examDate.isValid() || examDate < birthDate)
+        return 0;
+
+    int age = examDate.year() - birthDate.year();
+    const QDate birthdayThisYear(examDate.year(), birthDate.month(), birthDate.day());
+    if (birthdayThisYear.isValid() && examDate < birthdayThisYear)
+        --age;
+    return qMax(age, 0);
+}
+
+QString buildCompletedCaseSeriesUid(const MriPairResult& pair, int method)
+{
+    Q_UNUSED(method);
+
+    const QString seriesUid = pair.primarySeriesUid().trimmed();
+    if (!seriesUid.isEmpty())
+        return seriesUid;
+
+    const QString nameKey = pair.patientName.trimmed().replace('^', '_').replace(' ', '_');
+    const QString patientKey = !pair.patientId.trimmed().isEmpty() ? pair.patientId.trimmed()
+                                                                   : nameKey;
+    const QString studyDate = !pair.studyDate.trimmed().isEmpty() ? pair.studyDate.trimmed()
+                                                                  : QStringLiteral("nodate");
+    return QStringLiteral("fallback_%1_%2").arg(patientKey, studyDate);
+}
+
+QString normalizeDisplayedSex(const QString& rawSex)
+{
+    const QString trimmed = rawSex.trimmed();
+    const QString sex = trimmed.toUpper();
+    if (sex == QStringLiteral("M") || sex == QStringLiteral("MALE") || trimmed == QStringLiteral("男"))
+        return QStringLiteral("男");
+    if (sex == QStringLiteral("F") || sex == QStringLiteral("FEMALE") || trimmed == QStringLiteral("女"))
+        return QStringLiteral("女");
+    if (trimmed == QStringLiteral("男女"))
+        return {};
+    return trimmed;
+}
+
+QString buildCaseIdentityKey(const QString& name, const QString& examDate, const QString& seriesUid)
+{
+    const QString uid = seriesUid.trimmed();
+    if (!uid.isEmpty())
+        return QStringLiteral("uid:%1").arg(uid);
+
+    const QDate parsedDate = parseDicomDate(examDate);
+    const QString normalizedName = name.trimmed().replace('^', ' ').simplified().toLower();
+    const QString normalizedDate = parsedDate.isValid()
+            ? parsedDate.toString(QStringLiteral("yyyyMMdd"))
+            : examDate.trimmed();
+    return QStringLiteral("name:%1|date:%2").arg(normalizedName, normalizedDate);
+}
+
+QString buildCaseIdentityKey(const MriPairResult& pair)
+{
+    return buildCaseIdentityKey(pair.patientName, pair.studyDate, pair.primarySeriesUid());
+}
+
+QString stripKnownFileExtensions(const QString& value)
+{
+    QString text = value.trimmed();
+    if (text.endsWith(QStringLiteral(".nii.gz"), Qt::CaseInsensitive))
+        text.chop(7);
+    else if (text.endsWith(QStringLiteral(".nii"), Qt::CaseInsensitive)
+             || text.endsWith(QStringLiteral(".csv"), Qt::CaseInsensitive)
+             || text.endsWith(QStringLiteral(".gz"), Qt::CaseInsensitive)) {
+        const int dotPos = text.lastIndexOf('.');
+        if (dotPos > 0)
+            text = text.left(dotPos);
+    }
+    return text;
+}
+
+QStringList brainAgeIdVariants(const QString& rawId)
+{
+    QStringList variants;
+    const QString normalized = QDir::fromNativeSeparators(rawId.trimmed());
+    if (normalized.isEmpty())
+        return variants;
+
+    const auto addVariant = [&variants](const QString& value) {
+        const QString trimmed = value.trimmed();
+        if (!trimmed.isEmpty() && !variants.contains(trimmed))
+            variants.append(trimmed);
+    };
+
+    addVariant(normalized);
+
+    const QFileInfo info(normalized);
+    addVariant(info.fileName());
+
+    QString base = stripKnownFileExtensions(info.fileName());
+    addVariant(base);
+
+    const QStringList suffixes = {
+        QStringLiteral("_defaced"),
+        QStringLiteral("_T1w"),
+        QStringLiteral("_T1w_defaced"),
+        QStringLiteral("_task-rest_bold"),
+        QStringLiteral("_bold")
+    };
+    for (const QString& suffix : suffixes) {
+        if (base.endsWith(suffix, Qt::CaseInsensitive)) {
+            addVariant(base.left(base.size() - suffix.size()));
+        }
+    }
+
+    const QStringList segments = normalized.split('/', Qt::SkipEmptyParts);
+    for (const QString& segment : segments) {
+        if (segment.startsWith(QStringLiteral("sub-"), Qt::CaseInsensitive))
+            addVariant(segment);
+    }
+
+    return variants;
+}
+
+QString findBrainAgePredictionCsvPath(const QString& basePath)
+{
+    const QDir dir(basePath);
+    const QStringList candidates = {
+        QStringLiteral("brain_age_predictions.csv"),
+        QStringLiteral("BatchPrediction.csv")
+    };
+    for (const QString& fileName : candidates) {
+        const QString path = dir.filePath(fileName);
+        if (QFile::exists(path))
+            return path;
+    }
+    return {};
+}
+
+QVariantList discoverSubjectsFromOutputDirectory(const QString& outputDir)
+{
+    const QDir baseDir(outputDir);
+    const QStringList candidateRoots = {
+        QStringLiteral("Recon"),
+        QStringLiteral("sourcedata/freesurfer"),
+        QStringLiteral("BOLD"),
+        QString()
+    };
+
+    QSet<QString> seenSubjects;
+    QVariantList subjects;
+
+    for (const QString& root : candidateRoots) {
+        const QDir dir(root.isEmpty() ? baseDir.filePath(QStringLiteral(".")) : baseDir.filePath(root));
+        if (!dir.exists())
+            continue;
+
+        const QStringList subDirs = dir.entryList(QStringList() << QStringLiteral("sub-*"),
+                                                  QDir::Dirs | QDir::NoDotAndDotDot,
+                                                  QDir::Name);
+        for (const QString& subDir : subDirs) {
+            if (seenSubjects.contains(subDir))
+                continue;
+            seenSubjects.insert(subDir);
+
+            QVariantMap subject;
+            subject.insert(QStringLiteral("subjectId"), subDir);
+            subject.insert(QStringLiteral("patientName"), subDir);
+            subject.insert(QStringLiteral("patientId"), subDir);
+            subject.insert(QStringLiteral("patientSex"), QString());
+            subject.insert(QStringLiteral("patientBirthDate"), QString());
+            subject.insert(QStringLiteral("studyDate"), QString());
+            subjects.append(subject);
+        }
+    }
+
+    return subjects;
+}
+
+bool outputDirectoryContainsSubject(const QString& outputDir, const QString& subjectId)
+{
+    const QString normalizedSubjectId = subjectId.trimmed();
+    if (normalizedSubjectId.isEmpty())
+        return false;
+
+    const QStringList candidatePaths = {
+        QDir(outputDir).filePath(QStringLiteral("Recon/%1").arg(normalizedSubjectId)),
+        QDir(outputDir).filePath(QStringLiteral("BOLD/%1").arg(normalizedSubjectId)),
+        QDir(outputDir).filePath(QStringLiteral("sourcedata/freesurfer/%1").arg(normalizedSubjectId)),
+        QDir(outputDir).filePath(QStringLiteral("outputDir/%1").arg(normalizedSubjectId)),
+        QDir(outputDir).filePath(QStringLiteral("brain_regions/%1").arg(normalizedSubjectId)),
+        QDir(outputDir).filePath(QStringLiteral("QC/%1").arg(normalizedSubjectId))
+    };
+
+    for (const QString& path : candidatePaths) {
+        if (QFileInfo::exists(path))
+            return true;
+    }
+
+    return false;
+}
+
+} // namespace
 
 MainViewController::MainViewController(QObject* parent)
     : QObject(parent)
@@ -79,13 +324,19 @@ MainViewController::MainViewController(QObject* parent)
     
     // 初始化 Docker 预处理运行器
     setupDockerPrepRunner();
+
+    // 初始化数据库
+    m_dbManager = new DatabaseManager();
     
-    // 应用退出时停止进程并停止日志轮询
     if (QCoreApplication::instance()) {
         connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit,
                 this, [this]() {
                     stopFmriprepProcess();
                     stopDeepprepProcess();
+                    if (m_dockerPrepRunner) {
+                        m_dockerPrepRunner->stopDeface();
+                        m_dockerPrepRunner->stopBap();
+                    }
                 });
     }
 }
@@ -103,65 +354,61 @@ void MainViewController::setupDockerPrepRunner()
     connect(m_dockerPrepRunner, &DockerPrepRunner::runError, this, [this](const QString& error) {
         appendPreAnalysisLog(QStringLiteral("\n>>> 错误：%1\n").arg(error));
     });
-    
-    // 连接 fMRIPrep 完成信号
+
     connect(m_dockerPrepRunner, &DockerPrepRunner::fmriPrepFinished, this, [this](int exitCode, const QString& message) {
         stopPrepLogTimer();
-        
         if (exitCode == 0) {
-            qDebug() << QStringLiteral("fMRIPrep 运行成功！");
             appendPreAnalysisLog(QStringLiteral("\n>>> fMRIPrep 运行成功！\n"));
-            writeMetadataFile(m_preAnalysisOutputPath, m_currentProcessingPairs);
-            
-            // 开始脑区处理（生成 STL 和元数据）
-            appendPreAnalysisLog(QStringLiteral("\n>>> 开始脑区分割数据处理...\n"));
-            startBrainRegionProcessing();
         } else {
-            qDebug() << QStringLiteral("fMRIPrep 运行失败！") << message;
-            appendPreAnalysisLog(QStringLiteral("\n>>> fMRIPrep 运行失败！%1\n").arg(message));
-            appendPreAnalysisLog(QStringLiteral(">>> 正在异步删除失败的输出目录...\n"));
-            
-            QString dirToDelete = m_preAnalysisOutputPath;
-            QtConcurrent::run([dirToDelete]() {
-                QDir dir(dirToDelete);
-                if (dir.exists()) {
-                    dir.removeRecursively();
-                }
-            });
-            
-            setisPreAnalysisRunning(false);
-            appendPreAnalysisLog(QStringLiteral("\n========== 预处理完成 ==========\n"));
+            appendPreAnalysisLog(QStringLiteral("\n>>> fMRIPrep 运行失败：%1\n").arg(message));
         }
+        onPrepFinished(exitCode == 0, message);
     });
-    
-    // 连接 DeepPrep 完成信号
+
     connect(m_dockerPrepRunner, &DockerPrepRunner::deepPrepFinished, this, [this](int exitCode, const QString& message) {
         stopPrepLogTimer();
-        
         if (exitCode == 0) {
-            qDebug() << QStringLiteral("DeepPrep 运行成功！");
             appendPreAnalysisLog(QStringLiteral("\n>>> DeepPrep 运行成功！\n"));
-            writeMetadataFile(m_preAnalysisOutputPath, m_currentProcessingPairs);
-            
-            // 开始脑区处理（生成 STL 和元数据）
-            appendPreAnalysisLog(QStringLiteral("\n>>> 开始脑区分割数据处理...\n"));
-            startBrainRegionProcessing();
         } else {
-            qDebug() << QStringLiteral("DeepPrep 运行失败！") << message;
-            appendPreAnalysisLog(QStringLiteral("\n>>> DeepPrep 运行失败！%1\n").arg(message));
-            appendPreAnalysisLog(QStringLiteral(">>> 正在异步删除失败的输出目录...\n"));
-
-            QString dirToDelete = m_preAnalysisOutputPath;
-            QtConcurrent::run([dirToDelete]() {
-                QDir dir(dirToDelete);
-                if (dir.exists()) {
-                    dir.removeRecursively();
-                }
-            });
-            
-            setisPreAnalysisRunning(false);
-            appendPreAnalysisLog(QStringLiteral("\n========== 预处理完成 ==========\n"));
+            appendPreAnalysisLog(QStringLiteral("\n>>> DeepPrep 运行失败：%1\n").arg(message));
         }
+        onPrepFinished(exitCode == 0, message);
+    });
+
+    connect(m_dockerPrepRunner, &DockerPrepRunner::defaceFinished, this, [this](int exitCode, const QString& message) {
+        if (exitCode == 0) {
+            appendPreAnalysisLog(QStringLiteral("\n>>> Deface 完成！\n"));
+            if (!applyDefacedDataToCurrentBids()) {
+                appendPreAnalysisLog(QStringLiteral(">>> Deface 结果整理失败，未切换到去脸后的输入数据\n"));
+                onDefaceFinished(false, QStringLiteral("failed to replace original T1 with defaced copies"));
+                return;
+            }
+            if (m_preAnalysisMethod == 0) {
+                appendPreAnalysisLog(QStringLiteral(">>> Deface 后启动 fMRIPrep...\n"));
+                startFmriprepAfterBids();
+            } else {
+                appendPreAnalysisLog(QStringLiteral(">>> Deface 后启动 DeepPrep...\n"));
+                startDeepprepAfterBids();
+            }
+            startBapAfterDeface();
+        } else {
+            appendPreAnalysisLog(QStringLiteral("\n>>> Deface 失败：%1\n").arg(message));
+            onDefaceFinished(false, message);
+        }
+    });
+
+    connect(m_dockerPrepRunner, &DockerPrepRunner::bapFinished, this, [this](int exitCode, const QString& message) {
+        setbrainAgeProcessing(false);
+        if (exitCode == 0) {
+            appendPreAnalysisLog(QStringLiteral("\n>>> 脑龄预测(BAP) 完成！\n"));
+            if (persistBrainAgePredictionsToOutput() && loadBrainAgePredictions(m_preAnalysisOutputPath))
+                appendPreAnalysisLog(QStringLiteral(">>> 已加载脑龄结果表\n"));
+            else
+                appendPreAnalysisLog(QStringLiteral(">>> 警告：脑龄结果未能保存到输出目录或加载失败\n"));
+        } else {
+            appendPreAnalysisLog(QStringLiteral("\n>>> 脑龄预测(BAP) 失败：%1\n").arg(message));
+        }
+        onBrainAgePredictionFinished(exitCode == 0 && QFile::exists(findBrainAgePredictionCsvPath(m_preAnalysisOutputPath)));
     });
 }
 
@@ -201,8 +448,7 @@ void MainViewController::setupBrainRegionProcessor()
     // 连接批量处理完成信号
     connect(m_brainRegionProcessor, &BrainRegionProcessor::batchFinished, this, [this](int successCount, int failCount) {
         appendPreAnalysisLog(QStringLiteral("\n>>> 脑区处理完成: 成功 %1 个, 失败 %2 个\n").arg(successCount).arg(failCount));
-        setisPreAnalysisRunning(false);
-        appendPreAnalysisLog(QStringLiteral("\n========== 全部处理完成 ==========\n"));
+        onBrainRegionPostProcessingFinished(failCount == 0 && successCount > 0, successCount, failCount);
     });
     
     // 连接错误信号
@@ -436,23 +682,51 @@ void MainViewController::clearPrepOutputsOnFailure(const QString& outputDir, boo
 void MainViewController::writeMetadataFile(const QString& outputDir, const QList<MriPairResult>& pairs)
 {
     QString filePath = QDir(outputDir).filePath("metadata.json");
-    
+
     QJsonObject root;
+    QFile existingFile(filePath);
+    if (existingFile.open(QIODevice::ReadOnly)) {
+        const QJsonDocument existingDoc = QJsonDocument::fromJson(existingFile.readAll());
+        if (existingDoc.isObject())
+            root = existingDoc.object();
+        existingFile.close();
+    }
+
     root["processDate"] = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
     root["method"] = (m_preAnalysisMethod == 0) ? "fmriprep" : "deepprep";
-    
-    QJsonArray subjectsArr;
+
+    QJsonArray subjectsArr = root.value(QStringLiteral("subjects")).toArray();
+    QMap<QString, int> subjectIndexByKey;
+    for (int i = 0; i < subjectsArr.size(); ++i) {
+        const QJsonObject sub = subjectsArr.at(i).toObject();
+        const QString key = buildCaseIdentityKey(sub.value(QStringLiteral("patientName")).toString(),
+                                                 sub.value(QStringLiteral("studyDate")).toString(),
+                                                 sub.value(QStringLiteral("primarySeriesUid")).toString());
+        if (!key.isEmpty())
+            subjectIndexByKey.insert(key, i);
+    }
+
     for (const auto& pair : pairs) {
         QJsonObject sub;
-        sub["subjectId"] = pair.subjectId;  // 受训者ID（BIDS格式，如 sub-20260120001）
+        sub["subjectId"] = pair.subjectId;
         sub["patientName"] = pair.patientName;
         sub["patientId"] = pair.patientId;
-        sub["patientSex"] = pair.patientSex;
+        sub["patientSex"] = normalizeDisplayedSex(pair.patientSex);
         sub["patientBirthDate"] = pair.patientBirthDate;
         sub["studyDate"] = pair.studyDate;
+        sub["t1SeriesUid"] = pair.t1SeriesUid;
+        sub["boldSeriesUid"] = pair.boldSeriesUid;
+        sub["primarySeriesUid"] = pair.primarySeriesUid();
         sub["t1SeriesDesc"] = pair.t1SeriesDesc;
         sub["boldSeriesDesc"] = pair.boldSeriesDesc;
-        subjectsArr.append(sub);
+
+        const QString key = buildCaseIdentityKey(pair);
+        if (subjectIndexByKey.contains(key)) {
+            subjectsArr.replace(subjectIndexByKey.value(key), sub);
+        } else {
+            subjectIndexByKey.insert(key, subjectsArr.size());
+            subjectsArr.append(sub);
+        }
     }
     root["subjects"] = subjectsArr;
     
@@ -475,6 +749,12 @@ QVariantMap MainViewController::readMetadataFile(const QString& outputDir)
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
         qWarning() << "Cannot open metadata file:" << filePath;
+        const QVariantList discoveredSubjects = discoverSubjectsFromOutputDirectory(outputDir);
+        if (!discoveredSubjects.isEmpty()) {
+            result.insert(QStringLiteral("subjects"), discoveredSubjects);
+            result.insert(QStringLiteral("method"), isDeepprepOutput(outputDir) ? QStringLiteral("deepprep")
+                                                                               : QStringLiteral("fmriprep"));
+        }
         return result;
     }
     
@@ -484,6 +764,30 @@ QVariantMap MainViewController::readMetadataFile(const QString& outputDir)
     QJsonDocument doc = QJsonDocument::fromJson(data);
     if (!doc.isNull()) {
         result = doc.toVariant().toMap();
+    }
+
+    QVariantList subjects = result.value(QStringLiteral("subjects")).toList();
+    const QVariantList discoveredSubjects = discoverSubjectsFromOutputDirectory(outputDir);
+
+    bool metadataSubjectsMismatch = false;
+    for (const QVariant& subjectValue : subjects) {
+        const QVariantMap subject = subjectValue.toMap();
+        const QString subjectId = subject.value(QStringLiteral("subjectId")).toString();
+        if (!outputDirectoryContainsSubject(outputDir, subjectId)) {
+            metadataSubjectsMismatch = true;
+            qWarning() << "Metadata subject does not exist in output directory, fallback to discovered subjects:"
+                       << subjectId << outputDir;
+            break;
+        }
+    }
+
+    if (subjects.isEmpty() || metadataSubjectsMismatch) {
+        if (!discoveredSubjects.isEmpty()) {
+            result.insert(QStringLiteral("subjects"), discoveredSubjects);
+            if (metadataSubjectsMismatch) {
+                result.insert(QStringLiteral("metadataRecovered"), true);
+            }
+        }
     }
     
     return result;
@@ -540,72 +844,68 @@ bool MainViewController::loadBrainAgePredictions(const QString& basePath)
     if (dirPath.startsWith("file:///")) {
         dirPath = dirPath.mid(8);
     }
+    const QString p = QDir::fromNativeSeparators(dirPath);
+    const QString csvPath = findBrainAgePredictionCsvPath(p);
 
-    // 检查是否已经加载过相同路径的数据
-    if (m_currentBrainAgeDataPath == basePath && !m_brainAgePredictions.isEmpty()) {
-        return true;
-    }
-    
-    // 查找 BatchPrediction.csv 文件
-    QString csvPath = basePath + "/BatchPrediction.csv";
+    m_brainAgePredictions.clear();
+    m_currentBrainAgeDataPath.clear();
+
     QFile file(csvPath);
-    
     if (!file.exists()) {
-        qDebug() << QStringLiteral("脑龄预测文件不存在:") << csvPath;
+        qDebug() << QStringLiteral("脑龄预测 CSV 不存在: brain_age_predictions.csv / BatchPrediction.csv 于") << p;
         return false;
     }
-    
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qDebug() << QStringLiteral("无法打开脑龄预测文件:") << csvPath;
         return false;
     }
-    
-    m_brainAgePredictions.clear();
-    m_currentBrainAgeDataPath = basePath;
-    
+
+    m_currentBrainAgeDataPath = p;
+
     QTextStream in(&file);
     bool isHeader = true;
     int idColumn = -1;
     int ageColumn = -1;
-    
+
     while (!in.atEnd()) {
         QString line = in.readLine().trimmed();
         if (line.isEmpty()) continue;
-        
+
         QStringList fields = line.split(',');
-        
         if (isHeader) {
-            // 解析表头，找到 ID 和 Pred_Age 列的位置
             for (int i = 0; i < fields.size(); ++i) {
                 QString header = fields[i].trimmed().toLower();
-                if (header == "id") {
+                if (header == "id" || header == "subject" || header == "participant_id")
                     idColumn = i;
-                } else if (header == "pred_age") {
+                else if (header == "pred_age" || header == "predicted_age" || header == "prediction")
                     ageColumn = i;
-                }
             }
             isHeader = false;
-            
             if (idColumn < 0 || ageColumn < 0) {
-                qDebug() << QStringLiteral("脑龄预测文件格式错误，未找到 ID 或 Pred_Age 列");
+                qDebug() << QStringLiteral("脑龄 CSV 表头需含 subject/id 与 predicted_age/pred_age");
                 file.close();
                 return false;
             }
             continue;
         }
-        
-        // 解析数据行
+
         if (fields.size() > idColumn && fields.size() > ageColumn) {
             QString id = fields[idColumn].trimmed();
-            bool ok;
+            bool ok = false;
             double age = fields[ageColumn].trimmed().toDouble(&ok);
             if (ok && !id.isEmpty()) {
-                m_brainAgePredictions[id] = age;
-                qDebug() << QStringLiteral("加载脑龄预测: %1 -> %2").arg(id).arg(age);
+                const QStringList variants = brainAgeIdVariants(id);
+                for (const QString& variant : variants) {
+                    m_brainAgePredictions[variant] = age;
+                }
+                qDebug() << QStringLiteral("加载脑龄预测: %1 -> %2（键数=%3）")
+                            .arg(id)
+                            .arg(age)
+                            .arg(variants.size());
             }
         }
     }
-    
+
     file.close();
     qDebug() << QStringLiteral("共加载 %1 条脑龄预测数据").arg(m_brainAgePredictions.size());
     return !m_brainAgePredictions.isEmpty();
@@ -634,27 +934,45 @@ void MainViewController::importBrainData(const QString& url, const QString& subj
         emit brainAnalysisFinished(false);
         return;
     }
+
+    if (m_currentBrainAgeDataPath != dirPath) {
+        loadBrainAgePredictions(dirPath);
+    }
     
-    // 根据 subjectId 查找对应的脑龄预测值
-    if (m_brainAgePredictions.contains(patientId)) {
-        double predictedAge = m_brainAgePredictions[patientId];
+    setpredictedBrainAge(0.0);
+
+    // 优先按 subjectId，再按 patientId 匹配脑龄结果
+    QString matchedKey;
+    const QStringList lookupKeys = brainAgeIdVariants(subId) + brainAgeIdVariants(patientId);
+    for (const QString& key : lookupKeys) {
+        if (!m_brainAgePredictions.contains(key))
+            continue;
+        matchedKey = key;
+        break;
+    }
+
+    if (!matchedKey.isEmpty()) {
+        const double predictedAge = m_brainAgePredictions.value(matchedKey);
         setpredictedBrainAge(predictedAge);
-        qDebug() << QStringLiteral("设置脑龄预测值: %1 -> %2").arg(patientId).arg(predictedAge);
+        qDebug() << QStringLiteral("设置脑龄预测值: %1 -> %2").arg(matchedKey).arg(predictedAge);
     } else {
-        qDebug() << QStringLiteral("未找到被试 %1 的脑龄预测数据").arg(patientId);
+        qDebug() << QStringLiteral("未找到被试 %1 / %2 的脑龄预测数据").arg(subId, patientId);
     }
     
     // ========== 逻辑一：检查是否存在完整的输出结果 ==========
-    QDir outputDir(baseDir.filePath("outputDir/" + subjectId));
+    QDir outputDir(baseDir.filePath("outputDir/" + subId));
     if (outputDir.exists()) {
         bool hasAllFiles = true;
         
         // 检查必需的文件
         QStringList requiredFiles = {
             "alff.png",
+            "alff_transparent.png",
             "brain_network_results.json",
             "covariance.png",
-            "viewConnectome.html"
+            "covariance_transparent.png",
+            "viewConnectome.html",
+            "viewConnectome.png"
         };
         
         for (const QString& fileName : requiredFiles) {
@@ -674,7 +992,8 @@ void MainViewController::importBrainData(const QString& url, const QString& subj
                 filters << "*.png" << "*.jpg" << "*.jpeg" << "*.bmp" << "*.gif";
                 QStringList imageFiles = regionPlotsDir.entryList(filters, QDir::Files);
                 
-                if (imageFiles.count() == 117) {
+                if (imageFiles.count() == 117
+                        && QFile::exists(regionPlotsDir.filePath("001_Precentral_L_transparent.png"))) {
                     // ========== 符合逻辑一：已有完整的处理结果 ==========
                     qDebug() << QStringLiteral("检测到完整的脑网络分析结果!!!");
                     
@@ -712,7 +1031,7 @@ void MainViewController::importBrainData(const QString& url, const QString& subj
         // ========== 符合逻辑二：原始数据文件存在，需要处理 ==========
         qDebug() << QStringLiteral("检测到原始脑功能数据文件!!!");
         // 创建输出目录
-        QString outputDir = baseDir.filePath("outputDir/" + subjectId);
+        QString outputDir = baseDir.filePath("outputDir/" + subId);
         QDir outputDirObj(outputDir);
         if (!outputDirObj.exists()) {
             if (!outputDirObj.mkpath(".")) {
@@ -832,6 +1151,66 @@ void MainViewController::stopPrepLogTimer()
     if (m_prepLogTimer && m_prepLogTimer->isActive()) {
         m_prepLogTimer->stop();
     }
+}
+
+QString MainViewController::resolveDefaultBidsPath(const QString& bidsPath) const
+{
+    const QString normalized = normalizedPathOrEmpty(bidsPath);
+    if (!normalized.isEmpty()) {
+        return normalized;
+    }
+
+    return defaultProcessingPaths().value(QStringLiteral("bidsPath")).toString();
+}
+
+QString MainViewController::resolveDefaultOutputPath(const QString& outputPath) const
+{
+    const QString normalized = normalizedPathOrEmpty(outputPath);
+    if (!normalized.isEmpty()) {
+        return normalized;
+    }
+
+    return defaultProcessingPaths().value(QStringLiteral("outputPath")).toString();
+}
+
+QVariantMap MainViewController::defaultProcessingPaths() const
+{
+    const QString rootPath = QDir::fromNativeSeparators(managedStorageRoot());
+    const QString inputRootPath = QDir::fromNativeSeparators(managedInputRoot());
+    const QString outputRootPath = QDir::fromNativeSeparators(managedOutputRoot());
+    const QString timestamp = QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd_HHmmss"));
+
+    ensureDirectoryExists(rootPath);
+    ensureDirectoryExists(inputRootPath);
+    ensureDirectoryExists(outputRootPath);
+
+    QVariantMap result;
+    result.insert(QStringLiteral("rootPath"), rootPath);
+    result.insert(QStringLiteral("inputRootPath"), inputRootPath);
+    result.insert(QStringLiteral("outputRootPath"), outputRootPath);
+    result.insert(QStringLiteral("bidsPath"),
+                  QDir::fromNativeSeparators(QDir(inputRootPath).filePath(QStringLiteral("BIDS_%1").arg(timestamp))));
+    result.insert(QStringLiteral("outputPath"),
+                  QDir::fromNativeSeparators(QDir(outputRootPath).filePath(QStringLiteral("Output_%1").arg(timestamp))));
+    return result;
+}
+
+QString MainViewController::defaultLicenseFilePath() const
+{
+    const QDir currentDir(QDir::currentPath());
+    const QStringList candidates = {
+        QStringLiteral("license.txt"),
+        QStringLiteral("fs_license.txt"),
+        QStringLiteral("license")
+    };
+
+    for (const auto &name : candidates) {
+        const QString path = currentDir.filePath(name);
+        if (QFileInfo::exists(path))
+            return QDir::fromNativeSeparators(path);
+    }
+
+    return QDir::fromNativeSeparators(currentDir.filePath(QStringLiteral("license.txt")));
 }
 
 void MainViewController::processBrainNetworkAnalysis(const QString& boldPath, const QString& confoundsPath, const QString& outputDir)
@@ -1285,12 +1664,36 @@ void MainViewController::generatePdfReport(const QString& savePath)
     QRect targetRectTitle3(0, 80, title3.width() / 2, title3.height() / 2);
     painter.drawImage(targetRectTitle3, title3);
 
-    // 生成四张切片图片到临时文件夹
-    QString tempDir = QDir::tempPath() + "/brain_seg_images";
-    QDir().mkpath(tempDir);
-    
     QString axialPath, coronalPath, sagittalPath, seg3dPath;
-    GET_SINGLETON(DicomDataModel)->generateSegDataPNGs(tempDir, axialPath, coronalPath, sagittalPath, seg3dPath);
+
+    QString networkOutputDir;
+    if (!getcurrentAlffUrl().isEmpty()) {
+        networkOutputDir = getcurrentAlffUrl();
+        if (networkOutputDir.startsWith("file:///")) {
+            networkOutputDir = networkOutputDir.mid(8);
+        }
+        networkOutputDir = QFileInfo(networkOutputDir).absolutePath();
+    }
+
+    if (!networkOutputDir.isEmpty()) {
+        const QString subjectId = QFileInfo(networkOutputDir).fileName();
+        QDir baseDir(networkOutputDir);
+        baseDir.cdUp(); // outputDir
+        baseDir.cdUp(); // 预处理输出根目录
+        const QString slicesDir = baseDir.filePath("brain_regions/" + subjectId + "/slices");
+
+        axialPath = QDir(slicesDir).filePath("axial_mid.png");
+        coronalPath = QDir(slicesDir).filePath("coronal_mid.png");
+        sagittalPath = QDir(slicesDir).filePath("sagittal_mid.png");
+        seg3dPath = QDir(slicesDir).filePath("seg3d_superior.png");
+    }
+
+    if (!QFile::exists(axialPath) || !QFile::exists(coronalPath)
+            || !QFile::exists(sagittalPath) || !QFile::exists(seg3dPath)) {
+        const QString tempDir = QDir::tempPath() + "/brain_seg_images";
+        QDir().mkpath(tempDir);
+        GET_SINGLETON(DicomDataModel)->generateSegDataPNGs(tempDir, axialPath, coronalPath, sagittalPath, seg3dPath);
+    }
     
     // 在title3下方并列显示四张图片
     int imageStartY = 80 + title3.height() / 2; // 紧贴title3
@@ -2239,137 +2642,78 @@ void MainViewController::scanFolder(const QString& inputDir)
 
 void MainViewController::startPreAnalysis(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile)
 {
+    Q_UNUSED(bidsPath);
+    Q_UNUSED(outputPath);
+
     // 获取选中的 MRI 配对结果
-    QList<MriPairResult> checkedResults = m_mriPairResultModel->getCheckedResults();
-    
+    const QList<MriPairResult> selectedResults = m_mriPairResultModel->getCheckedResults();
+    QList<MriPairResult> checkedResults;
+    QSet<QString> selectedCaseKeys;
+    int skippedProcessing = 0;
+    int skippedQueued = 0;
+    int skippedCompleted = 0;
+    int skippedDuplicatedSelection = 0;
+
+    auto *appDataModel = GET_SINGLETON(AppDataModel);
+    for (const auto& pair : selectedResults) {
+        const QString caseKey = buildCaseIdentityKey(pair);
+        if (selectedCaseKeys.contains(caseKey)) {
+            ++skippedDuplicatedSelection;
+            continue;
+        }
+
+        const QString status = appDataModel
+            ? appDataModel->matchingRecordStatus(pair.patientName, pair.studyDate, pair.primarySeriesUid())
+            : QString();
+
+        if (status == QStringLiteral("processing")) {
+            ++skippedProcessing;
+            continue;
+        }
+        if (status == QStringLiteral("queued")) {
+            ++skippedQueued;
+            continue;
+        }
+        if (!status.isEmpty()) {
+            ++skippedCompleted;
+            continue;
+        }
+
+        selectedCaseKeys.insert(caseKey);
+        checkedResults.append(pair);
+    }
+
     if (checkedResults.isEmpty()) {
-        qWarning() << "No MRI pairs selected for analysis";
+        appendPreAnalysisLog(QStringLiteral(">>> 当前勾选病例均已分析完成、分析中或排队中，未加入新任务\n"));
         return;
     }
 
-    // 保存当前正在处理的配对信息（用于成功后写元数据）
-    m_currentProcessingPairs = checkedResults;
+    const bool startsAsActive = !m_isProcessing && m_processingQueue.isEmpty();
+    const QString initialStatus = startsAsActive ? QStringLiteral("processing")
+                                                 : QStringLiteral("queued");
 
-    // 2. 判断目录状态
-    QDir dir(outputPath);
-    if (dir.exists()) {
-        QStringList entries = dir.entryList(QDir::NoDotAndDotDot | QDir::AllEntries);
-        if (!entries.isEmpty()) {
-            appendPreAnalysisLog(QStringLiteral("Warning: 输出目录已存在且不为空：%1\n").arg(outputPath));
-        }
+    addPendingTasks(checkedResults, method, QString(), QString(), initialStatus);
+
+    // 按批次添加到处理队列
+    addToProcessingQueue(checkedResults, method, QString(), QString(), licenseFile);
+
+    appendPreAnalysisLog(QStringLiteral("\n>>> 已添加 1 个批次到队列（本批次 %1 个被试，当前共 %2 个待处理批次）\n")
+                         .arg(checkedResults.size()).arg(getQueueSize()));
+    if (skippedProcessing > 0 || skippedQueued > 0 || skippedCompleted > 0 || skippedDuplicatedSelection > 0) {
+        appendPreAnalysisLog(QStringLiteral(">>> 已自动跳过重复病例：分析中 %1 条，排队中 %2 条，已完成 %3 条，当前勾选重复 %4 条（按 seriesUID 优先，其次姓名+拍摄日期匹配）\n")
+                             .arg(skippedProcessing)
+                             .arg(skippedQueued)
+                             .arg(skippedCompleted)
+                             .arg(skippedDuplicatedSelection));
     }
-    
-    qDebug() << "Starting pre-analysis with" << checkedResults.size() << "selected pairs";
-    qDebug() << "Method:" << (method == 0 ? "fmriprep" : "deepprep");
-    qDebug() << "BIDS Path:" << bidsPath;
-    qDebug() << "Output Path:" << outputPath;
-    qDebug() << "License File:" << licenseFile;
-    
-    // 保存参数，用于BIDS转换完成后启动fmriprep/deepprep
-    m_preAnalysisMethod = method;
-    m_preAnalysisBidsPath = bidsPath;
-    m_preAnalysisOutputPath = outputPath; // 使用带时间戳的路径
-    m_preAnalysisLicenseFile = licenseFile;
-    
-    // 清空统一日志，准备显示
-    clearPreAnalysisLog();
-    setisPreAnalysisRunning(true);
-    
-    // 添加开始日志
-    QString methodName = (method == 0) ? "fmriprep" : "deepprep";
-    appendPreAnalysisLog(QStringLiteral("========== 开始预处理 ==========\n"));
-    appendPreAnalysisLog(QStringLiteral("方法: %1\n").arg(methodName));
-    appendPreAnalysisLog(QStringLiteral("BIDS 目录: %1\n").arg(bidsPath));
-    appendPreAnalysisLog(QStringLiteral("输出目录: %1\n").arg(outputPath));
-    appendPreAnalysisLog(QStringLiteral("License 文件: %1\n\n").arg(licenseFile));
-    
-    // 同时启动脑龄预测（使用选中的 T1 路径和患者 ID）
-    startBatchBrainAgePrediction(checkedResults, outputPath);
-    
-    appendPreAnalysisLog(QStringLiteral(">>> 开始 BIDS 转换...\n"));
-    
-    // 设置 BIDS 转换器参数
-    m_bidsConverter->setOutputDirectory(bidsPath);
-    m_bidsConverter->setDatasetName("BrainMRI_Study");
-    m_bidsConverter->setTaskName("rest");
-    
-    // 启动转换，传入选中的结果
-    m_bidsConverter->startConversion(checkedResults);
-}
 
-void MainViewController::startBatchBrainAgePrediction(const QList<MriPairResult>& results, const QString& outputDir)
-{
-    QStringList t1Paths;
-    QStringList patientIds;
-    
-    for (const auto& result : results) {
-        if (!result.t1Path.isEmpty()) {
-            t1Paths << QDir::toNativeSeparators(result.t1Path);
-            patientIds << result.patientId;
-        }
+    // 如果队列未运行，启动它
+    if (!m_isProcessing) {
+        appendPreAnalysisLog(QStringLiteral(">>> 启动队列处理...\n"));
+        startProcessingQueue();
+    } else {
+        appendPreAnalysisLog(QStringLiteral(">>> 队列正在运行，新任务已加入队列\n"));
     }
-    
-    if (t1Paths.isEmpty()) {
-        appendPreAnalysisLog(QStringLiteral(">>> 警告: 没有有效的 T1 数据用于脑龄预测\n\n"));
-        return;
-    }
-    
-    appendPreAnalysisLog(QStringLiteral(">>> 开始脑龄预测 (共 %1 个被试)...\n").arg(t1Paths.size()));
-    
-    const QString outputPath = outputDir + "/BatchPrediction.csv";
-    const QString modelPath = QStringLiteral("Scripts/model/DBN_model.h5");
-    
-    qDebug() << "Starting batch brain age prediction (pybind11):";
-    qDebug() << "  T1 Paths:" << t1Paths;
-    qDebug() << "  Patient IDs:" << patientIds;
-    qDebug() << "  Output:" << outputPath;
-
-    QtConcurrent::run([=]() {
-        bool success = false;
-        try {
-            py::gil_scoped_acquire acquire;
-            py::module_ brain_age = py::module_::import("brain_age");
-
-            py::module_ sys = py::module_::import("sys");
-            py::list argv;
-            argv.append("brain_age");
-            argv.append("--input");
-            for (const QString& p : t1Paths) {
-                argv.append(p.toStdString());
-            }
-            argv.append("--ids");
-            for (const QString& id : patientIds) {
-                argv.append(id.toStdString());
-            }
-            argv.append("--output");
-            argv.append(outputPath.toStdString());
-            argv.append("--model");
-            argv.append(modelPath.toStdString());
-            argv.append("--docker-image");
-            argv.append("deepbrain");
-            argv.append("--preprocess");
-            sys.attr("argv") = argv;
-
-            brain_age.attr("main")();
-            success = true;
-        } catch (const py::error_already_set& e) {
-            QMetaObject::invokeMethod(this, [=]() {
-                appendPreAnalysisLog(QStringLiteral(">>> 脑龄预测 Python 错误: %1\n\n").arg(QString::fromUtf8(e.what())));
-            }, Qt::QueuedConnection);
-        } catch (const std::exception& e) {
-            QMetaObject::invokeMethod(this, [=]() {
-                appendPreAnalysisLog(QStringLiteral(">>> 脑龄预测错误: %1\n\n").arg(QString::fromUtf8(e.what())));
-            }, Qt::QueuedConnection);
-        }
-
-        QMetaObject::invokeMethod(this, [=]() {
-            if (success) {
-                appendPreAnalysisLog(QStringLiteral("\n>>> 脑龄预测完成，结果保存至: %1\n\n").arg(outputPath));
-            } else {
-                appendPreAnalysisLog(QStringLiteral("\n>>> 脑龄预测失败\n\n"));
-            }
-        }, Qt::QueuedConnection);
-    });
 }
 
 void MainViewController::onScanProgressUpdated(const ScanProgress& progress) {
@@ -2401,87 +2745,777 @@ void MainViewController::onConverterProgressUpdated(const BidsConversionProgress
 void MainViewController::onConversionFinished(const QList<BidsSubjectResult>& results)
 {
     qDebug() << "BIDS conversion finished with" << results.size() << "subjects";
-    
-    appendPreAnalysisLog(QStringLiteral(">>> BIDS 转换完成，共 %1 个被试\n\n").arg(results.size()));
-    
-    // 将 BIDS 转换结果中的 subjectId 保存到配对信息中
-    for (int i = 0; i < results.size() && i < m_currentProcessingPairs.size(); ++i) {
-        m_currentProcessingPairs[i].subjectId = results[i].subjectId;
+    appendPreAnalysisLog(QStringLiteral(">>> BIDS 转换完成，共 %1 个被试\n").arg(results.size()));
+
+    // 回填当前批次的 subjectId，保持和转换结果一致
+    const int count = qMin(m_currentQueuePairs.size(), results.size());
+    for (int i = 0; i < count; ++i) {
+        m_currentQueuePairs[i].subjectId = results[i].subjectId;
     }
-    
-    // 根据method值启动对应的预处理程序
-    if (m_preAnalysisMethod == 0) {
-        appendPreAnalysisLog(QStringLiteral(">>> 开始运行 fmriprep...\n"));
-        startFmriprepAfterBids();
-    } else {
-        appendPreAnalysisLog(QStringLiteral(">>> 开始运行 deepprep...\n"));
-        startDeepprepAfterBids();
+    m_currentProcessingPairs = m_currentQueuePairs;
+    writeMetadataFile(m_preAnalysisOutputPath, m_currentQueuePairs);
+
+    appendPreAnalysisLog(QStringLiteral(">>> [Step 2/3] 启动 Deface...\n"));
+    appendPreAnalysisLog(QStringLiteral(">>> Deface 完成后将并行启动预处理与 Docker 脑龄预测(BAP)\n"));
+    startDefaceAfterBids();
+}
+
+QStringList MainViewController::currentQueueSubjectIds() const
+{
+    QStringList subjects;
+    for (const auto& pair : m_currentQueuePairs) {
+        const QString subjectId = pair.subjectId.trimmed();
+        if (!subjectId.isEmpty() && !subjects.contains(subjectId))
+            subjects.append(subjectId);
     }
+    return subjects;
+}
+
+bool MainViewController::applyDefacedDataToCurrentBids()
+{
+    const QStringList subjects = currentQueueSubjectIds();
+    if (subjects.isEmpty()) {
+        appendPreAnalysisLog(QStringLiteral(">>> 警告：当前批次没有 subjectId，无法切换 defaced 数据\n"));
+        return false;
+    }
+
+    int replacedCount = 0;
+    QStringList failures;
+    const QDir bidsDir(m_preAnalysisBidsPath);
+    for (const QString& subjectId : subjects) {
+        const QDir anatDir(bidsDir.filePath(subjectId + QStringLiteral("/anat")));
+        if (!anatDir.exists()) {
+            failures.append(QStringLiteral("%1: anat 目录不存在").arg(subjectId));
+            continue;
+        }
+
+        const QStringList defacedFiles = anatDir.entryList(QStringList() << QStringLiteral("*_defaced.nii.gz"),
+                                                           QDir::Files,
+                                                           QDir::Name);
+        if (defacedFiles.isEmpty()) {
+            failures.append(QStringLiteral("%1: 未找到 *_defaced.nii.gz").arg(subjectId));
+            continue;
+        }
+
+        for (const QString& defacedFile : defacedFiles) {
+            const QString defacedPath = anatDir.filePath(defacedFile);
+            QString originalFile = defacedFile;
+            originalFile.replace(QStringLiteral("_defaced.nii.gz"), QStringLiteral(".nii.gz"), Qt::CaseInsensitive);
+            const QString originalPath = anatDir.filePath(originalFile);
+
+            if (QFile::exists(originalPath) && !QFile::remove(originalPath)) {
+                failures.append(QStringLiteral("%1: 无法覆盖 %2").arg(subjectId, originalFile));
+                continue;
+            }
+            if (!QFile::copy(defacedPath, originalPath)) {
+                failures.append(QStringLiteral("%1: 复制 defaced 文件失败 %2").arg(subjectId, defacedFile));
+                continue;
+            }
+            ++replacedCount;
+        }
+    }
+
+    if (!failures.isEmpty()) {
+        for (const QString& failure : failures)
+            appendPreAnalysisLog(QStringLiteral(">>> %1\n").arg(failure));
+    }
+
+    if (replacedCount > 0) {
+        appendPreAnalysisLog(QStringLiteral(">>> 已将 %1 个去脸后的 T1 文件同步为下游预处理输入\n").arg(replacedCount));
+    }
+
+    return replacedCount > 0 && failures.isEmpty();
+}
+
+bool MainViewController::persistBrainAgePredictionsToOutput()
+{
+    const QString sourcePath = findBrainAgePredictionCsvPath(m_preAnalysisBidsPath);
+    if (sourcePath.isEmpty())
+        return false;
+
+    QDir().mkpath(m_preAnalysisOutputPath);
+    const QString targetPath = QDir(m_preAnalysisOutputPath).filePath(QStringLiteral("brain_age_predictions.csv"));
+    if (QFileInfo(sourcePath).absoluteFilePath() == QFileInfo(targetPath).absoluteFilePath())
+        return true;
+    if (QFile::exists(targetPath) && !QFile::remove(targetPath))
+        return false;
+    if (!QFile::copy(sourcePath, targetPath))
+        return false;
+
+    appendPreAnalysisLog(QStringLiteral(">>> 脑龄预测结果已保存到输出目录：%1\n").arg(targetPath));
+    return true;
+}
+
+
+void MainViewController::startDefaceAfterBids()
+{
+    setbrainAgeProcessing(true);
+    m_dockerPrepRunner->runDeface(m_preAnalysisBidsPath, currentQueueSubjectIds());
+}
+
+void MainViewController::startBapAfterDeface()
+{
+    appendPreAnalysisLog(QStringLiteral(">>> 启动脑龄预测 (Docker bap:0312-v1.0)...\n"));
+    m_dockerPrepRunner->runBap(m_preAnalysisBidsPath, currentQueueSubjectIds());
 }
 
 void MainViewController::startFmriprepAfterBids()
 {
-    // 如果已有进程在跑，先停止
     stopFmriprepProcess();
 
-    // 设置参数
     FmriPrepParams params;
     params.bidsDir = m_preAnalysisBidsPath;
     params.outputDir = m_preAnalysisOutputPath;
     params.licenseFile = m_preAnalysisLicenseFile;
     params.skipBidsValidation = true;
-    params.fsNoReconall = false;  // 启用 FreeSurfer reconall
+    params.fsNoReconall = false;
     params.ignoreFieldmaps = true;
-    
-    // 记录日志文件路径，启动日志轮询
+    params.subjects = currentQueueSubjectIds();
+
     m_prepLogFilePath = m_preAnalysisOutputPath + "/fmriprep-docker.log";
     m_prepLogReadPos = 0;
-    
-    qDebug() << "Starting fMRIPrep via DockerPrepRunner";
-    appendPreAnalysisLog(QStringLiteral("启动 预处理方法...\n\n"));
-    
     startPrepLogTimer(m_prepLogFilePath);
-    
-    // 使用 DockerPrepRunner 异步运行
+
+    appendPreAnalysisLog(QStringLiteral(">>> fMRIPrep 已启动\n"));
     m_dockerPrepRunner->runFmriPrep(params);
 }
 
 void MainViewController::startDeepprepAfterBids()
 {
-    // 如果已有进程在跑，先停止
     stopDeepprepProcess();
 
-    // 设置参数
     DeepPrepParams params;
     params.bidsDir = m_preAnalysisBidsPath;
     params.outputDir = m_preAnalysisOutputPath;
     params.licenseFile = m_preAnalysisLicenseFile;
     params.skipBidsValidation = true;
-    params.boldSdc = false;  // 禁用 SDC
+    params.boldSdc = false;
     params.device = "auto";
-    
-    // 记录日志文件路径，启动日志轮询
+    params.subjects = currentQueueSubjectIds();
+
     m_prepLogFilePath = m_preAnalysisOutputPath + "/deepprep-docker.log";
     m_prepLogReadPos = 0;
-    
-    qDebug() << "Starting DeepPrep via DockerPrepRunner";
-    appendPreAnalysisLog(QStringLiteral("使用 DockerPrepRunner 启动 DeepPrep...\n\n"));
-    
     startPrepLogTimer(m_prepLogFilePath);
-    
-    // 使用 DockerPrepRunner 异步运行
+
+    appendPreAnalysisLog(QStringLiteral(">>> DeepPrep 已启动\n"));
     m_dockerPrepRunner->runDeepPrep(params);
+}
+
+void MainViewController::onDefaceFinished(bool success, const QString& message)
+{
+    if (!success) {
+        setbrainAgeProcessing(false);
+        onPrepFinished(false, message);
+        onBrainAgePredictionFinished(false);
+    }
+}
+
+void MainViewController::onBrainAgePredictionFinished(bool success)
+{
+    m_currentBrainAgeDone = true;
+    m_currentBrainAgeSuccess = success;
+    tryFinishCurrentQueueItem();
+}
+
+void MainViewController::onPrepFinished(bool success, const QString& message)
+{
+    Q_UNUSED(message);
+
+    if (!success) {
+        m_currentPrepDone = true;
+        m_currentPrepSuccess = false;
+        tryFinishCurrentQueueItem();
+        return;
+    }
+
+    appendPreAnalysisLog(QStringLiteral(">>> 预处理完成，开始执行输出目录后处理（脑区分割 + 脑网络）...\n"));
+    m_currentBrainRegionDone = false;
+    m_currentBrainRegionSuccess = false;
+    m_currentBrainNetworkDone = false;
+    m_currentBrainNetworkSuccess = false;
+
+    startBrainRegionProcessing();
+    startBrainNetworkPostProcessing();
+}
+
+void MainViewController::startBrainNetworkPostProcessing()
+{
+    const QList<MriPairResult> pairs = m_currentQueuePairs;
+    const QString outputBase = m_preAnalysisOutputPath;
+    const int method = m_preAnalysisMethod;
+
+    if (pairs.isEmpty()) {
+        appendPreAnalysisLog(QStringLiteral(">>> 脑网络后处理失败：当前批次为空\n"));
+        onBrainNetworkPostProcessingFinished(false);
+        return;
+    }
+
+    QtConcurrent::run([this, pairs, outputBase, method]() {
+        int successCount = 0;
+        int failCount = 0;
+        QString firstSuccessOutputDir;
+
+        for (const auto& pair : pairs) {
+            const QString subjectId = pair.subjectId.trimmed();
+            if (subjectId.isEmpty()) {
+                ++failCount;
+                QMetaObject::invokeMethod(this, [this]() {
+                    appendPreAnalysisLog(QStringLiteral(">>> 脑网络后处理跳过：缺少 subjectId\n"));
+                }, Qt::QueuedConnection);
+                continue;
+            }
+
+            QString boldPath;
+            QString confoundsPath;
+            if (method == 0) {
+                boldPath = QDir(outputBase).filePath(subjectId + "/func/" + subjectId + "_task-rest_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold.nii.gz");
+                confoundsPath = QDir(outputBase).filePath(subjectId + "/func/" + subjectId + "_task-rest_desc-confounds_timeseries.tsv");
+            } else {
+                boldPath = QDir(outputBase).filePath("BOLD/" + subjectId + "/func/" + subjectId + "_task-rest_space-MNI152NLin6Asym_res-02_desc-preproc_bold.nii.gz");
+                confoundsPath = QDir(outputBase).filePath("BOLD/" + subjectId + "/func/" + subjectId + "_task-rest_desc-confounds_timeseries.tsv");
+            }
+
+            if (!QFileInfo::exists(boldPath) || !QFileInfo::exists(confoundsPath)) {
+                ++failCount;
+                QMetaObject::invokeMethod(this, [this, subjectId, boldPath, confoundsPath]() {
+                    appendPreAnalysisLog(QStringLiteral(">>> 脑网络后处理失败：%1 缺少输入文件\n    BOLD: %2\n    Confounds: %3\n")
+                                         .arg(subjectId, boldPath, confoundsPath));
+                }, Qt::QueuedConnection);
+                continue;
+            }
+
+            const QString networkOutputDir = QDir(outputBase).filePath("outputDir/" + subjectId);
+            QDir().mkpath(networkOutputDir);
+
+            bool ok = false;
+            try {
+                py::gil_scoped_acquire acquire;
+                py::module_ brain_network = py::module_::import("brain_network");
+                py::module_ sys = py::module_::import("sys");
+                py::list argv;
+                argv.append("brain_network");
+                argv.append("--bold");
+                argv.append(boldPath.toStdString());
+                argv.append("--confounds");
+                argv.append(confoundsPath.toStdString());
+                argv.append("--tr");
+                argv.append("2.0");
+                argv.append("--output");
+                argv.append(networkOutputDir.toStdString());
+                sys.attr("argv") = argv;
+                brain_network.attr("main")();
+                ok = QFileInfo::exists(QDir(networkOutputDir).filePath("alff.png"))
+                        && QFileInfo::exists(QDir(networkOutputDir).filePath("alff_transparent.png"))
+                        && QFileInfo::exists(QDir(networkOutputDir).filePath("covariance.png"))
+                        && QFileInfo::exists(QDir(networkOutputDir).filePath("covariance_transparent.png"))
+                        && QFileInfo::exists(QDir(networkOutputDir).filePath("viewConnectome.html"))
+                        && QFileInfo::exists(QDir(networkOutputDir).filePath("viewConnectome.png"))
+                        && QFileInfo::exists(QDir(networkOutputDir).filePath("region_plots/001_Precentral_L_transparent.png"))
+                        && QFileInfo::exists(QDir(networkOutputDir).filePath("brain_network_results.json"));
+            } catch (const py::error_already_set& e) {
+                QMetaObject::invokeMethod(this, [this, subjectId, err = QString::fromUtf8(e.what())]() {
+                    appendPreAnalysisLog(QStringLiteral(">>> 脑网络后处理 Python 错误 [%1]: %2\n").arg(subjectId, err));
+                }, Qt::QueuedConnection);
+            } catch (const std::exception& e) {
+                QMetaObject::invokeMethod(this, [this, subjectId, err = QString::fromUtf8(e.what())]() {
+                    appendPreAnalysisLog(QStringLiteral(">>> 脑网络后处理错误 [%1]: %2\n").arg(subjectId, err));
+                }, Qt::QueuedConnection);
+            }
+
+            if (ok) {
+                ++successCount;
+                if (firstSuccessOutputDir.isEmpty())
+                    firstSuccessOutputDir = networkOutputDir;
+            } else {
+                ++failCount;
+            }
+        }
+
+        QMetaObject::invokeMethod(this, [this, successCount, failCount, firstSuccessOutputDir]() {
+            if (!firstSuccessOutputDir.isEmpty()) {
+                loadOutputData(firstSuccessOutputDir);
+            }
+            appendPreAnalysisLog(QStringLiteral(">>> 脑网络后处理完成: 成功 %1 个, 失败 %2 个\n")
+                                 .arg(successCount).arg(failCount));
+            onBrainNetworkPostProcessingFinished(failCount == 0 && successCount > 0);
+        }, Qt::QueuedConnection);
+    });
+}
+
+void MainViewController::onBrainRegionPostProcessingFinished(bool success, int successCount, int failCount)
+{
+    Q_UNUSED(successCount);
+    Q_UNUSED(failCount);
+    m_currentBrainRegionDone = true;
+    m_currentBrainRegionSuccess = success;
+    tryFinishPrepPostProcessing();
+}
+
+void MainViewController::onBrainNetworkPostProcessingFinished(bool success)
+{
+    m_currentBrainNetworkDone = true;
+    m_currentBrainNetworkSuccess = success;
+    tryFinishPrepPostProcessing();
+}
+
+void MainViewController::tryFinishPrepPostProcessing()
+{
+    if (!m_currentBrainRegionDone || !m_currentBrainNetworkDone) {
+        return;
+    }
+
+    m_currentPrepDone = true;
+    m_currentPrepSuccess = m_currentBrainRegionSuccess && m_currentBrainNetworkSuccess;
+
+    if (m_currentPrepSuccess) {
+        appendPreAnalysisLog(QStringLiteral(">>> 输出目录后处理完成：脑区分割与脑网络均成功\n"));
+    } else {
+        appendPreAnalysisLog(QStringLiteral(">>> 输出目录后处理未全部成功，本批次不计为完成病例\n"));
+    }
+
+    tryFinishCurrentQueueItem();
+}
+
+void MainViewController::tryFinishCurrentQueueItem()
+{
+    if (!m_currentPrepDone || !m_currentBrainAgeDone) {
+        appendPreAnalysisLog(QStringLiteral(">>> [完成判定] 等待中：prepDone=%1, brainAgeDone=%2\n")
+                             .arg(m_currentPrepDone ? 1 : 0)
+                             .arg(m_currentBrainAgeDone ? 1 : 0));
+        return;
+    }
+
+    // 脑龄预测(BAP)为可选步骤，即使失败也不阻止入库；核心条件是 prepSuccess（脑区+脑网络）
+    if (m_currentPrepSuccess && m_dbManager && !m_currentQueuePairs.isEmpty()) {
+        const QString checkType = (m_preAnalysisMethod == 0)
+                ? QStringLiteral("fMRIPrep")
+                : QStringLiteral("DeepPrep");
+        int insertedCount = 0;
+        int skippedCount = 0;
+
+        for (const auto& pair : m_currentQueuePairs) {
+            const QString name = pair.patientName;
+            const QString patientId = pair.patientId;
+            const QString examDate = pair.studyDate;
+            const QString seriesUid = buildCompletedCaseSeriesUid(pair, m_preAnalysisMethod);
+            const int age = calculateAgeFromDates(pair.patientBirthDate, pair.studyDate);
+            const QString sex = normalizeDisplayedSex(pair.patientSex);
+            const QString bidsPath = m_preAnalysisBidsPath;
+            const QString outputPath = m_preAnalysisOutputPath;
+
+            const bool ok = m_dbManager->insertCompletedCase(name, patientId, examDate, seriesUid,
+                                                             age, sex, checkType, bidsPath, outputPath);
+            if (ok) {
+                ++insertedCount;
+            } else {
+                ++skippedCount;
+                qWarning() << "Insert completed case skipped/failed for patient"
+                           << patientId << ":" << m_dbManager->lastError();
+            }
+        }
+
+        if (insertedCount > 0)
+            refreshAppDataModel();
+
+        appendPreAnalysisLog(QStringLiteral(">>> 已写入完成病例表：成功 %1 条，跳过/失败 %2 条\n")
+                             .arg(insertedCount).arg(skippedCount));
+    } else {
+        // 详细输出未满足条件的原因，便于定位
+        const bool hasDb = (m_dbManager != nullptr);
+        const bool hasPairs = !m_currentQueuePairs.isEmpty();
+        appendPreAnalysisLog(QStringLiteral(">>> [完成判定] 未满足条件，跳过入库。\n"));
+        appendPreAnalysisLog(QStringLiteral("    - prepDone=%1, prepSuccess=%2\n")
+                             .arg(m_currentPrepDone ? 1 : 0)
+                             .arg(m_currentPrepSuccess ? 1 : 0));
+        appendPreAnalysisLog(QStringLiteral("    - brainAgeDone=%1, brainAgeSuccess=%2\n")
+                             .arg(m_currentBrainAgeDone ? 1 : 0)
+                             .arg(m_currentBrainAgeSuccess ? 1 : 0));
+        appendPreAnalysisLog(QStringLiteral("    - dbManager=%1\n").arg(hasDb ? QStringLiteral("OK") : QStringLiteral("NULL")));
+        appendPreAnalysisLog(QStringLiteral("    - currentQueuePairs=%1\n").arg(hasPairs ? QStringLiteral("OK") : QStringLiteral("EMPTY")));
+        if (!hasPairs) {
+            appendPreAnalysisLog(QStringLiteral("    - 提示：当前批次 pairs 为空，可能是队列状态/删除/清空导致。\n"));
+        }
+        if (!m_currentPrepSuccess) {
+            appendPreAnalysisLog(QStringLiteral("    - 提示：prepSuccess=false 通常是脑区分割或脑网络后处理失败。\n"));
+        }
+        if (!m_currentBrainAgeSuccess) {
+            appendPreAnalysisLog(QStringLiteral("    - 提示：brainAgeSuccess=false 通常是 BAP 失败或未找到脑龄结果 CSV。\n"));
+        }
+    }
+
+    removePendingTasks(m_currentQueuePairs, m_preAnalysisMethod);
+    m_currentQueuePairs.clear();
+    processNextInQueue();
+}
+
+void MainViewController::addPendingTasks(const QList<MriPairResult>& pairs, int method,
+                                         const QString& bidsPath, const QString& outputPath,
+                                         const QString& status)
+{
+    auto *model = GET_SINGLETON(AppDataModel);
+    if (!model)
+        return;
+
+    const QString checkType = (method == 0)
+            ? QStringLiteral("fMRIPrep")
+            : QStringLiteral("DeepPrep");
+
+    for (const auto &pair : pairs) {
+        HardwareScanResult item;
+        item.name = pair.patientName;
+        item.patientId = pair.patientId;
+        item.examDate = pair.studyDate;
+        item.checkType = checkType;
+        item.sex = normalizeDisplayedSex(pair.patientSex);
+        item.age = calculateAgeFromDates(pair.patientBirthDate, pair.studyDate);
+        item.seriesUid = pair.primarySeriesUid();
+        item.sliceCount = pair.t1ImageCount + pair.boldImageCount;
+        item.status = status;
+        item.outputPath = outputPath;
+        item.bidsPath = bidsPath;
+        model->addPendingItem(item);
+    }
+}
+
+void MainViewController::removePendingTasks(const QList<MriPairResult>& pairs, int method)
+{
+    Q_UNUSED(method);
+
+    auto *model = GET_SINGLETON(AppDataModel);
+    if (!model)
+        return;
+
+    for (const auto &pair : pairs) {
+        model->removePendingItem(pair.patientName, pair.studyDate, pair.primarySeriesUid());
+    }
+}
+
+void MainViewController::updatePendingTasksStatus(const QList<MriPairResult>& pairs, const QString& status)
+{
+    auto *model = GET_SINGLETON(AppDataModel);
+    if (!model)
+        return;
+
+    for (const auto &pair : pairs) {
+        model->setPendingItemStatus(pair.patientName, pair.studyDate, pair.primarySeriesUid(), status);
+    }
+}
+
+void MainViewController::addToProcessingQueue(const QList<MriPairResult>& pairs, int method,
+                                              const QString& bidsPath, const QString& outputPath,
+                                              const QString& licenseFile)
+{
+    QueueItem item;
+    item.method = method;
+    item.bidsPath = bidsPath;
+    item.outputPath = outputPath;
+    item.licenseFile = licenseFile;
+    item.pairResults = pairs;
+    m_processingQueue.append(item);
+    appendPreAnalysisLog(QStringLiteral(">>> [队列] 添加 1 个批次（%1 个被试），当前队列长度：%2\n")
+                         .arg(pairs.size()).arg(m_processingQueue.size()));
+}
+
+void MainViewController::startProcessingQueue()
+{
+    if (m_isProcessing || m_processingQueue.isEmpty()) return;
+    m_queuePaused = false;
+    processNextInQueue();
+}
+
+void MainViewController::pauseProcessingQueue()
+{
+    m_queuePaused = true;
+    appendPreAnalysisLog(QStringLiteral(">>> 队列将在当前任务完成后暂停\n"));
+}
+
+void MainViewController::clearProcessingQueue()
+{
+    for (const auto &item : m_processingQueue) {
+        removePendingTasks(item.pairResults, item.method);
+    }
+    const int removed = m_processingQueue.size();
+    m_processingQueue.clear();
+    appendPreAnalysisLog(QStringLiteral(">>> [队列] 已清空队列，移除 %1 个批次\n").arg(removed));
+}
+
+void MainViewController::processNextInQueue()
+{
+    if (m_queuePaused || m_processingQueue.isEmpty()) {
+        m_isProcessing = false;
+        setisPreAnalysisRunning(false);
+        if (m_processingQueue.isEmpty()) {
+            appendPreAnalysisLog(QStringLiteral("\n========== 所有任务处理完成 ==========\n"));
+        }
+        return;
+    }
+
+    m_isProcessing = true;
+    m_currentItem = m_processingQueue.takeFirst();
+
+    auto *model = GET_SINGLETON(AppDataModel);
+    const auto firstPairStatus = [model](const QList<MriPairResult>& pairs) -> QString {
+        if (!model || pairs.isEmpty())
+            return {};
+        const MriPairResult &pair = pairs.first();
+        return model->matchingRecordStatus(pair.patientName, pair.studyDate, pair.primarySeriesUid());
+    };
+
+    const bool startingQueuedBacklog = (firstPairStatus(m_currentItem.pairResults) == QStringLiteral("queued"));
+    int mergedBatchCount = 1;
+    int incompatibleBatchCount = 0;
+
+    if (startingQueuedBacklog && !m_processingQueue.isEmpty()) {
+        QList<QueueItem> remainingQueue;
+        for (const auto &queuedItem : m_processingQueue) {
+            const bool sameExecutionConfig = queuedItem.method == m_currentItem.method
+                    && queuedItem.licenseFile == m_currentItem.licenseFile;
+            if (sameExecutionConfig) {
+                m_currentItem.pairResults.append(queuedItem.pairResults);
+                ++mergedBatchCount;
+            } else {
+                remainingQueue.append(queuedItem);
+                ++incompatibleBatchCount;
+            }
+        }
+        m_processingQueue = remainingQueue;
+    }
+
+    m_currentQueuePairs = m_currentItem.pairResults;
+    m_currentProcessingPairs = m_currentQueuePairs;
+
+    updatePendingTasksStatus(m_currentQueuePairs, QStringLiteral("processing"));
+
+    m_currentPrepDone = false;
+    m_currentPrepSuccess = false;
+    m_currentBrainAgeDone = false;
+    m_currentBrainAgeSuccess = false;
+    m_currentBrainRegionDone = false;
+    m_currentBrainRegionSuccess = false;
+    m_currentBrainNetworkDone = false;
+    m_currentBrainNetworkSuccess = false;
+
+    QString firstSubId;
+    QString firstName;
+    if (!m_currentQueuePairs.isEmpty()) {
+        const MriPairResult& firstPair = m_currentQueuePairs.first();
+        firstSubId = firstPair.subjectId.isEmpty() ? firstPair.patientId : firstPair.subjectId;
+        firstName = firstPair.patientName;
+    }
+
+    appendPreAnalysisLog(QStringLiteral("\n>>> 开始处理队列批次：%1 个被试")
+                         .arg(m_currentQueuePairs.size()));
+    if (!firstName.isEmpty() || !firstSubId.isEmpty()) {
+        appendPreAnalysisLog(QStringLiteral("（首个被试 [%1]: %2）")
+                             .arg(firstName, firstSubId));
+    }
+    appendPreAnalysisLog(QStringLiteral("，剩余 %1 个批次\n").arg(m_processingQueue.size()));
+
+    if (startingQueuedBacklog && mergedBatchCount > 1) {
+        appendPreAnalysisLog(QStringLiteral(">>> 当前分析任务完成后，已自动合并 %1 个排队批次并一次性执行\n")
+                             .arg(mergedBatchCount));
+    }
+    if (startingQueuedBacklog) {
+        appendPreAnalysisLog(QStringLiteral(">>> 已从列表移除本轮开始执行的“排队中”项\n"));
+    }
+    if (incompatibleBatchCount > 0) {
+        appendPreAnalysisLog(QStringLiteral(">>> 有 %1 个排队批次因处理方式或 license 不同，保留在队列中等待后续执行\n")
+                             .arg(incompatibleBatchCount));
+    }
+
+    m_preAnalysisMethod = m_currentItem.method;
+    const QVariantMap runtimePaths = defaultProcessingPaths();
+    m_preAnalysisBidsPath = runtimePaths.value(QStringLiteral("bidsPath")).toString();
+    m_preAnalysisOutputPath = runtimePaths.value(QStringLiteral("outputPath")).toString();
+    m_currentItem.bidsPath = m_preAnalysisBidsPath;
+    m_currentItem.outputPath = m_preAnalysisOutputPath;
+    m_preAnalysisLicenseFile = m_currentItem.licenseFile;
+    setisPreAnalysisRunning(true);
+
+    QDir().mkpath(m_preAnalysisBidsPath);
+    QDir().mkpath(m_preAnalysisOutputPath);
+    appendPreAnalysisLog(QStringLiteral(">>> 已为当前执行批次创建独立目录：\n    BIDS: %1\n    Output: %2\n")
+                         .arg(m_preAnalysisBidsPath, m_preAnalysisOutputPath));
+
+    appendPreAnalysisLog(QStringLiteral(">>> 预处理将继续执行；脑龄预测会在 Deface 完成后通过 Docker BAP 启动\n"));
+
+    // Step 1: BIDS 转换（整批 subjects）
+    appendPreAnalysisLog(QStringLiteral(">>> [Step 1/2] 开始 BIDS 转换...\n"));
+    m_bidsConverter->setOutputDirectory(m_preAnalysisBidsPath);
+    m_bidsConverter->setDatasetName("BrainMRI_Study");
+    m_bidsConverter->setTaskName("rest");
+    m_bidsConverter->startConversion(m_currentQueuePairs);
+}
+
+// ================================================================
+// 数据库相关 Q_INVOKABLE 方法
+// ================================================================
+
+bool MainViewController::initDatabase(const QString& dbPath)
+{
+    if (!m_dbManager->openDatabase(dbPath)) return false;
+    m_dbManager->createTable();
+    return m_dbManager->createCompletedCasesTable();
+}
+
+bool MainViewController::addCompletedCase(const QString& name, const QString& patientId,
+                                           const QString& examDate, const QString& seriesUid,
+                                           int age, const QString& sex, const QString& checkType,
+                                           const QString& bidsPath, const QString& outputPath)
+{
+    bool ok = m_dbManager->insertCompletedCase(name, patientId, examDate, seriesUid,
+                                                age, sex, checkType, bidsPath, outputPath);
+    if (ok) refreshAppDataModel();
+    return ok;
+}
+
+bool MainViewController::removeCompletedCase(int id)
+{
+    bool ok = m_dbManager->deleteCompletedCase(id);
+    if (ok) refreshAppDataModel();
+    return ok;
+}
+
+QVariantList MainViewController::searchCases(const QString& keyword)
+{
+    QList<QVariantMap> results = keyword.isEmpty()
+        ? m_dbManager->getAllCompletedCases()
+        : m_dbManager->searchCompletedCases(keyword);
+    QVariantList list;
+    for (const auto& r : results)
+        list.append(r);
+    return list;
+}
+
+void MainViewController::refreshAppDataModel()
+{
+    auto* model = GET_SINGLETON(AppDataModel);
+    model->setCompletedItems(m_dbManager->getAllCompletedCases());
+}
+
+bool MainViewController::removeQueuedTask(const QString& name, const QString& examDate, const QString& seriesUid)
+{
+    bool removedFromQueue = false;
+
+    auto normDate = [](const QString& d) -> QString {
+        QString digits = d.trimmed();
+        digits.remove(QRegularExpression(QStringLiteral("[^0-9]")));
+        return digits.left(8);
+    };
+    const QString normExamDate = normDate(examDate);
+
+    for (int i = m_processingQueue.size() - 1; i >= 0; --i) {
+        QList<MriPairResult>& pairs = m_processingQueue[i].pairResults;
+        for (int j = pairs.size() - 1; j >= 0; --j) {
+            const auto& p = pairs[j];
+            const bool uidMatch = !seriesUid.trimmed().isEmpty()
+                    && p.primarySeriesUid().trimmed() == seriesUid.trimmed();
+            const bool nameDate = p.patientName.trimmed() == name.trimmed()
+                    && normDate(p.studyDate) == normExamDate;
+            if (uidMatch || nameDate) {
+                pairs.removeAt(j);
+                removedFromQueue = true;
+            }
+        }
+        if (pairs.isEmpty()) {
+            m_processingQueue.removeAt(i);
+        }
+    }
+
+    auto* model = GET_SINGLETON(AppDataModel);
+    if (model) {
+        model->removePendingItem(name, examDate, seriesUid);
+    }
+
+    if (removedFromQueue) {
+        appendPreAnalysisLog(QStringLiteral(">>> [队列] 已删除排队任务：%1 (%2)\n").arg(name, examDate));
+    }
+
+    return removedFromQueue || model != nullptr;
+}
+
+void MainViewController::testPostProcessing(const QString& outputDir, int method)
+{
+    qDebug() << "=== TEST POST PROCESSING ===";
+    qDebug() << "OutputDir:" << outputDir;
+    qDebug() << "Method:" << (method == 0 ? "fMRIPrep" : "DeepPrep");
+
+    m_preAnalysisOutputPath = outputDir;
+    m_preAnalysisMethod = method;
+    setisPreAnalysisRunning(true);
+    clearPreAnalysisLog();
+
+    // 从 metadata.json 恢复 m_currentQueuePairs
+    QVariantMap meta = readMetadataFile(outputDir);
+    QVariantList subjects = meta.value("subjects").toList();
+    m_currentQueuePairs.clear();
+    for (const auto& s : subjects) {
+        QVariantMap sm = s.toMap();
+        MriPairResult pair;
+        pair.subjectId   = sm.value("subjectId").toString();
+        pair.patientName = sm.value("patientName").toString();
+        pair.patientId   = sm.value("patientId").toString();
+        pair.patientSex  = sm.value("patientSex").toString();
+        pair.patientBirthDate = sm.value("patientBirthDate").toString();
+        pair.studyDate   = sm.value("studyDate").toString();
+        m_currentQueuePairs.append(pair);
+    }
+
+    if (m_currentQueuePairs.isEmpty()) {
+        // 没有 metadata，自动扫描 sub-* 目录
+        QString basePath = (method == 0)
+            ? QDir(outputDir).filePath("sourcedata/freesurfer")
+            : QDir(outputDir).filePath("Recon");
+        QDir baseDir(basePath);
+        QStringList subDirs = baseDir.entryList(QStringList() << "sub-*", QDir::Dirs | QDir::NoDotAndDotDot);
+        for (const QString& sub : subDirs) {
+            MriPairResult pair;
+            pair.subjectId = sub;
+            pair.patientId = sub;
+            pair.patientName = sub;
+            m_currentQueuePairs.append(pair);
+        }
+    }
+
+    m_currentProcessingPairs = m_currentQueuePairs;
+
+    appendPreAnalysisLog(QStringLiteral("=== 测试模式：直接执行后处理 ===\n"));
+    appendPreAnalysisLog(QStringLiteral("输出目录: %1\n").arg(outputDir));
+    appendPreAnalysisLog(QStringLiteral("方法: %1\n").arg(method == 0 ? "fMRIPrep" : "DeepPrep"));
+    appendPreAnalysisLog(QStringLiteral("被试数: %1\n\n").arg(m_currentQueuePairs.size()));
+
+    for (const auto& p : m_currentQueuePairs) {
+        appendPreAnalysisLog(QStringLiteral("  - %1 (%2)\n").arg(p.subjectId, p.patientName));
+    }
+
+    // 直接模拟 onPrepFinished(true)
+    m_currentBrainRegionDone = false;
+    m_currentBrainRegionSuccess = false;
+    m_currentBrainNetworkDone = false;
+    m_currentBrainNetworkSuccess = false;
+    m_currentPrepDone = false;
+    m_currentPrepSuccess = false;
+    m_currentBrainAgeDone = true;    // 跳过脑龄
+    m_currentBrainAgeSuccess = true;
+
+    appendPreAnalysisLog(QStringLiteral("\n>>> 开始脑区分割后处理...\n"));
+    startBrainRegionProcessing();
+
+    appendPreAnalysisLog(QStringLiteral(">>> 开始脑网络后处理...\n"));
+    startBrainNetworkPostProcessing();
 }
 
 void MainViewController::appendPreAnalysisLog(const QString& text)
 {
     if (text.isEmpty())
         return;
+
+    // 完整日志 -> LogManager（无截断）
+    GET_SINGLETON(LogManager)->appendLog(text);
+
     m_preAnalysisLog.append(text);
-    // 限制日志长度，避免TextArea渲染大量文本导致UI卡顿
     const int maxLogLength = 10000;
     if (m_preAnalysisLog.length() > maxLogLength) {
-        // 保留后半部分日志，从换行符处截断以保持完整行
         int cutPos = m_preAnalysisLog.indexOf('\n', m_preAnalysisLog.length() - maxLogLength);
         if (cutPos > 0) {
             m_preAnalysisLog = m_preAnalysisLog.mid(cutPos + 1);
@@ -2489,11 +3523,10 @@ void MainViewController::appendPreAnalysisLog(const QString& text)
             m_preAnalysisLog = m_preAnalysisLog.right(maxLogLength);
         }
     }
-    // 使用节流机制，避免频繁触发UI更新
     if (!m_preAnalysisLogUpdateTimer) {
         m_preAnalysisLogUpdateTimer = new QTimer(this);
         m_preAnalysisLogUpdateTimer->setSingleShot(true);
-        m_preAnalysisLogUpdateTimer->setInterval(300); // 300ms节流
+        m_preAnalysisLogUpdateTimer->setInterval(300);
         connect(m_preAnalysisLogUpdateTimer, &QTimer::timeout, this, [this]() {
             emit preAnalysisLogUpdated();
         });

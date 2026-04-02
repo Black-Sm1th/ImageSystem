@@ -12,6 +12,7 @@
 // VTK 前置声明
 class vtkImageData;
 class vtkPolyData;
+class BrainRegionVisualizer;
 
 /**
  * @brief 脑区元数据结构体
@@ -217,6 +218,11 @@ private:
      * @brief 保存处理信息 JSON
      */
     bool saveProcessingInfo(const QString& outputDir, const QString& segPath, const QString& rawPath);
+
+    /**
+     * @brief 生成脑分割预览图（3 个切面 + 1 张 3D 图）
+     */
+    bool generatePreviewImages(const QString& segPath, const QString& rawPath, const QString& outputDir);
 
     /**
      * @brief 清理文件名中的非法字符

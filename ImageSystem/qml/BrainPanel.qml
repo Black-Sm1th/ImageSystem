@@ -68,6 +68,79 @@ Rectangle {
         isDeepprepOutput = $MainViewController.isDeepprepOutput(path)
     }
 
+    function normalizeDateKey(value) {
+        if (!value)
+            return ""
+
+        return String(value).replace(/[^0-9]/g, "").slice(0, 8)
+    }
+
+    function resolvePreferredSubjectIndex(metadataSubjects, preferredCase) {
+        if (!metadataSubjects || metadataSubjects.length === 0)
+            return 0
+
+        if (!preferredCase)
+            return 0
+
+        var preferredPatientId = ""
+        var preferredPatientName = ""
+        var preferredExamDate = ""
+        var preferredSeriesUid = ""
+
+        if (typeof preferredCase === "string") {
+            preferredPatientId = preferredCase
+        } else {
+            preferredPatientId = preferredCase.patientId || ""
+            preferredPatientName = preferredCase.patientName || ""
+            preferredExamDate = normalizeDateKey(preferredCase.examDate || "")
+            preferredSeriesUid = preferredCase.seriesUid || ""
+        }
+
+        for (var i = 0; i < metadataSubjects.length; ++i) {
+            var bySeries = metadataSubjects[i]
+            if (preferredSeriesUid !== ""
+                    && (bySeries.primarySeriesUid === preferredSeriesUid
+                        || bySeries.t1SeriesUid === preferredSeriesUid
+                        || bySeries.boldSeriesUid === preferredSeriesUid)) {
+                return i
+            }
+        }
+
+        for (var j = 0; j < metadataSubjects.length; ++j) {
+            var byPatientAndDate = metadataSubjects[j]
+            if (preferredPatientId !== ""
+                    && byPatientAndDate.patientId === preferredPatientId
+                    && preferredExamDate !== ""
+                    && normalizeDateKey(byPatientAndDate.studyDate || "") === preferredExamDate) {
+                return j
+            }
+        }
+
+        for (var k = 0; k < metadataSubjects.length; ++k) {
+            if (preferredPatientId !== "" && metadataSubjects[k].patientId === preferredPatientId)
+                return k
+        }
+
+        for (var m = 0; m < metadataSubjects.length; ++m) {
+            var byNameAndDate = metadataSubjects[m]
+            if (preferredPatientName !== ""
+                    && byNameAndDate.patientName === preferredPatientName
+                    && preferredExamDate !== ""
+                    && normalizeDateKey(byNameAndDate.studyDate || "") === preferredExamDate) {
+                return m
+            }
+        }
+
+        return 0
+    }
+
+    function refreshDefaultPrepPaths() {
+        var defaultPaths = $MainViewController.defaultProcessingPaths()
+        bidsDir.text = defaultPaths.bidsPath || ""
+        outputDir.text = defaultPaths.outputPath || ""
+        outputDetailDir.text = outputDir.text
+    }
+
     function startUnifiedImports(url, normalizedPath, subjectId, currentPatientId) {
         selectedOutputPath = normalizedPath
         outputDetailDir.text = normalizedPath
@@ -79,6 +152,58 @@ Rectangle {
         $MainViewController.importBrainData(url, subjectId, currentPatientId)
         // 默认展示分割结果预览
         segBtnMouseArea.clicked(Qt.LeftButton)
+    }
+
+    function selectSubjectAtIndex(selectedIndex) {
+        if (selectedIndex < 0 || subjectsMetadata.length <= selectedIndex || outputDetailDir.text === "")
+            return
+
+        currentSubjectId = subjectsMetadata[selectedIndex].subjectId
+        var path = outputDetailDir.text
+        var subjectUrl = "file:///" + path
+        startUnifiedImports(subjectUrl, path, currentSubjectId, subjectsMetadata[selectedIndex].patientId)
+    }
+
+    function loadOutputDirectory(path, preferredCase) {
+        if (!path || path === "")
+            return false
+
+        var normalizedPath = path.replace(/\\/g, "/")
+        outputDetailDir.text = normalizedPath
+        selectedOutputPath = normalizedPath
+
+        var metadata = $MainViewController.readMetadataFile(normalizedPath)
+        if (!(metadata && metadata.subjects && metadata.subjects.length > 0)) {
+            subjectsMetadata = []
+            subjectsList = []
+            patientComboBox.model = []
+            currentSubjectId = ""
+            if (messageManager)
+                messageManager.warning(qsTr("未在该文件夹中找到被试数据"), 2000)
+            return false
+        }
+
+        subjectsMetadata = metadata.subjects
+        var displayList = []
+        var selectedIndex = resolvePreferredSubjectIndex(metadata.subjects, preferredCase)
+        for (var i = 0; i < metadata.subjects.length; i++) {
+            var sub = metadata.subjects[i]
+            displayList.push(sub.patientName + "(" + sub.patientId + ")")
+        }
+
+        subjectsList = displayList
+        patientComboBox.model = displayList
+        patientComboBox.selectedText = displayList[selectedIndex]
+        patientComboBox.selectedIndices = [selectedIndex]
+
+        $MainViewController.loadBrainAgePredictions(normalizedPath)
+        selectSubjectAtIndex(selectedIndex)
+        return true
+    }
+
+    Component.onCompleted: {
+        refreshDefaultPrepPaths()
+        licenseFile.text = $MainViewController.defaultLicenseFilePath()
     }
 
     FileDialog {
@@ -99,11 +224,7 @@ Rectangle {
 
             dicomDir.text = path
 
-            var lastSlash = path.lastIndexOf("/")
-            var baseDir = lastSlash >= 0 ? path.substring(0, lastSlash + 1) : path
-            bidsDir.text = baseDir + "Bids"
-            outputDir.text = baseDir + "Output" + "_" + Qt.formatDateTime(new Date(), "yyyyMMdd_HHmmss")
-            outputDetailDir.text = baseDir + "Output" + "_" + Qt.formatDateTime(new Date(), "yyyyMMdd_HHmmss")
+            refreshDefaultPrepPaths()
         }
     }
     
@@ -1100,8 +1221,8 @@ Rectangle {
             color: "transparent"
             visible: currentIndex === 1
             clip: true
-            
-            property int currentTabIndex: 0
+
+            property int currentTabIndex: 1
 
             Column{
                 width: parent.width
@@ -1119,6 +1240,7 @@ Rectangle {
                         height: parent.height
                         anchors.horizontalCenter: parent.horizontalCenter
                         z: 2
+                        visible: false
                         // // 传统处理 Tab
                         // Item{
                         //     id: tab1
@@ -1286,6 +1408,7 @@ Rectangle {
                         y: (parent.height - height) / 2 - 2
                         source: "qrc:/image/textBackgroundAfter.png"
                         z: 1
+                        visible: false
                         property int currentTab: 0
                         property int targetTab: 0
                         
@@ -1379,6 +1502,7 @@ Rectangle {
                         width: 88
                         color: "#0078d4"
                         radius: 1
+                        visible: false
 
                         property int currentTab: 0
                         property int targetTab: 0
@@ -1450,6 +1574,23 @@ Rectangle {
                             }
                         }
                     }
+
+                    Label {
+                        anchors.centerIn: parent
+                        text: qsTr("数据详情")
+                        font.pixelSize: 16
+                        color: "#E5FFFFFF"
+                        font.family: "Alibaba PuHuiTi 3.0"
+                    }
+
+                    Rectangle {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom
+                        width: 88
+                        height: 2
+                        color: "#0078d4"
+                        radius: 1
+                    }
                 }
 
                 ScrollView{
@@ -1457,7 +1598,7 @@ Rectangle {
                     height: preAnalysis.height - 16 - 48
                     clip: true
                     ScrollBar.vertical.policy: ScrollBar.AlwaysOff
-                    visible: preAnalysis.currentTabIndex === 0
+                    visible: false
                     Column{
                         id: prepCol
                         width: parent.width
@@ -1938,6 +2079,7 @@ Rectangle {
                                 id: bidsDir
                                 width: prepCol.width - label2.width - 10
                                 height: 38
+                                text: ""
                                 inputRadius: 4
                                 backgroundColor: "#14FFFFFF"
                             }
@@ -2207,14 +2349,47 @@ Rectangle {
                         }
                     }
                 }
+
+                Rectangle {
+                    width: parent.width
+                    height: preAnalysis.height - 16 - 48
+                    radius: 8
+                    color: "#141A24"
+                    border.color: "#2A3348"
+                    border.width: 1
+                    visible: false
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 12
+
+                        Label {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: qsTr("预处理任务入口已迁移到数据上传窗口")
+                            color: "#E5FFFFFF"
+                            font.pixelSize: 18
+                            font.family: "Alibaba PuHuiTi 3.0"
+                            font.bold: true
+                        }
+
+                        Label {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: qsTr("请在主界面打开数据上传，完成硬件扫描、选择算法并提交任务。")
+                            color: "#80FFFFFF"
+                            font.pixelSize: 14
+                            font.family: "Alibaba PuHuiTi 3.0"
+                        }
+                    }
+                }
                 Column{
                     id: preDetailCol
                     width: parent.width
                     spacing: 12
-                    visible: preAnalysis.currentTabIndex === 1
+                    visible: true
                     Row{
                         height: 38
                         spacing: 10
+                        visible: false
                         Label {
                             id: label5
                             text: qsTr("预处理后文件夹：")
@@ -2244,6 +2419,7 @@ Rectangle {
                     Row{
                         height: 38
                         spacing: 10
+                        visible: false
                         Label {
                             id: label6
                             text: qsTr("数据列表：")
@@ -2257,13 +2433,8 @@ Rectangle {
                             model: []
                             onSelectionChanged: {
                                 // 通过索引从 subjectsMetadata 获取对应的 subjectId
-                                var selectedIndex = selectedIndices[0]
-                                if (outputDetailDir.text !== "" && subjectsMetadata.length > selectedIndex) {
-                                    currentSubjectId = subjectsMetadata[selectedIndex].subjectId
-                                    var path = outputDetailDir.text
-                                    var subjectUrl = "file:///" + path
-                                    startUnifiedImports(subjectUrl, path, currentSubjectId, subjectsMetadata[selectedIndex].patientId)
-                                }
+                                if (selectedIndices.length > 0)
+                                    selectSubjectAtIndex(selectedIndices[0])
                             }
                         }
                     }

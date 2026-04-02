@@ -1,4 +1,4 @@
-import QtQuick 2.15
+﻿import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtGraphicalEffects 1.0
 
@@ -155,7 +155,7 @@ Rectangle {
                     color: closeBtnArea.containsMouse ? "#44E81123" : "transparent"
                     Text {
                         anchors.centerIn: parent
-                        text: "\u2715"
+                        text: "✕"
                         color: "#80FFFFFF"
                         font.pixelSize: 12
                     }

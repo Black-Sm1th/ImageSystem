@@ -2,6 +2,27 @@
 #include <QCoreApplication>
 #include <QTextStream>
 #include <QDebug>
+#include <QProcessEnvironment>
+
+namespace {
+
+QStringList filteredSubjectDirs(const QDir& dir, const QStringList& subjects)
+{
+    QStringList subDirs = dir.entryList(QStringList() << QStringLiteral("sub-*"),
+                                        QDir::Dirs | QDir::NoDotAndDotDot,
+                                        QDir::Name);
+    if (subjects.isEmpty())
+        return subDirs;
+
+    QStringList filtered;
+    for (const QString& sub : subDirs) {
+        if (subjects.contains(sub))
+            filtered.append(sub);
+    }
+    return filtered;
+}
+
+} // namespace
 
 // ============================================================
 // 构造与析构
@@ -263,6 +284,8 @@ QStringList DockerPrepRunner::buildDeepPrepCommand(const DeepPrepParams& params)
     
     command << "run" << "--rm" << "--gpus" << "all";
     command << "-e" << QString("DOCKER_VERSION_8395080871=%1").arg(dockerVersion);
+    command << "-e" << "PYTHONUNBUFFERED=1";
+    command << "-e" << "PYTHONIOENCODING=UTF-8";
     
     // 挂载目录
     QString absBids = QFileInfo(params.bidsDir).absoluteFilePath();
@@ -288,13 +311,12 @@ QStringList DockerPrepRunner::buildDeepPrepCommand(const DeepPrepParams& params)
     
     // 被试参数
     if (!params.subjects.isEmpty()) {
-        QStringList labels;
+        command << "--participant_label";
         for (const QString& s : params.subjects) {
             QString label = s;
             label.remove("sub-");
-            labels.append(label.trimmed());
+            command << label.trimmed();
         }
-        command << "--participant_label" << labels.join(" ");
     }
     
     if (params.skipBidsValidation) {
@@ -324,6 +346,8 @@ QStringList DockerPrepRunner::buildFmriPrepCommand(const FmriPrepParams& params)
     
     command << "run" << "--rm";
     command << "-e" << QString("DOCKER_VERSION_8395080871=%1").arg(dockerVersion);
+    command << "-e" << "PYTHONUNBUFFERED=1";
+    command << "-e" << "PYTHONIOENCODING=UTF-8";
     
     // 挂载目录
     QString absBids = QFileInfo(params.bidsDir).absoluteFilePath();
@@ -400,6 +424,22 @@ QStringList DockerPrepRunner::buildFmriPrepCommand(const FmriPrepParams& params)
 // 异步执行 Docker 命令
 // ============================================================
 
+void DockerPrepRunner::configureProcess(QProcess* process) const
+{
+    if (!process)
+        return;
+
+    process->setInputChannelMode(QProcess::ManagedInputChannel);
+    process->setStandardInputFile(QProcess::nullDevice());
+    process->setProcessChannelMode(QProcess::SeparateChannels);
+
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    env.insert(QStringLiteral("PYTHONUNBUFFERED"), QStringLiteral("1"));
+    env.insert(QStringLiteral("PYTHONIOENCODING"), QStringLiteral("UTF-8"));
+    env.insert(QStringLiteral("CI"), QStringLiteral("1"));
+    process->setProcessEnvironment(env);
+}
+
 void DockerPrepRunner::startAsyncProcess(const QStringList& command, const QString& logPath, bool isDeepPrep)
 {
     if (command.isEmpty()) {
@@ -413,6 +453,8 @@ void DockerPrepRunner::startAsyncProcess(const QStringList& command, const QStri
     
     // 创建进程
     m_process = new QProcess(this);
+    m_lastProcessOutput.clear();
+    configureProcess(m_process);
     
     // 打开日志文件
     m_logFile = new QFile(logPath, this);
@@ -426,6 +468,10 @@ void DockerPrepRunner::startAsyncProcess(const QStringList& command, const QStri
             m_logFile->write(data);
             m_logFile->flush();
         }
+        m_lastProcessOutput += QString::fromUtf8(data);
+        if (m_lastProcessOutput.size() > 8000) {
+            m_lastProcessOutput = m_lastProcessOutput.right(8000);
+        }
         emit outputLog(QString::fromUtf8(data));
     });
     
@@ -435,6 +481,10 @@ void DockerPrepRunner::startAsyncProcess(const QStringList& command, const QStri
         if (m_logFile && m_logFile->isOpen()) {
             m_logFile->write(data);
             m_logFile->flush();
+        }
+        m_lastProcessOutput += QString::fromUtf8(data);
+        if (m_lastProcessOutput.size() > 8000) {
+            m_lastProcessOutput = m_lastProcessOutput.right(8000);
         }
         emit outputLog(QString::fromUtf8(data));
     });
@@ -456,6 +506,9 @@ void DockerPrepRunner::startAsyncProcess(const QStringList& command, const QStri
         QString message = exitCode == 0 
             ? (m_isDeepPrep ? "DeepPrep completed successfully" : "fMRIPrep completed successfully")
             : QString("%1 exited with code %2").arg(m_isDeepPrep ? "DeepPrep" : "fMRIPrep").arg(exitCode);
+        if (exitCode != 0 && !m_lastProcessOutput.trimmed().isEmpty()) {
+            message += QStringLiteral("\n%1").arg(m_lastProcessOutput.trimmed());
+        }
         
         // 发送对应的完成信号
         if (m_isDeepPrep) {
@@ -469,6 +522,7 @@ void DockerPrepRunner::startAsyncProcess(const QStringList& command, const QStri
             m_process->deleteLater();
             m_process = nullptr;
         }
+        m_lastProcessOutput.clear();
     });
     
     // 连接错误信号
@@ -489,7 +543,15 @@ void DockerPrepRunner::startAsyncProcess(const QStringList& command, const QStri
                 break;
         }
         
+        if (!m_lastProcessOutput.trimmed().isEmpty()) {
+            errorMsg += QStringLiteral("\n%1").arg(m_lastProcessOutput.trimmed());
+        }
         emit runError(errorMsg);
+        if (m_isDeepPrep) {
+            emit deepPrepFinished(-1, errorMsg);
+        } else {
+            emit fmriPrepFinished(-1, errorMsg);
+        }
         
         // 关闭日志文件
         if (m_logFile) {
@@ -499,13 +561,14 @@ void DockerPrepRunner::startAsyncProcess(const QStringList& command, const QStri
         }
         
         m_isRunning = false;
+        m_lastProcessOutput.clear();
     });
     
     m_isRunning = true;
     
     // 异步启动进程
-    m_process->setProcessChannelMode(QProcess::MergedChannels);
     m_process->start(command.first(), command.mid(1));
+    m_process->closeWriteChannel();
 }
 
 // ============================================================
@@ -515,7 +578,9 @@ void DockerPrepRunner::startAsyncProcess(const QStringList& command, const QStri
 void DockerPrepRunner::runDeepPrep(const DeepPrepParams& params)
 {
     if (m_isRunning) {
-        emit runError("Another process is already running");
+        const QString error = QStringLiteral("Another process is already running");
+        emit runError(error);
+        emit deepPrepFinished(-1, error);
         return;
     }
     
@@ -530,12 +595,15 @@ void DockerPrepRunner::runDeepPrep(const DeepPrepParams& params)
             ? "Docker command not found. Is Docker installed?"
             : "Cannot connect to Docker daemon. Is it running?";
         emit runError(error);
+        emit deepPrepFinished(-1, error);
         return;
     }
     
     // 检查许可证文件
     if (!QFileInfo::exists(params.licenseFile)) {
-        emit runError(QString("FreeSurfer license file not found: %1").arg(params.licenseFile));
+        const QString error = QString("FreeSurfer license file not found: %1").arg(params.licenseFile);
+        emit runError(error);
+        emit deepPrepFinished(-1, error);
         return;
     }
     
@@ -544,6 +612,7 @@ void DockerPrepRunner::runDeepPrep(const DeepPrepParams& params)
         BidsValidationResult validation = validateBidsStructure(params.bidsDir);
         if (!validation.isValid) {
             emit runError(validation.message);
+            emit deepPrepFinished(-1, validation.message);
             return;
         }
         qDebug() << validation.message;
@@ -590,7 +659,9 @@ void DockerPrepRunner::runDeepPrep(const DeepPrepParams& params)
 void DockerPrepRunner::runFmriPrep(const FmriPrepParams& params)
 {
     if (m_isRunning) {
-        emit runError("Another process is already running");
+        const QString error = QStringLiteral("Another process is already running");
+        emit runError(error);
+        emit fmriPrepFinished(-1, error);
         return;
     }
     
@@ -605,12 +676,15 @@ void DockerPrepRunner::runFmriPrep(const FmriPrepParams& params)
             ? "Docker command not found. Is Docker installed?"
             : "Cannot connect to Docker daemon. Is it running?";
         emit runError(error);
+        emit fmriPrepFinished(-1, error);
         return;
     }
     
     // 检查许可证文件
     if (!QFileInfo::exists(params.licenseFile)) {
-        emit runError(QString("FreeSurfer license file not found: %1").arg(params.licenseFile));
+        const QString error = QString("FreeSurfer license file not found: %1").arg(params.licenseFile);
+        emit runError(error);
+        emit fmriPrepFinished(-1, error);
         return;
     }
     
@@ -619,6 +693,7 @@ void DockerPrepRunner::runFmriPrep(const FmriPrepParams& params)
         BidsValidationResult validation = validateBidsStructure(params.bidsDir);
         if (!validation.isValid) {
             emit runError(validation.message);
+            emit fmriPrepFinished(-1, validation.message);
             return;
         }
         qDebug() << validation.message;
@@ -671,16 +746,12 @@ void DockerPrepRunner::runFmriPrep(const FmriPrepParams& params)
 void DockerPrepRunner::stop()
 {
     if (m_process && m_process->state() != QProcess::NotRunning) {
-        // 断开所有信号连接，避免手动停止时触发回调
         disconnect(m_process, nullptr, this, nullptr);
-        
         m_process->terminate();
         if (!m_process->waitForFinished(5000)) {
             m_process->kill();
             m_process->waitForFinished(3000);
         }
-        
-        // 清理进程对象
         m_process->deleteLater();
         m_process = nullptr;
     }
@@ -694,3 +765,202 @@ void DockerPrepRunner::stop()
     m_isRunning = false;
 }
 
+// ============================================================
+// 通用：启动独立 Docker 进程（deface / bap 共用）
+// ============================================================
+void DockerPrepRunner::startDetachedDockerProcess(
+    QPointer<QProcess>& proc,
+    const QStringList& command,
+    const char* taskName,
+    std::function<void(int, const QString&)> finishedCb)
+{
+    if (command.isEmpty()) {
+        emit runError(QStringLiteral("%1: empty command").arg(taskName));
+        return;
+    }
+
+    qDebug() << taskName << "command:" << command.join(" ");
+
+    proc = new QProcess(this);
+    configureProcess(proc);
+
+    connect(proc.data(), &QProcess::readyReadStandardOutput, this, [this, proc]() {
+        if (!proc) return;
+        emit outputLog(QString::fromUtf8(proc->readAllStandardOutput()));
+    });
+    connect(proc.data(), &QProcess::readyReadStandardError, this, [this, proc]() {
+        if (!proc) return;
+        emit outputLog(QString::fromUtf8(proc->readAllStandardError()));
+    });
+
+    QString name = QString::fromLatin1(taskName);
+    connect(proc.data(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this, [this, proc, name, finishedCb](int exitCode, QProcess::ExitStatus) {
+        QString msg = exitCode == 0
+            ? QStringLiteral("%1 completed successfully").arg(name)
+            : QStringLiteral("%1 exited with code %2").arg(name).arg(exitCode);
+        if (finishedCb) finishedCb(exitCode, msg);
+        if (proc) { proc->deleteLater(); }
+    });
+
+    connect(proc.data(), &QProcess::errorOccurred, this, [this, name](QProcess::ProcessError err) {
+        Q_UNUSED(err);
+        emit runError(QStringLiteral("%1 process error").arg(name));
+    });
+
+    proc->start(command.first(), command.mid(1));
+    proc->closeWriteChannel();
+}
+
+// bap_subjects.txt 用容器内绝对路径 /app/input/...
+static QString dockerListLine(const QString& sub, const QString& niiFile)
+{
+    return QStringLiteral("/app/input/%1/anat/%2").arg(sub, niiFile);
+}
+
+// deface：写 bap_subjects.txt，原始 T1（排除 _defaced）
+bool DockerPrepRunner::generateDefaceSubjectsTxt(const QString& bidsDir, const QStringList& subjects)
+{
+    QDir dir(bidsDir);
+    QStringList subDirs = filteredSubjectDirs(dir, subjects);
+    if (subDirs.isEmpty()) {
+        qWarning() << "No sub-* in" << bidsDir;
+        return false;
+    }
+    QFile file(dir.filePath(QStringLiteral("bap_subjects.txt")));
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qWarning() << "Cannot write bap_subjects.txt (deface list)";
+        return false;
+    }
+    QTextStream out(&file);
+    int n = 0;
+    for (const QString& sub : subDirs) {
+        QDir anatDir(dir.filePath(sub + QStringLiteral("/anat")));
+        if (!anatDir.exists()) continue;
+        QStringList niftis = anatDir.entryList(QStringList() << QStringLiteral("*_T1w.nii.gz")
+                                                             << QStringLiteral("*_T1w.nii"),
+                                               QDir::Files);
+        for (const QString& nii : niftis) {
+            if (nii.contains(QStringLiteral("_defaced"), Qt::CaseInsensitive)) continue;
+            out << dockerListLine(sub, nii) << "\n";
+            ++n;
+        }
+    }
+    file.close();
+    qDebug() << "bap_subjects.txt (deface, originals) lines:" << n;
+    return n > 0;
+}
+
+// BAP：重写 bap_subjects.txt，仅 *_defaced.nii.gz
+bool DockerPrepRunner::generateBapSubjectsTxtDefaced(const QString& bidsDir, const QStringList& subjects)
+{
+    QDir dir(bidsDir);
+    QStringList subDirs = filteredSubjectDirs(dir, subjects);
+    QFile file(dir.filePath(QStringLiteral("bap_subjects.txt")));
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qWarning() << "Cannot write bap_subjects.txt (BAP list)";
+        return false;
+    }
+    QTextStream out(&file);
+    int n = 0;
+    for (const QString& sub : subDirs) {
+        QDir anatDir(dir.filePath(sub + QStringLiteral("/anat")));
+        if (!anatDir.exists()) continue;
+        QStringList niftis = anatDir.entryList(QStringList() << QStringLiteral("*_T1w_defaced.nii.gz"),
+                                               QDir::Files);
+        for (const QString& nii : niftis) {
+            out << dockerListLine(sub, nii) << "\n";
+            ++n;
+        }
+    }
+    file.close();
+    qDebug() << "bap_subjects.txt (defaced only) lines:" << n;
+    return n > 0;
+}
+
+// ============================================================
+// Deface Docker: pydeface:0311-v1.1
+// ============================================================
+void DockerPrepRunner::runDeface(const QString& bidsDir, const QStringList& subjects)
+{
+    DockerStatus status = checkDocker();
+    if (status != DockerReady) {
+        emit runError("Docker not ready for deface");
+        emit defaceFinished(-1, "Docker not ready");
+        return;
+    }
+
+    if (!generateDefaceSubjectsTxt(bidsDir, subjects)) {
+        emit runError("bap_subjects.txt (deface list) empty or write failed");
+        emit defaceFinished(-1, "deface list failed");
+        return;
+    }
+
+    QString absBids = QFileInfo(bidsDir).absoluteFilePath();
+    QStringList cmd = getDockerCmd();
+    // 去掉 -w，保持简单；txt 里用 /app/input/... 绝对路径
+    cmd << "run" << "--rm"
+        << "-e" << "PYTHONUNBUFFERED=1"
+        << "-e" << "PYTHONIOENCODING=UTF-8"
+        << "-v" << QStringLiteral("%1:/app/input").arg(absBids)
+        << "pydeface:0311-v1.1"
+        << "python" << "-u" << "deface.py" << "--input_dir" << "/app/input";
+
+    startDetachedDockerProcess(m_defaceProcess, cmd, "Deface",
+        [this](int code, const QString& msg) { emit defaceFinished(code, msg); });
+}
+
+void DockerPrepRunner::stopDeface()
+{
+    if (m_defaceProcess && m_defaceProcess->state() != QProcess::NotRunning) {
+        disconnect(m_defaceProcess, nullptr, this, nullptr);
+        m_defaceProcess->terminate();
+        if (!m_defaceProcess->waitForFinished(5000))
+            m_defaceProcess->kill();
+        m_defaceProcess->deleteLater();
+        m_defaceProcess = nullptr;
+    }
+}
+
+// ============================================================
+// BAP Docker: bap-0312-v1.0 (Brain Age Prediction)
+// ============================================================
+void DockerPrepRunner::runBap(const QString& bidsDir, const QStringList& subjects)
+{
+    DockerStatus status = checkDocker();
+    if (status != DockerReady) {
+        emit runError("Docker not ready for BAP");
+        emit bapFinished(-1, "Docker not ready");
+        return;
+    }
+
+    if (!generateBapSubjectsTxtDefaced(bidsDir, subjects)) {
+        emit runError("No *_defaced.nii.gz for BAP (run deface first)");
+        emit bapFinished(-1, "bap list empty");
+        return;
+    }
+
+    QString absBids = QFileInfo(bidsDir).absoluteFilePath();
+    QStringList cmd = getDockerCmd();
+    cmd << "run" << "--gpus" << "all" << "--rm"
+        << "-e" << "PYTHONUNBUFFERED=1"
+        << "-e" << "PYTHONIOENCODING=UTF-8"
+        << "-v" << QStringLiteral("%1:/app/input").arg(absBids)
+        << "bap:0312-v1.0"
+        << "python" << "-u" << "inference.py" << "--input_dir" << "/app/input";
+
+    startDetachedDockerProcess(m_bapProcess, cmd, "BAP",
+        [this](int code, const QString& msg) { emit bapFinished(code, msg); });
+}
+
+void DockerPrepRunner::stopBap()
+{
+    if (m_bapProcess && m_bapProcess->state() != QProcess::NotRunning) {
+        disconnect(m_bapProcess, nullptr, this, nullptr);
+        m_bapProcess->terminate();
+        if (!m_bapProcess->waitForFinished(5000))
+            m_bapProcess->kill();
+        m_bapProcess->deleteLater();
+        m_bapProcess = nullptr;
+    }
+}
