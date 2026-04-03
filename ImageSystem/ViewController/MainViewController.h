@@ -83,8 +83,10 @@ public:
     Q_INVOKABLE void calculateKidney();
     Q_INVOKABLE void importBrainData(const QString& url, const QString& subjectId = "sub-01", const QString& patientId = "sub-01");
     Q_INVOKABLE void selectBrainRegion(int row);
-    Q_INVOKABLE void scanFolder(const QString& inputDir);
+    Q_INVOKABLE void scanFolder(const QString& inputDir, int mode = 0);
     Q_INVOKABLE void startPreAnalysis(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile);
+    Q_INVOKABLE void startBrainAgeOnly();
+    Q_INVOKABLE void startPreprocessingOnly(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile);
     Q_INVOKABLE QVariantMap defaultProcessingPaths() const;
     Q_INVOKABLE QString defaultLicenseFilePath() const;
     Q_INVOKABLE void stopFmriprepProcess();
@@ -163,9 +165,11 @@ private:
 
     // 任务队列管理（支持动态追加，资源控制）
     void addToProcessingQueue(const QList<MriPairResult>& pairs, int method, const QString& bidsPath,
-                              const QString& outputPath, const QString& licenseFile);
+                              const QString& outputPath, const QString& licenseFile,
+                              bool runBrainAge, bool runPreprocessing);
     void addPendingTasks(const QList<MriPairResult>& pairs, int method, const QString& bidsPath,
-                         const QString& outputPath, const QString& status);
+                         const QString& outputPath, const QString& status,
+                         bool runBrainAge, bool runPreprocessing);
     void removePendingTasks(const QList<MriPairResult>& pairs, int method);
     void updatePendingTasksStatus(const QList<MriPairResult>& pairs, const QString& status);
     bool isProcessing() const { return m_isProcessing; }
@@ -223,6 +227,8 @@ private:
         QString bidsPath;
         QString outputPath;
         QString licenseFile;
+        bool runBrainAge = true;
+        bool runPreprocessing = true;
         QList<MriPairResult> pairResults;  // 一个批次内的完整 MRI 配对信息
     };
     QList<QueueItem> m_processingQueue;

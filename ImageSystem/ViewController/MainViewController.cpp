@@ -104,6 +104,23 @@ QString buildCompletedCaseSeriesUid(const MriPairResult& pair, int method)
     return QStringLiteral("fallback_%1_%2").arg(patientKey, studyDate);
 }
 
+QString preprocessMethodLabel(int method)
+{
+    return method == 0 ? QStringLiteral("fMRIPrep")
+                       : QStringLiteral("DeepPrep");
+}
+
+QString processingModeLabel(bool runBrainAge, bool runPreprocessing)
+{
+    if (runBrainAge && runPreprocessing)
+        return QStringLiteral("全流程");
+    if (runBrainAge)
+        return QStringLiteral("仅脑龄预测");
+    if (runPreprocessing)
+        return QStringLiteral("仅预处理");
+    return QStringLiteral("未知模式");
+}
+
 QString normalizeDisplayedSex(const QString& rawSex)
 {
     const QString trimmed = rawSex.trimmed();
@@ -192,6 +209,18 @@ QStringList brainAgeIdVariants(const QString& rawId)
     }
 
     return variants;
+}
+
+double resolvePredictedBrainAgeForPair(const MriPairResult& pair,
+                                       const QMap<QString, double>& brainAgePredictions)
+{
+    const QStringList lookupKeys = brainAgeIdVariants(pair.subjectId) + brainAgeIdVariants(pair.patientId);
+    for (const QString& key : lookupKeys) {
+        auto it = brainAgePredictions.constFind(key);
+        if (it != brainAgePredictions.constEnd())
+            return it.value();
+    }
+    return -1.0;
 }
 
 QString findBrainAgePredictionCsvPath(const QString& basePath)
@@ -319,6 +348,12 @@ MainViewController::MainViewController(QObject* parent)
     m_bidsConverter = new BidsConverter();
     QObject::connect(m_mriScanner, &BatchMriScanner::progressUpdated, this, &MainViewController::onScanProgressUpdated);
     QObject::connect(m_mriScanner, &BatchMriScanner::scanFinished, this, &MainViewController::onScanFinished);
+    QObject::connect(m_mriScanner, &BatchMriScanner::scanLog, this, [this](const QString& message) {
+        appendPreAnalysisLog(message);
+    });
+    QObject::connect(m_mriScanner, &BatchMriScanner::scanError, this, [this](const QString& error) {
+        appendPreAnalysisLog(QStringLiteral("扫描错误：%1\n").arg(error));
+    });
     QObject::connect(m_bidsConverter, &BidsConverter::progressUpdated, this, &MainViewController::onConverterProgressUpdated);
     QObject::connect(m_bidsConverter, &BidsConverter::conversionFinished, this, &MainViewController::onConversionFinished);
     
@@ -383,14 +418,26 @@ void MainViewController::setupDockerPrepRunner()
                 onDefaceFinished(false, QStringLiteral("failed to replace original T1 with defaced copies"));
                 return;
             }
-            if (m_preAnalysisMethod == 0) {
-                appendPreAnalysisLog(QStringLiteral(">>> Deface 后启动 fMRIPrep...\n"));
-                startFmriprepAfterBids();
+            if (m_currentItem.runPreprocessing) {
+                if (m_preAnalysisMethod == 0) {
+                    appendPreAnalysisLog(QStringLiteral(">>> Deface 后启动 fMRIPrep...\n"));
+                    startFmriprepAfterBids();
+                } else {
+                    appendPreAnalysisLog(QStringLiteral(">>> Deface 后启动 DeepPrep...\n"));
+                    startDeepprepAfterBids();
+                }
             } else {
-                appendPreAnalysisLog(QStringLiteral(">>> Deface 后启动 DeepPrep...\n"));
-                startDeepprepAfterBids();
+                appendPreAnalysisLog(QStringLiteral(">>> [%1] 跳过预处理（fmriprep/deepprep）\n")
+                                     .arg(processingModeLabel(m_currentItem.runBrainAge, m_currentItem.runPreprocessing)));
+                m_currentPrepDone = true;
+                m_currentPrepSuccess = true;
             }
-            startBapAfterDeface();
+            if (m_currentItem.runBrainAge) {
+                startBapAfterDeface();
+            } else {
+                appendPreAnalysisLog(QStringLiteral(">>> [%1] 跳过脑龄预测(BAP)\n")
+                                     .arg(processingModeLabel(m_currentItem.runBrainAge, m_currentItem.runPreprocessing)));
+            }
         } else {
             appendPreAnalysisLog(QStringLiteral("\n>>> Deface 失败：%1\n").arg(message));
             onDefaceFinished(false, message);
@@ -2632,12 +2679,14 @@ void MainViewController::captureViewScreenshot(int viewType, const QString& file
     }
 }
 
-void MainViewController::scanFolder(const QString& inputDir)
+void MainViewController::scanFolder(const QString& inputDir, int mode)
 {
     if (!m_mriScanner) {
         return;
     }
-    m_mriScanner->startScan(inputDir);
+    clearPreAnalysisLog();
+    // mode: 0 = 配对模式 (T1W+BOLD), 1 = 脑龄模式 (仅T1W)
+    m_mriScanner->startScan(inputDir, 5, mode);
 }
 
 void MainViewController::startPreAnalysis(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile)
@@ -2674,11 +2723,6 @@ void MainViewController::startPreAnalysis(int method, const QString& bidsPath, c
             ++skippedQueued;
             continue;
         }
-        if (!status.isEmpty()) {
-            ++skippedCompleted;
-            continue;
-        }
-
         selectedCaseKeys.insert(caseKey);
         checkedResults.append(pair);
     }
@@ -2692,10 +2736,10 @@ void MainViewController::startPreAnalysis(int method, const QString& bidsPath, c
     const QString initialStatus = startsAsActive ? QStringLiteral("processing")
                                                  : QStringLiteral("queued");
 
-    addPendingTasks(checkedResults, method, QString(), QString(), initialStatus);
+    addPendingTasks(checkedResults, method, QString(), QString(), initialStatus, true, true);
 
     // 按批次添加到处理队列
-    addToProcessingQueue(checkedResults, method, QString(), QString(), licenseFile);
+    addToProcessingQueue(checkedResults, method, QString(), QString(), licenseFile, true, true);
 
     appendPreAnalysisLog(QStringLiteral("\n>>> 已添加 1 个批次到队列（本批次 %1 个被试，当前共 %2 个待处理批次）\n")
                          .arg(checkedResults.size()).arg(getQueueSize()));
@@ -2710,6 +2754,101 @@ void MainViewController::startPreAnalysis(int method, const QString& bidsPath, c
     // 如果队列未运行，启动它
     if (!m_isProcessing) {
         appendPreAnalysisLog(QStringLiteral(">>> 启动队列处理...\n"));
+        startProcessingQueue();
+    } else {
+        appendPreAnalysisLog(QStringLiteral(">>> 队列正在运行，新任务已加入队列\n"));
+    }
+}
+
+void MainViewController::startBrainAgeOnly()
+{
+    const QList<MriPairResult> selectedResults = m_mriPairResultModel->getCheckedResults();
+    QList<MriPairResult> checkedResults;
+    QSet<QString> selectedCaseKeys;
+
+    auto *appDataModel = GET_SINGLETON(AppDataModel);
+    for (const auto& pair : selectedResults) {
+        const QString caseKey = buildCaseIdentityKey(pair);
+        if (selectedCaseKeys.contains(caseKey)) continue;
+
+        const QString status = appDataModel
+            ? appDataModel->matchingRecordStatus(pair.patientName, pair.studyDate, pair.primarySeriesUid())
+            : QString();
+
+        if (status == QStringLiteral("processing") ||
+            status == QStringLiteral("queued")) continue;
+
+        selectedCaseKeys.insert(caseKey);
+        checkedResults.append(pair);
+    }
+
+    if (checkedResults.isEmpty()) {
+        appendPreAnalysisLog(QStringLiteral(">>> 当前勾选病例均已分析完成、分析中或排队中，未加入新任务\n"));
+        return;
+    }
+
+    const bool startsAsActive = !m_isProcessing && m_processingQueue.isEmpty();
+    const QString initialStatus = startsAsActive ? QStringLiteral("processing")
+                                                 : QStringLiteral("queued");
+    addPendingTasks(checkedResults, 0, QString(), QString(), initialStatus, true, false);
+
+    QueueItem item;
+    item.method = 0;
+    item.runBrainAge = true;
+    item.runPreprocessing = false;
+    item.pairResults = checkedResults;
+    m_processingQueue.append(item);
+
+    appendPreAnalysisLog(QStringLiteral("\n>>> [仅脑龄预测] 已添加 %1 个被试到队列\n").arg(checkedResults.size()));
+
+    if (!m_isProcessing) {
+        startProcessingQueue();
+    } else {
+        appendPreAnalysisLog(QStringLiteral(">>> 队列正在运行，新任务已加入队列\n"));
+    }
+}
+
+void MainViewController::startPreprocessingOnly(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile)
+{
+    Q_UNUSED(bidsPath);
+    Q_UNUSED(outputPath);
+
+    const QList<MriPairResult> selectedResults = m_mriPairResultModel->getCheckedResults();
+    QList<MriPairResult> checkedResults;
+    QSet<QString> selectedCaseKeys;
+
+    auto *appDataModel = GET_SINGLETON(AppDataModel);
+    for (const auto& pair : selectedResults) {
+        const QString caseKey = buildCaseIdentityKey(pair);
+        if (selectedCaseKeys.contains(caseKey))
+            continue;
+
+        const QString status = appDataModel
+            ? appDataModel->matchingRecordStatus(pair.patientName, pair.studyDate, pair.primarySeriesUid())
+            : QString();
+
+        if (status == QStringLiteral("processing") || status == QStringLiteral("queued"))
+            continue;
+
+        selectedCaseKeys.insert(caseKey);
+        checkedResults.append(pair);
+    }
+
+    if (checkedResults.isEmpty()) {
+        appendPreAnalysisLog(QStringLiteral(">>> 当前勾选病例均在分析中或排队中，未加入新任务\n"));
+        return;
+    }
+
+    const bool startsAsActive = !m_isProcessing && m_processingQueue.isEmpty();
+    const QString initialStatus = startsAsActive ? QStringLiteral("processing")
+                                                 : QStringLiteral("queued");
+
+    addPendingTasks(checkedResults, method, QString(), QString(), initialStatus, false, true);
+    addToProcessingQueue(checkedResults, method, QString(), QString(), licenseFile, false, true);
+
+    appendPreAnalysisLog(QStringLiteral("\n>>> [仅预处理] 已添加 %1 个被试到队列\n").arg(checkedResults.size()));
+
+    if (!m_isProcessing) {
         startProcessingQueue();
     } else {
         appendPreAnalysisLog(QStringLiteral(">>> 队列正在运行，新任务已加入队列\n"));
@@ -2756,7 +2895,8 @@ void MainViewController::onConversionFinished(const QList<BidsSubjectResult>& re
     writeMetadataFile(m_preAnalysisOutputPath, m_currentQueuePairs);
 
     appendPreAnalysisLog(QStringLiteral(">>> [Step 2/3] 启动 Deface...\n"));
-    appendPreAnalysisLog(QStringLiteral(">>> Deface 完成后将并行启动预处理与 Docker 脑龄预测(BAP)\n"));
+    appendPreAnalysisLog(QStringLiteral(">>> Deface 完成后将启动模式：%1\n")
+                         .arg(processingModeLabel(m_currentItem.runBrainAge, m_currentItem.runPreprocessing)));
     startDefaceAfterBids();
 }
 
@@ -2849,7 +2989,7 @@ bool MainViewController::persistBrainAgePredictionsToOutput()
 
 void MainViewController::startDefaceAfterBids()
 {
-    setbrainAgeProcessing(true);
+    setbrainAgeProcessing(m_currentItem.runBrainAge);
     m_dockerPrepRunner->runDeface(m_preAnalysisBidsPath, currentQueueSubjectIds());
 }
 
@@ -2905,8 +3045,10 @@ void MainViewController::onDefaceFinished(bool success, const QString& message)
 {
     if (!success) {
         setbrainAgeProcessing(false);
-        onPrepFinished(false, message);
-        onBrainAgePredictionFinished(false);
+        if (m_currentItem.runPreprocessing)
+            onPrepFinished(false, message);
+        if (m_currentItem.runBrainAge)
+            onBrainAgePredictionFinished(false);
     }
 }
 
@@ -2914,6 +3056,29 @@ void MainViewController::onBrainAgePredictionFinished(bool success)
 {
     m_currentBrainAgeDone = true;
     m_currentBrainAgeSuccess = success;
+
+    // 脑龄预测完成后，先把结果匹配到当前批次，待完成病例入库时一并落库。
+    if (success) {
+        if (loadBrainAgePredictions(m_preAnalysisOutputPath)) {
+            appendPreAnalysisLog(QStringLiteral(">>> 已加载脑龄预测结果\n"));
+
+            if (!m_brainAgePredictions.isEmpty()) {
+                for (MriPairResult& pair : m_currentQueuePairs) {
+                    const double predictedAge = resolvePredictedBrainAgeForPair(pair, m_brainAgePredictions);
+                    if (predictedAge < 0)
+                        continue;
+
+                    pair.predictedBrainAge = predictedAge;
+                    qDebug() << QStringLiteral("匹配脑龄预测结果: %1 / %2 = %3")
+                                    .arg(pair.subjectId, pair.patientId)
+                                    .arg(predictedAge);
+                }
+            }
+        } else {
+            appendPreAnalysisLog(QStringLiteral(">>> 警告：脑龄预测结果加载失败\n"));
+        }
+    }
+
     tryFinishCurrentQueueItem();
 }
 
@@ -3085,11 +3250,10 @@ void MainViewController::tryFinishCurrentQueueItem()
         return;
     }
 
-    // 脑龄预测(BAP)为可选步骤，即使失败也不阻止入库；核心条件是 prepSuccess（脑区+脑网络）
-    if (m_currentPrepSuccess && m_dbManager && !m_currentQueuePairs.isEmpty()) {
-        const QString checkType = (m_preAnalysisMethod == 0)
-                ? QStringLiteral("fMRIPrep")
-                : QStringLiteral("DeepPrep");
+    const bool hasPrepResult = m_currentItem.runPreprocessing ? m_currentPrepSuccess : false;
+    const bool hasBrainAgeResult = m_currentItem.runBrainAge ? m_currentBrainAgeSuccess : false;
+
+    if ((hasPrepResult || hasBrainAgeResult) && m_dbManager && !m_currentQueuePairs.isEmpty()) {
         int insertedCount = 0;
         int skippedCount = 0;
 
@@ -3102,9 +3266,19 @@ void MainViewController::tryFinishCurrentQueueItem()
             const QString sex = normalizeDisplayedSex(pair.patientSex);
             const QString bidsPath = m_preAnalysisBidsPath;
             const QString outputPath = m_preAnalysisOutputPath;
+            const double predictedBrainAge = pair.predictedBrainAge >= 0
+                    ? pair.predictedBrainAge
+                    : resolvePredictedBrainAgeForPair(pair, m_brainAgePredictions);
+            const bool pairHasBrainAgeResult = predictedBrainAge >= 0 || hasBrainAgeResult;
+            const QString preprocessMethod = hasPrepResult ? preprocessMethodLabel(m_preAnalysisMethod)
+                                                           : QString();
 
             const bool ok = m_dbManager->insertCompletedCase(name, patientId, examDate, seriesUid,
-                                                             age, sex, checkType, bidsPath, outputPath);
+                                                             age, sex, bidsPath, outputPath,
+                                                             predictedBrainAge,
+                                                             pairHasBrainAgeResult,
+                                                             hasPrepResult,
+                                                             preprocessMethod);
             if (ok) {
                 ++insertedCount;
             } else {
@@ -3135,10 +3309,10 @@ void MainViewController::tryFinishCurrentQueueItem()
         if (!hasPairs) {
             appendPreAnalysisLog(QStringLiteral("    - 提示：当前批次 pairs 为空，可能是队列状态/删除/清空导致。\n"));
         }
-        if (!m_currentPrepSuccess) {
+        if (m_currentItem.runPreprocessing && !m_currentPrepSuccess) {
             appendPreAnalysisLog(QStringLiteral("    - 提示：prepSuccess=false 通常是脑区分割或脑网络后处理失败。\n"));
         }
-        if (!m_currentBrainAgeSuccess) {
+        if (m_currentItem.runBrainAge && !m_currentBrainAgeSuccess) {
             appendPreAnalysisLog(QStringLiteral("    - 提示：brainAgeSuccess=false 通常是 BAP 失败或未找到脑龄结果 CSV。\n"));
         }
     }
@@ -3150,15 +3324,22 @@ void MainViewController::tryFinishCurrentQueueItem()
 
 void MainViewController::addPendingTasks(const QList<MriPairResult>& pairs, int method,
                                          const QString& bidsPath, const QString& outputPath,
-                                         const QString& status)
+                                         const QString& status,
+                                         bool runBrainAge, bool runPreprocessing)
 {
     auto *model = GET_SINGLETON(AppDataModel);
     if (!model)
         return;
 
-    const QString checkType = (method == 0)
-            ? QStringLiteral("fMRIPrep")
-            : QStringLiteral("DeepPrep");
+    QString checkType;
+    if (runBrainAge && runPreprocessing)
+        checkType = QStringLiteral("FullPipeline");
+    else if (runBrainAge)
+        checkType = QStringLiteral("BrainAgeOnly");
+    else if (runPreprocessing)
+        checkType = QStringLiteral("PrepOnly");
+    else
+        checkType = QStringLiteral("Unknown");
 
     for (const auto &pair : pairs) {
         HardwareScanResult item;
@@ -3203,17 +3384,22 @@ void MainViewController::updatePendingTasksStatus(const QList<MriPairResult>& pa
 
 void MainViewController::addToProcessingQueue(const QList<MriPairResult>& pairs, int method,
                                               const QString& bidsPath, const QString& outputPath,
-                                              const QString& licenseFile)
+                                              const QString& licenseFile,
+                                              bool runBrainAge, bool runPreprocessing)
 {
     QueueItem item;
     item.method = method;
     item.bidsPath = bidsPath;
     item.outputPath = outputPath;
     item.licenseFile = licenseFile;
+    item.runBrainAge = runBrainAge;
+    item.runPreprocessing = runPreprocessing;
     item.pairResults = pairs;
     m_processingQueue.append(item);
-    appendPreAnalysisLog(QStringLiteral(">>> [队列] 添加 1 个批次（%1 个被试），当前队列长度：%2\n")
-                         .arg(pairs.size()).arg(m_processingQueue.size()));
+    appendPreAnalysisLog(QStringLiteral(">>> [队列] 添加 1 个批次（%1 个被试，模式：%2），当前队列长度：%3\n")
+                         .arg(pairs.size())
+                         .arg(processingModeLabel(runBrainAge, runPreprocessing))
+                         .arg(m_processingQueue.size()));
 }
 
 void MainViewController::startProcessingQueue()
@@ -3269,7 +3455,9 @@ void MainViewController::processNextInQueue()
         QList<QueueItem> remainingQueue;
         for (const auto &queuedItem : m_processingQueue) {
             const bool sameExecutionConfig = queuedItem.method == m_currentItem.method
-                    && queuedItem.licenseFile == m_currentItem.licenseFile;
+                    && queuedItem.licenseFile == m_currentItem.licenseFile
+                    && queuedItem.runBrainAge == m_currentItem.runBrainAge
+                    && queuedItem.runPreprocessing == m_currentItem.runPreprocessing;
             if (sameExecutionConfig) {
                 m_currentItem.pairResults.append(queuedItem.pairResults);
                 ++mergedBatchCount;
@@ -3286,10 +3474,10 @@ void MainViewController::processNextInQueue()
 
     updatePendingTasksStatus(m_currentQueuePairs, QStringLiteral("processing"));
 
-    m_currentPrepDone = false;
-    m_currentPrepSuccess = false;
-    m_currentBrainAgeDone = false;
-    m_currentBrainAgeSuccess = false;
+    m_currentPrepDone = !m_currentItem.runPreprocessing;
+    m_currentPrepSuccess = !m_currentItem.runPreprocessing;
+    m_currentBrainAgeDone = !m_currentItem.runBrainAge;
+    m_currentBrainAgeSuccess = !m_currentItem.runBrainAge;
     m_currentBrainRegionDone = false;
     m_currentBrainRegionSuccess = false;
     m_currentBrainNetworkDone = false;
@@ -3310,6 +3498,8 @@ void MainViewController::processNextInQueue()
                              .arg(firstName, firstSubId));
     }
     appendPreAnalysisLog(QStringLiteral("，剩余 %1 个批次\n").arg(m_processingQueue.size()));
+    appendPreAnalysisLog(QStringLiteral(">>> 当前模式：%1\n")
+                         .arg(processingModeLabel(m_currentItem.runBrainAge, m_currentItem.runPreprocessing)));
 
     if (startingQueuedBacklog && mergedBatchCount > 1) {
         appendPreAnalysisLog(QStringLiteral(">>> 当前分析任务完成后，已自动合并 %1 个排队批次并一次性执行\n")
@@ -3363,8 +3553,19 @@ bool MainViewController::addCompletedCase(const QString& name, const QString& pa
                                            int age, const QString& sex, const QString& checkType,
                                            const QString& bidsPath, const QString& outputPath)
 {
+    const bool hasBrainAge = (checkType == QStringLiteral("BrainAgeOnly")
+                              || checkType == QStringLiteral("FullPipeline"));
+    const bool hasPreprocessing = (checkType == QStringLiteral("PrepOnly")
+                                   || checkType == QStringLiteral("FullPipeline")
+                                   || checkType == QStringLiteral("fMRIPrep")
+                                   || checkType == QStringLiteral("DeepPrep"));
+    const QString preprocessMethod = (checkType == QStringLiteral("DeepPrep"))
+            ? QStringLiteral("DeepPrep")
+            : (hasPreprocessing ? QStringLiteral("fMRIPrep") : QString());
+
     bool ok = m_dbManager->insertCompletedCase(name, patientId, examDate, seriesUid,
-                                                age, sex, checkType, bidsPath, outputPath);
+                                                age, sex, bidsPath, outputPath, -1.0,
+                                                hasBrainAge, hasPreprocessing, preprocessMethod);
     if (ok) refreshAppDataModel();
     return ok;
 }

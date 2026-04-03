@@ -184,9 +184,13 @@ bool DatabaseManager::createCompletedCasesTable()
         "age INTEGER,"
         "sex TEXT,"
         "check_type TEXT,"
+        "has_brain_age INTEGER DEFAULT 0,"
+        "has_preprocessing INTEGER DEFAULT 0,"
+        "preprocess_method TEXT DEFAULT '',"
         "status TEXT DEFAULT 'completed',"
         "bids_path TEXT,"
         "output_path TEXT,"
+        "predicted_brain_age REAL DEFAULT -1.0,"
         "created_at DATETIME DEFAULT CURRENT_TIMESTAMP"
         ")";
     if (!q.exec(sql)) {
@@ -194,6 +198,51 @@ bool DatabaseManager::createCompletedCasesTable()
         qWarning() << "Create completed_cases table failed:" << m_lastError;
         return false;
     }
+
+    // 尝试添加 predicted_brain_age 列（如果表已存在但列不存在）
+    q.prepare("PRAGMA table_info(completed_cases)");
+    if (q.exec()) {
+        bool hasPredictedBrainAge = false;
+        bool hasBrainAgeFlag = false;
+        bool hasPreprocessingFlag = false;
+        bool hasPreprocessMethod = false;
+        while (q.next()) {
+            const QString columnName = q.value(1).toString();
+            if (columnName == "predicted_brain_age")
+                hasPredictedBrainAge = true;
+            else if (columnName == "has_brain_age")
+                hasBrainAgeFlag = true;
+            else if (columnName == "has_preprocessing")
+                hasPreprocessingFlag = true;
+            else if (columnName == "preprocess_method")
+                hasPreprocessMethod = true;
+        }
+        if (!hasPredictedBrainAge) {
+            QSqlQuery alterQ(m_db);
+            if (!alterQ.exec("ALTER TABLE completed_cases ADD COLUMN predicted_brain_age REAL DEFAULT -1.0")) {
+                qWarning() << "Add predicted_brain_age column failed:" << alterQ.lastError().text();
+            }
+        }
+        if (!hasBrainAgeFlag) {
+            QSqlQuery alterQ(m_db);
+            if (!alterQ.exec("ALTER TABLE completed_cases ADD COLUMN has_brain_age INTEGER DEFAULT 0")) {
+                qWarning() << "Add has_brain_age column failed:" << alterQ.lastError().text();
+            }
+        }
+        if (!hasPreprocessingFlag) {
+            QSqlQuery alterQ(m_db);
+            if (!alterQ.exec("ALTER TABLE completed_cases ADD COLUMN has_preprocessing INTEGER DEFAULT 0")) {
+                qWarning() << "Add has_preprocessing column failed:" << alterQ.lastError().text();
+            }
+        }
+        if (!hasPreprocessMethod) {
+            QSqlQuery alterQ(m_db);
+            if (!alterQ.exec("ALTER TABLE completed_cases ADD COLUMN preprocess_method TEXT DEFAULT ''")) {
+                qWarning() << "Add preprocess_method column failed:" << alterQ.lastError().text();
+            }
+        }
+    }
+
     return true;
 }
 
@@ -203,9 +252,12 @@ bool DatabaseManager::insertCompletedCase(const QString &name,
                                           const QString &seriesUid,
                                           int age,
                                           const QString &sex,
-                                          const QString &checkType,
                                           const QString &bidsPath,
-                                          const QString &outputPath)
+                                          const QString &outputPath,
+                                          double predictedBrainAge,
+                                          bool hasBrainAge,
+                                          bool hasPreprocessing,
+                                          const QString &preprocessMethod)
 {
     if (!m_db.isOpen()) {
         m_lastError = "Database is not open";
@@ -213,17 +265,52 @@ bool DatabaseManager::insertCompletedCase(const QString &name,
     }
     QSqlQuery q(m_db);
     q.prepare("INSERT INTO completed_cases "
-              "(name, patient_id, exam_date, series_uid, age, sex, check_type, bids_path, output_path) "
-              "VALUES (:name, :pid, :edate, :suid, :age, :sex, :ctype, :bpath, :opath)");
+              "(name, patient_id, exam_date, series_uid, age, sex, check_type, has_brain_age, has_preprocessing, preprocess_method, bids_path, output_path, predicted_brain_age) "
+              "VALUES (:name, :pid, :edate, :suid, :age, :sex, "
+              "CASE "
+              "WHEN :has_brain_age = 1 AND :has_preprocessing = 1 THEN 'FullPipeline' "
+              "WHEN :has_brain_age = 1 THEN 'BrainAgeOnly' "
+              "WHEN :has_preprocessing = 1 THEN 'PrepOnly' "
+              "ELSE 'Unknown' "
+              "END, "
+              ":has_brain_age, :has_preprocessing, :preprocess_method, :bpath, :opath, :predicted_age) "
+              "ON CONFLICT(series_uid) DO UPDATE SET "
+              "name = excluded.name, "
+              "patient_id = excluded.patient_id, "
+              "exam_date = excluded.exam_date, "
+              "age = excluded.age, "
+              "sex = excluded.sex, "
+              "has_brain_age = MAX(completed_cases.has_brain_age, excluded.has_brain_age), "
+              "has_preprocessing = MAX(completed_cases.has_preprocessing, excluded.has_preprocessing), "
+              "preprocess_method = CASE "
+              "WHEN excluded.preprocess_method != '' THEN excluded.preprocess_method "
+              "ELSE completed_cases.preprocess_method "
+              "END, "
+              "check_type = CASE "
+              "WHEN MAX(completed_cases.has_brain_age, excluded.has_brain_age) = 1 "
+              " AND MAX(completed_cases.has_preprocessing, excluded.has_preprocessing) = 1 THEN 'FullPipeline' "
+              "WHEN MAX(completed_cases.has_brain_age, excluded.has_brain_age) = 1 THEN 'BrainAgeOnly' "
+              "WHEN MAX(completed_cases.has_preprocessing, excluded.has_preprocessing) = 1 THEN 'PrepOnly' "
+              "ELSE completed_cases.check_type "
+              "END, "
+              "bids_path = excluded.bids_path, "
+              "output_path = excluded.output_path, "
+              "predicted_brain_age = CASE "
+              "WHEN excluded.predicted_brain_age >= 0 THEN excluded.predicted_brain_age "
+              "ELSE completed_cases.predicted_brain_age "
+              "END");
     q.bindValue(":name", name);
     q.bindValue(":pid", patientId);
     q.bindValue(":edate", examDate);
     q.bindValue(":suid", seriesUid);
     q.bindValue(":age", age);
     q.bindValue(":sex", sex);
-    q.bindValue(":ctype", checkType);
+    q.bindValue(":has_brain_age", hasBrainAge ? 1 : 0);
+    q.bindValue(":has_preprocessing", hasPreprocessing ? 1 : 0);
+    q.bindValue(":preprocess_method", preprocessMethod);
     q.bindValue(":bpath", bidsPath);
     q.bindValue(":opath", outputPath);
+    q.bindValue(":predicted_age", predictedBrainAge);
     if (!q.exec()) {
         m_lastError = q.lastError().text();
         qWarning() << "Insert completed_case failed:" << m_lastError;
@@ -248,6 +335,25 @@ bool DatabaseManager::deleteCompletedCase(int id)
     }
     return true;
 }
+
+bool DatabaseManager::updatePredictedBrainAge(const QString &seriesUid, double predictedAge)
+{
+    if (!m_db.isOpen()) {
+        m_lastError = "Database is not open";
+        return false;
+    }
+    QSqlQuery q(m_db);
+    q.prepare("UPDATE completed_cases SET predicted_brain_age = :age WHERE series_uid = :suid");
+    q.bindValue(":age", predictedAge);
+    q.bindValue(":suid", seriesUid);
+    if (!q.exec()) {
+        m_lastError = q.lastError().text();
+        qWarning() << "Update predicted_brain_age failed:" << m_lastError;
+        return false;
+    }
+    return true;
+}
+
 
 QList<QVariantMap> DatabaseManager::searchCompletedCases(const QString &keyword)
 {

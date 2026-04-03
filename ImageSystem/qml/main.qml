@@ -8,8 +8,19 @@ import "./components"
 ApplicationWindow {
     id: win
     visible: true
-    width: 1920
-    height: 1080
+    // 按当前屏幕可用区域（不含任务栏）比例显示，并限制最小尺寸
+    property int minWindowWidth: 800
+    property int minWindowHeight: 600
+    width: Math.max(minWindowWidth, Math.floor(Screen.desktopAvailableWidth * 0.82))
+    height: Math.max(minWindowHeight, Math.floor(Screen.desktopAvailableHeight * 0.82))
+    Component.onCompleted: {
+        var sw = Screen.desktopAvailableWidth
+        var sh = Screen.desktopAvailableHeight
+        var sx = Screen.virtualX
+        var sy = Screen.virtualY
+        win.x = Math.floor((sw - win.width) / 2 + sx)
+        win.y = Math.floor((sh - win.height) / 2 + sy)
+    }
     //title: qsTr("脑健康影像辅助定量分析系统")AetherDesk
     title: qsTr("AetherDesk")
     color: "#000000"
@@ -37,7 +48,20 @@ ApplicationWindow {
         color: "#0C1120"
         flags: Qt.Window | Qt.FramelessWindowHint
 
+        function centerWindow() {
+            var sw = Screen.desktopAvailableWidth
+            var sh = Screen.desktopAvailableHeight
+            var sx = Screen.virtualX
+            var sy = Screen.virtualY
+            x = Math.floor((sw - width) / 2 + sx)
+            y = Math.floor((sh - height) / 2 + sy)
+        }
+
+        Component.onCompleted: centerWindow()
+        onVisibleChanged: if (visible) centerWindow()
+
         DataStorePanel {
+            id: dataStorePanel
             anchors.fill: parent
             messageManager: dialogMessageBox
             onViewAnalysisRequested: {
@@ -59,8 +83,6 @@ ApplicationWindow {
     }
     // 窗口边缘调整大小相关属性
     property int resizeEdgeSize: 6
-    property int minWindowWidth: 800
-    property int minWindowHeight: 600
 
     // 左边缘
     MouseArea {
@@ -1736,6 +1758,7 @@ ApplicationWindow {
         fourViewPanel: fourViewPanel
         messageManager: dialogMessageBox
         rightPanelExpanded: topExpandBar.brainRightExpanded
+        dataStorePanel: dataStorePanel
     }
     DropShadow {
         id:aiPanelShaow

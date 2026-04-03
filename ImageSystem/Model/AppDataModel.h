@@ -36,6 +36,7 @@ struct UnifiedRecord {
     QString bidsPath;
     QString seriesUid;
     int dbId = -1;
+    double predictedBrainAge = -1.0;  // -1 表示未预测
 };
 
 class AppDataModel : public QAbstractListModel
@@ -56,7 +57,8 @@ public:
         SliceCountRole,
         OutputPathRole,
         BidsPathRole,
-        DbIdRole
+        DbIdRole,
+        PredictedBrainAgeRole
     };
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;

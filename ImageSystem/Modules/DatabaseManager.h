@@ -36,11 +36,17 @@ public:
                              const QString &seriesUid,
                              int age,
                              const QString &sex,
-                             const QString &checkType,
                              const QString &bidsPath,
-                             const QString &outputPath);
+                             const QString &outputPath,
+                             double predictedBrainAge = -1.0,
+                             bool hasBrainAge = false,
+                             bool hasPreprocessing = false,
+                             const QString &preprocessMethod = QString());
 
     bool deleteCompletedCase(int id);
+
+    // 更新预测脑龄
+    bool updatePredictedBrainAge(const QString &seriesUid, double predictedAge);
 
     // 模糊搜索：按 patient_id / name / exam_date
     QList<QVariantMap> searchCompletedCases(const QString &keyword);

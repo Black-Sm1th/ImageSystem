@@ -1,4 +1,4 @@
-import QtQuick 2.15
+﻿import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Window 2.2
 import QtQuick.Dialogs 1.3
@@ -14,8 +14,8 @@ Rectangle {
     property int uploadTabIndex: 0
     property string currentStatusFilter: "全部"
     property var statusOptions: ["全部", "排队中", "分析中", "分析完成"]
-    property var tableHeaders: ["序号", "姓名", "病历号", "年龄", "性别", "检查日期", "状态", "操作"]
-    property var columnWidths: [0.11, 0.12, 0.14, 0.08, 0.08, 0.15, 0.12, 0.20]
+    property var tableHeaders: ["序号", "姓名", "病历号", "年龄", "性别", "检查日期", "预测脑龄", "状态", "操作"]
+    property var columnWidths: [0.08, 0.10, 0.12, 0.07, 0.07, 0.13, 0.10, 0.10, 0.23]
     property bool allChecked: false
     property var allTasks: []
     property string scanSourcePath: ""
@@ -23,6 +23,10 @@ Rectangle {
     property string uploadOutputPath: ""
     property string uploadLicensePath: ""
     property int uploadMethodIndex: 1
+    property int contentMaxWidth: 1760
+    property int contentHorizontalMargin: 24
+    property int uploadProcessingMode: 0  // 0: 仅脑龄预测 1: 仅预处理 2: 全流程
+    property bool scanNoticePending: false
 
     signal viewAnalysisRequested(var caseInfo)
 
@@ -71,6 +75,20 @@ Rectangle {
     function notifyWarning(text) {
         if (messageManager)
             messageManager.warning(text, 2000)
+        else
+            console.log(text)
+    }
+
+    function notifyInfo(text) {
+        if (messageManager)
+            messageManager.info(text, 2000)
+        else
+            console.log(text)
+    }
+
+    function notifySuccess(text) {
+        if (messageManager)
+            messageManager.success(text, 2200)
         else
             console.log(text)
     }
@@ -135,6 +153,7 @@ Rectangle {
         showUploadDialog = true
         uploadTabIndex = 0
         uploadMethodIndex = 1
+        uploadProcessingMode = 0  // 默认仅脑龄预测
         refreshUploadPaths()
         if (uploadLicensePath === "")
             uploadLicensePath = $MainViewController.defaultLicenseFilePath()
@@ -152,6 +171,7 @@ Rectangle {
             var row = rows[i]
             var statusText = normalizeStatusText(row.status)
             var numericAge = Number(row.age)
+            var brainAge = Number(row.predictedBrainAge)
             tasks.push({
                 checked: false,
                 serialNumber: (i + 1 < 10 ? "0" : "") + (i + 1),
@@ -160,9 +180,10 @@ Rectangle {
                 ageText: !isNaN(numericAge) && numericAge > 0 ? String(Math.round(numericAge)) : "-",
                 genderText: formatSexText(row.sex),
                 inspectTime: formatDateText(row.examDate),
+                predictedBrainAgeText: !isNaN(brainAge) && brainAge >= 0 ? String(Math.round(brainAge)) : "-",
                 statusText: statusText,
                 statusColorValue: statusColor(statusText),
-                detailEnabled: statusText === "分析完成" && (row.outputPath || "") !== "",
+                detailEnabled: statusText === "分析完成" && (row.outputPath || "") !== "" && (row.checkType || "") !== "BrainAgeOnly",
                 dbId: row.dbId !== undefined ? row.dbId : -1,
                 source: row.source,
                 outputPath: row.outputPath || "",
@@ -185,7 +206,7 @@ Rectangle {
     }
 
     function canViewTaskDetail(task) {
-        return task.statusText === "分析完成" && task.outputPath !== ""
+        return task.statusText === "分析完成" && task.outputPath !== "" && task.checkType !== "BrainAgeOnly"
     }
 
     function appendTask(task) {
@@ -197,6 +218,7 @@ Rectangle {
             ageText: task.ageText,
             genderText: task.genderText,
             inspectTime: task.inspectTime,
+            predictedBrainAgeText: task.predictedBrainAgeText,
             statusText: task.statusText,
             statusColorValue: task.statusColorValue,
             detailEnabled: task.detailEnabled,
@@ -328,7 +350,23 @@ Rectangle {
         }
 
         setScanSourcePath(path.replace(/\\/g, "/"))
-        $MainViewController.scanFolder(scanSourcePath)
+        // 根据处理模式调用扫描：0 = 仅脑龄预测(mode=1), 1/2 = 含预处理(mode=0)
+        var scanMode = (uploadProcessingMode === 0) ? 1 : 0
+        scanNoticePending = true
+        notifyInfo(qsTr("已开始扫描，请稍候…"))
+        $MainViewController.scanFolder(scanSourcePath, scanMode)
+    }
+
+    function rescanForCurrentMode() {
+        if (!showUploadDialog || uploadTabIndex !== 0)
+            return
+        if ($MainViewController.isScanning)
+            return
+        if (!scanPathField || scanPathField.text.trim() === "")
+            return
+
+        notifyInfo(qsTr("处理模式已切换，正在按新模式重新扫描…"))
+        startHardwareScan()
     }
 
     function confirmUploadTask() {
@@ -340,17 +378,30 @@ Rectangle {
             notifyWarning(qsTr("请先完成扫描，生成 Bids 和 Output 路径"))
             return
         }
-        if (uploadLicensePath === "") {
+
+        // 仅脑龄预测模式不需要 license 文件
+        if (uploadProcessingMode !== 0 && uploadLicensePath === "") {
             notifyWarning(qsTr("未找到默认 license 文件路径"))
             return
         }
 
-        $MainViewController.startPreAnalysis(
-            uploadMethodIndex,
-            uploadBidsPath,
-            uploadOutputPath,
-            uploadLicensePath
-        )
+        if (uploadProcessingMode === 0) {
+            $MainViewController.startBrainAgeOnly()
+        } else if (uploadProcessingMode === 1) {
+            $MainViewController.startPreprocessingOnly(
+                uploadMethodIndex,
+                uploadBidsPath,
+                uploadOutputPath,
+                uploadLicensePath
+            )
+        } else {
+            $MainViewController.startPreAnalysis(
+                uploadMethodIndex,
+                uploadBidsPath,
+                uploadOutputPath,
+                uploadLicensePath
+            )
+        }
 
         $MriPairResultModel.deselectAll()
         refreshUploadPaths()
@@ -370,6 +421,22 @@ Rectangle {
             root.loadTaskList()
         }
     }
+
+    Connections {
+        target: $MainViewController
+        function onIsScanningChanged() {
+            if ($MainViewController.isScanning)
+                return
+
+            if (!root.scanNoticePending)
+                return
+
+            root.scanNoticePending = false
+            root.notifySuccess(qsTr("扫描完成，共识别 %1 条结果").arg($MriPairResultModel.resultCount))
+        }
+    }
+
+    onUploadProcessingModeChanged: rescanForCurrentMode()
 
     Rectangle {
         anchors.fill: parent
@@ -393,8 +460,8 @@ Rectangle {
     Rectangle {
         id: frameCard
         anchors.fill: parent
-        anchors.margins: 8
-        radius: 4
+        anchors.margins: 4
+        radius: 8
         color: "#0D1323"
 
         Column {
@@ -404,8 +471,8 @@ Rectangle {
             Rectangle {
                 id: topBar
                 width: parent.width
-                height: 38
-                color: "#1E232D"
+                height: 44
+                color: "#171D29"
 
                 Text {
                     anchors.left: parent.left
@@ -441,11 +508,11 @@ Rectangle {
                 height: parent.height - topBar.height
 
                 Item {
-                    anchors.fill: parent
-                    anchors.leftMargin: 24
-                    anchors.rightMargin: 24
-                    anchors.topMargin: 28
-                    anchors.bottomMargin: 22
+                    width: Math.min(parent.width - root.contentHorizontalMargin * 2, root.contentMaxWidth)
+                    height: parent.height - 36
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: parent.top
+                    anchors.topMargin: 20
 
                     Item {
                         id: headerBlock
@@ -510,13 +577,13 @@ Rectangle {
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: headerBlock.bottom
-                        anchors.topMargin: 28
+                        anchors.topMargin: 24
                         height: 42
 
                         Rectangle {
                             id: searchBox
                             anchors.left: parent.left
-                            width: 420
+                            width: Math.min(520, parent.width * 0.34)
                             height: parent.height
                             radius: 6
                             color: searchField.activeFocus ? palette.inputFocusColor : palette.inputColor
@@ -542,11 +609,12 @@ Rectangle {
                                 onAccepted: root.applyFilters()
                                 onTextChanged: root.applyFilters()
                             }
+
                         }
 
                         Text {
                             anchors.left: searchBox.right
-                            anchors.leftMargin: 16
+                            anchors.leftMargin: 20
                             anchors.verticalCenter: parent.verticalCenter
                             text: "状态筛选："
                             color: palette.textWhite50
@@ -557,7 +625,7 @@ Rectangle {
                         CustomComboBox {
                             id: statusComboBox
                             anchors.left: searchBox.right
-                            anchors.leftMargin: 82
+                            anchors.leftMargin: 92
                             anchors.verticalCenter: parent.verticalCenter
                             comboWidth: 138
                             comboHeight: parent.height
@@ -609,7 +677,7 @@ Rectangle {
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: filterRow.bottom
-                        anchors.topMargin: 18
+                        anchors.topMargin: 22
                         height: 32
 
                         Text {
@@ -642,9 +710,9 @@ Rectangle {
                         anchors.top: listHeaderRow.bottom
                         anchors.topMargin: 12
                         anchors.bottom: parent.bottom
-                        radius: 4
-                        color: palette.panelColor
-                        border.color: palette.panelBorder
+                        radius: 10
+                        color: "#101827"
+                        border.color: "#2B3950"
                         border.width: 1
                         clip: true
 
@@ -655,7 +723,7 @@ Rectangle {
                             Rectangle {
                                 width: parent.width
                                 height: 46
-                                color: palette.headerColor
+                                color: "#222938"
 
                                 Row {
                                     anchors.fill: parent
@@ -737,6 +805,7 @@ Rectangle {
                                     ageText: model.ageText
                                     genderText: model.genderText
                                     inspectTime: model.inspectTime
+                                    predictedBrainAgeText: model.predictedBrainAgeText
                                     statusText: model.statusText
                                     statusColor: model.statusColorValue
                                     detailEnabled: model.detailEnabled
@@ -900,10 +969,65 @@ Rectangle {
                             }
                         }
 
+                        // 处理模式选择
+                        Row {
+                            width: parent.width
+                            height: 36
+                            spacing: 16
+
+                            Text {
+                                text: "处理模式："
+                                color: "#B9BDC6"
+                                font.pixelSize: 14
+                                font.family: "Alibaba PuHuiTi 3.0"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Repeater {
+                                model: [qsTr("仅脑龄预测"), qsTr("仅预处理"), qsTr("全流程")]
+                                Row {
+                                    spacing: 6
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    Rectangle {
+                                        width: 18
+                                        height: 18
+                                        radius: 9
+                                        color: "transparent"
+                                        border.color: root.uploadProcessingMode === index ? "#3C7EFF" : "#7E8796"
+                                        border.width: 2
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        Rectangle {
+                                            width: 10
+                                            height: 10
+                                            radius: 5
+                                            color: "#3C7EFF"
+                                            anchors.centerIn: parent
+                                            visible: root.uploadProcessingMode === index
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            onClicked: root.uploadProcessingMode = index
+                                        }
+                                    }
+                                    Text {
+                                        text: modelData
+                                        color: root.uploadProcessingMode === index ? "#FFFFFF" : "#B9BDC6"
+                                        font.pixelSize: 14
+                                        font.family: "Alibaba PuHuiTi 3.0"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            onClicked: root.uploadProcessingMode = index
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         Item {
                             id: uploadContentArea
                             width: parent.width
-                            height: parent.height - 36 - 60 - 18
+                            height: parent.height - 36 - 36 - 60 - 18 * 2
 
                             Column {
                                 anchors.fill: parent
@@ -931,7 +1055,7 @@ Rectangle {
                                             color: "#E8EAF0"
                                             font.family: "Alibaba PuHuiTi 3.0"
                                             font.pixelSize: 14
-                                            placeholderText: "搜索"
+                                            placeholderText: "请输入扫描目录"
                                             placeholderTextColor: "#7E8796"
                                             background: Item {}
                                             selectByMouse: true
@@ -1014,7 +1138,7 @@ Rectangle {
                                     }
 
                                     Text {
-                                        text: "配对成功：" + $MainViewController.scanPairedCount
+                                        text: "成功：" + $MainViewController.scanPairedCount
                                         color: "#A8AFBC"
                                         font.pixelSize: 12
                                         font.family: "Alibaba PuHuiTi 3.0"
@@ -1023,12 +1147,14 @@ Rectangle {
 
                                 Item {
                                     width: parent.width
-                                    height: 26
+                                    height: root.uploadProcessingMode !== 0 ? 26 : 0
+                                    visible: root.uploadProcessingMode !== 0
+                                    clip: true
 
                                     Text {
                                         anchors.left: parent.left
                                         anchors.verticalCenter: parent.verticalCenter
-                                        text: "文件列表"
+                                        text: "算法选择"
                                         color: "#FFFFFF"
                                         font.pixelSize: 14
                                         font.family: "Alibaba PuHuiTi 3.0"
@@ -1127,6 +1253,20 @@ Rectangle {
                                     }
                                 }
 
+                                Item {
+                                    width: parent.width
+                                    height: 26
+
+                                    Text {
+                                        anchors.left: parent.left
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: "文件列表"
+                                        color: "#FFFFFF"
+                                        font.pixelSize: 14
+                                        font.family: "Alibaba PuHuiTi 3.0"
+                                    }
+                                }
+
                                 Rectangle {
                                     width: parent.width
                                     height: parent.height - (($MainViewController.isScanning || $MainViewController.scanProgress > 0) ? 148 : 98)
@@ -1147,7 +1287,40 @@ Rectangle {
 
                                             Row {
                                                 anchors.fill: parent
-                                                Item { width: 52; height: parent.height }
+                                                Item {
+                                                    width: 52
+                                                    height: parent.height
+
+                                                    Rectangle {
+                                                        width: 18
+                                                        height: 18
+                                                        radius: 4
+                                                        anchors.centerIn: parent
+                                                        color: root.scanAllChecked ? "#3C7EFF" : "#3A3D42"
+                                                        border.color: root.scanAllChecked ? "#3C7EFF" : "#4B5057"
+                                                        border.width: 1
+
+                                                        Text {
+                                                            anchors.centerIn: parent
+                                                            text: root.scanAllChecked ? "✓" : ""
+                                                            color: "#FFFFFF"
+                                                            font.pixelSize: 11
+                                                            font.family: "Alibaba PuHuiTi 3.0"
+                                                        }
+
+                                                        MouseArea {
+                                                            anchors.fill: parent
+                                                            hoverEnabled: true
+                                                            cursorShape: Qt.PointingHandCursor
+                                                            onClicked: {
+                                                                if (root.scanAllChecked)
+                                                                    $MriPairResultModel.deselectAll()
+                                                                else
+                                                                    $MriPairResultModel.selectAll()
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                                 Item { width: (parent.width - 52) * 0.08; height: parent.height
                                                     Text { anchors.centerIn: parent; text: "序号"; color: "#FFFFFF"; font.pixelSize: 14; font.family: "Alibaba PuHuiTi 3.0" } }
                                                 Item { width: (parent.width - 52) * 0.18; height: parent.height
@@ -1226,9 +1399,23 @@ Rectangle {
                                                     Item { width: (parent.width - 52) * 0.20; height: parent.height
                                                         Text { anchors.centerIn: parent; text: root.formatDateText(model.studyDate); color: "#E6E6E6"; font.pixelSize: 14; font.family: "Alibaba PuHuiTi 3.0" } }
                                                     Item { width: (parent.width - 52) * 0.20; height: parent.height
-                                                        Text { anchors.centerIn: parent; text: model.isComplete ? "MRI 配对" : "待补全"; color: "#E6E6E6"; font.pixelSize: 14; font.family: "Alibaba PuHuiTi 3.0" } }
+                                                        Text {
+                                                            anchors.centerIn: parent
+                                                            text: model.scanMode === 1 ? "T1W" : (model.isComplete ? "MRI 配对" : "待补全")
+                                                            color: "#E6E6E6"
+                                                            font.pixelSize: 14
+                                                            font.family: "Alibaba PuHuiTi 3.0"
+                                                        } }
                                                     Item { width: (parent.width - 52) * 0.16; height: parent.height
-                                                        Text { anchors.centerIn: parent; text: (model.t1ImageCount || 0) + (model.boldImageCount || 0); color: "#E6E6E6"; font.pixelSize: 14; font.family: "Alibaba PuHuiTi 3.0" } }
+                                                        Text {
+                                                            anchors.centerIn: parent
+                                                            text: model.scanMode === 1
+                                                                  ? (model.t1ImageCount || 0)
+                                                                  : ((model.t1ImageCount || 0) + (model.boldImageCount || 0))
+                                                            color: "#E6E6E6"
+                                                            font.pixelSize: 14
+                                                            font.family: "Alibaba PuHuiTi 3.0"
+                                                        } }
                                                 }
 
                                                 Rectangle {

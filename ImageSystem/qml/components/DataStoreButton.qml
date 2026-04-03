@@ -1,4 +1,5 @@
 import QtQuick 2.15
+import QtQuick.Controls 2.15
 
 Rectangle {
     id: root
@@ -13,6 +14,7 @@ Rectangle {
     property int radiusSize: 6
     property int fontSize: 14
     property bool enabledButton: true
+    property string tooltipText: ""
 
     signal clicked()
 
@@ -49,13 +51,39 @@ Rectangle {
     MouseArea {
         id: buttonMouseArea
         anchors.fill: parent
-        enabled: root.enabledButton
         hoverEnabled: true
-        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+        acceptedButtons: root.enabledButton ? Qt.LeftButton : Qt.NoButton
+        cursorShape: root.enabledButton ? Qt.PointingHandCursor : Qt.ArrowCursor
 
-        onPressed: root.scale = 0.97
-        onReleased: root.scale = containsMouse ? 1.02 : 1.0
+        onPressed: if (root.enabledButton) root.scale = 0.97
+        onReleased: root.scale = (root.enabledButton && containsMouse) ? 1.02 : 1.0
         onExited: root.scale = 1.0
-        onClicked: root.clicked()
+        onClicked: if (root.enabledButton) root.clicked()
+
+        ToolTip {
+            id: buttonToolTip
+            parent: buttonMouseArea
+            visible: root.tooltipText !== "" && buttonMouseArea.containsMouse
+            text: root.tooltipText
+            delay: 500
+            x: (buttonMouseArea.width - width) / 2
+            y: -height - 8
+            padding: 10
+
+            background: Rectangle {
+                radius: 6
+                color: "#2B4D97"
+                border.width: 1
+                border.color: "#3862BE"
+            }
+
+            contentItem: Text {
+                text: buttonToolTip.text
+                color: "#FFFFFF"
+                font.pixelSize: 12
+                font.family: "Alibaba PuHuiTi 3.0"
+                wrapMode: Text.Wrap
+            }
+        }
     }
 }

@@ -20,6 +20,9 @@ Rectangle {
     
     // 接收从外部传入的 FourViewPanel 实例
     property var fourViewPanel: null
+
+    // 接收从外部传入的 DataStorePanel 实例
+    property var dataStorePanel: null
     
     // 四视图容器（当在脑分割面板时使用）
     property alias fourViewContainer: brainSegmentationContainer
@@ -2066,7 +2069,7 @@ Rectangle {
                         Row{
                             height: 38
                             spacing: 10
-                            visible: !$MainViewController.isScanning && $MriPairResultModel.checkedCount
+                            visible: !$MainViewController.isScanning && $MriPairResultModel.checkedCount && dataStorePanel && dataStorePanel.uploadProcessingMode === 1
                             Label {
                                 id:label2
                                 text: qsTr("输出Bids文件夹：")
@@ -2087,7 +2090,7 @@ Rectangle {
                         Row{
                             height: 38
                             spacing: 10
-                            visible: !$MainViewController.isScanning && $MriPairResultModel.checkedCount
+                            visible: !$MainViewController.isScanning && $MriPairResultModel.checkedCount && dataStorePanel && dataStorePanel.uploadProcessingMode === 1
                             Label {
                                 id:label3
                                 text: qsTr("输出Output文件夹：")
@@ -2107,7 +2110,7 @@ Rectangle {
                         Row{
                             height: 38
                             spacing: 10
-                            visible: !$MainViewController.isScanning && $MriPairResultModel.checkedCount
+                            visible: !$MainViewController.isScanning && $MriPairResultModel.checkedCount && dataStorePanel && dataStorePanel.uploadProcessingMode === 1
                             Label {
                                 id:label4
                                 text: qsTr("license文件地址：")
@@ -2138,7 +2141,7 @@ Rectangle {
                         Row {
                             height: 38
                             spacing: 10
-                            visible: !$MainViewController.isScanning && $MriPairResultModel.checkedCount
+                            visible: !$MainViewController.isScanning && $MriPairResultModel.checkedCount && $DataStorePanel.uploadProcessingMode === 1
                             Label {
                                 text: qsTr("预处理方式：")
                                 font.pixelSize: 16
@@ -2194,13 +2197,11 @@ Rectangle {
                             backgroundColor: $MainViewController.isPreAnalysisRunning ? "#E74C3C" : "#3C7EFF"
                             onClicked: {
                                 if ($MainViewController.isPreAnalysisRunning) {
-                                    // 取消预处理
                                     $MainViewController.stopFmriprepProcess()
                                     $MainViewController.stopDeepprepProcess()
                                     return
                                 }
-                                
-                                // 开始分析
+
                                 function warn(msg) {
                                     if (messageManager) {
                                         messageManager.warning(msg, 2000)
@@ -2208,26 +2209,33 @@ Rectangle {
                                         console.log(msg)
                                     }
                                 }
-                                var b = bidsDir.text.trim()
-                                var o = outputDir.text.trim()
-                                var l = licenseFile.text.trim()
-                                if (b === "") {
-                                    warn(qsTr("请输入 Bids 文件夹路径"))
-                                    return
+
+                                if (dataStorePanel && dataStorePanel.uploadProcessingMode === 0) {
+                                    // 仅脑龄预测：只需去脸→脑零，不需要 bids/output/license
+                                    $MainViewController.startBrainAgeOnly()
+                                } else {
+                                    // 完整流程：去脸→脑龄 + deepprep/fmriprep
+                                    var b = bidsDir.text.trim()
+                                    var o = outputDir.text.trim()
+                                    var l = licenseFile.text.trim()
+                                    if (b === "") {
+                                        warn(qsTr("请输入 Bids 文件夹路径"))
+                                        return
+                                    }
+                                    if (o === "") {
+                                        warn(qsTr("请输入 Output 文件夹路径"))
+                                        return
+                                    }
+                                    if (l === "") {
+                                        warn(qsTr("请输入 license 文件路径"))
+                                        return
+                                    }
+                                    if (methodComboBox.selectedIndices.length === 0) {
+                                        warn(qsTr("请选择预处理方式"))
+                                        return
+                                    }
+                                    $MainViewController.startPreAnalysis(methodComboBox.selectedIndices[0], b, o, l)
                                 }
-                                if (o === "") {
-                                    warn(qsTr("请输入 Output 文件夹路径"))
-                                    return
-                                }
-                                if (l === "") {
-                                    warn(qsTr("请输入 license 文件路径"))
-                                    return
-                                }
-                                if(methodComboBox.selectedIndices.length === 0){
-                                    warn(qsTr("请选择预处理方式"))
-                                    return
-                                }
-                                $MainViewController.startPreAnalysis(methodComboBox.selectedIndices[0], b, o, l)
                             }
                         }
 

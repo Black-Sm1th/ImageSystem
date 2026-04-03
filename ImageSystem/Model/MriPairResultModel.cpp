@@ -149,6 +149,10 @@ QVariant MriPairResultModel::data(const QModelIndex& index, int role) const
         return result.isComplete();
     case IsCheckedRole:
         return m_checkedStates[index.row()];
+    case PredictedBrainAgeRole:
+        return result.predictedBrainAge >= 0 ? result.predictedBrainAge : QVariant();
+    case ScanModeRole:
+        return result.scanMode;
     default:
         break;
     }
@@ -228,6 +232,8 @@ QHash<int, QByteArray> MriPairResultModel::roleNames() const
     roles[BoldImageCountRole] = "boldImageCount";
     roles[IsCompleteRole] = "isComplete";
     roles[IsCheckedRole] = "isChecked";
+    roles[PredictedBrainAgeRole] = "predictedBrainAge";
+    roles[ScanModeRole] = "scanMode";
     return roles;
 }
 

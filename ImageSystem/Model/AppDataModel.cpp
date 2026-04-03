@@ -97,9 +97,11 @@ QVariant AppDataModel::data(const QModelIndex &index, int role) const
     case OutputPathRole: return r.outputPath;
     case BidsPathRole:   return r.bidsPath;
     case DbIdRole:       return r.dbId;
+    case PredictedBrainAgeRole: return r.predictedBrainAge >= 0 ? r.predictedBrainAge : QVariant();
     default: return {};
     }
-}
+ }
+
 
 QHash<int, QByteArray> AppDataModel::roleNames() const
 {
@@ -115,7 +117,8 @@ QHash<int, QByteArray> AppDataModel::roleNames() const
         { SliceCountRole, "sliceCount" },
         { OutputPathRole, "outputPath" },
         { BidsPathRole,   "bidsPath" },
-        { DbIdRole,       "dbId" }
+        { DbIdRole,       "dbId" },
+        { PredictedBrainAgeRole, "predictedBrainAge" }
     };
 }
 
@@ -142,6 +145,7 @@ QVariantList AppDataModel::records() const
         row.insert("bidsPath", r.bidsPath);
         row.insert("seriesUid", r.seriesUid);
         row.insert("dbId", r.dbId);
+        row.insert("predictedBrainAge", r.predictedBrainAge);
         list.append(row);
     }
     return list;
@@ -158,17 +162,6 @@ void AppDataModel::addPendingItem(const HardwareScanResult &item)
     for (const auto &existing : m_pendingItems) {
         if (isSameCaseIdentity(existing.name, existing.examDate, existing.seriesUid,
                                item.name, item.examDate, item.seriesUid)) {
-            return;
-        }
-    }
-
-    for (const auto &existing : m_completedItems) {
-        if (isSameCaseIdentity(existing.value(QStringLiteral("name")).toString(),
-                               existing.value(QStringLiteral("exam_date")).toString(),
-                               existing.value(QStringLiteral("series_uid")).toString(),
-                               item.name,
-                               item.examDate,
-                               item.seriesUid)) {
             return;
         }
     }
@@ -262,6 +255,19 @@ void AppDataModel::rebuildRecords()
     }
 
     for (const auto &c : m_completedItems) {
+        bool shadowedByPending = false;
+        for (const auto &p : m_pendingItems) {
+            if (isSameCaseIdentity(p.name, p.examDate, p.seriesUid,
+                                   c.value(QStringLiteral("name")).toString(),
+                                   c.value(QStringLiteral("exam_date")).toString(),
+                                   c.value(QStringLiteral("series_uid")).toString())) {
+                shadowedByPending = true;
+                break;
+            }
+        }
+        if (shadowedByPending)
+            continue;
+
         UnifiedRecord r;
         r.source     = UnifiedRecord::Completed;
         r.dbId       = c.value("id").toInt();
@@ -275,6 +281,7 @@ void AppDataModel::rebuildRecords()
         r.status     = c.value("status", "completed").toString();
         r.bidsPath   = c.value("bids_path").toString();
         r.outputPath = c.value("output_path").toString();
+        r.predictedBrainAge = c.value("predicted_brain_age", -1.0).toDouble();
         m_records.append(r);
     }
 

@@ -1,4 +1,4 @@
-import QtQuick 2.15
+﻿import QtQuick 2.15
 import "./"
 
 Rectangle {
@@ -13,12 +13,13 @@ Rectangle {
     property string ageText: ""
     property string genderText: ""
     property string inspectTime: ""
+    property string predictedBrainAgeText: ""
     property string statusText: ""
     property color statusColor: "#32D26B"
     property bool detailEnabled: true
     property bool deleteEnabled: true
     property real selectColumnWidth: 46
-    property var columnWidths: [0.12, 0.12, 0.12, 0.08, 0.08, 0.14, 0.12, 0.22]
+    property var columnWidths: [0.08, 0.10, 0.12, 0.07, 0.07, 0.13, 0.10, 0.10, 0.23]
 
     signal rowClicked()
     signal checkClicked()
@@ -158,6 +159,20 @@ Rectangle {
         Item {
             width: root.bodyWidth(root.columnWidths[6])
             height: parent.height
+            Text {
+                anchors.centerIn: parent
+                text: root.predictedBrainAgeText
+                color: "#E6E6E6"
+                font.pixelSize: 14
+                font.family: "Alibaba PuHuiTi 3.0"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+        }
+
+        Item {
+            width: root.bodyWidth(root.columnWidths[7])
+            height: parent.height
 
             Row {
                 anchors.centerIn: parent
@@ -183,7 +198,7 @@ Rectangle {
         }
 
         Item {
-            width: root.bodyWidth(root.columnWidths[7])
+            width: root.bodyWidth(root.columnWidths[8])
             height: parent.height
 
             Row {
@@ -202,6 +217,7 @@ Rectangle {
                     textColor: root.detailEnabled ? "#E6FFFFFF" : "#7E8796"
                     fontSize: 12
                     enabledButton: root.detailEnabled
+                    tooltipText: !root.detailEnabled ? qsTr("仅进行了脑龄预测，未走完整流程，无法查看分析详情") : ""
                     onClicked: root.detailClicked()
                 }
 
@@ -238,3 +254,4 @@ DataStoreButton {
         onClicked: root.rowClicked()
     }
 }
+

@@ -29,7 +29,9 @@ public:
         BoldSeriesDescRole,
         BoldImageCountRole,
         IsCompleteRole,
-        IsCheckedRole
+        IsCheckedRole,
+        PredictedBrainAgeRole,
+        ScanModeRole
     };
 
     explicit MriPairResultModel(QObject* parent = nullptr);
