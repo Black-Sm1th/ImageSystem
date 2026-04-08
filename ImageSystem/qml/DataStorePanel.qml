@@ -14,8 +14,8 @@ Rectangle {
     property int uploadTabIndex: 0
     property string currentStatusFilter: "全部"
     property var statusOptions: ["全部", "排队中", "分析中", "分析完成"]
-    property var tableHeaders: ["序号", "姓名", "病历号", "年龄", "性别", "检查日期", "预测脑龄", "状态", "操作"]
-    property var columnWidths: [0.08, 0.10, 0.12, 0.07, 0.07, 0.13, 0.10, 0.10, 0.23]
+    property var tableHeaders: ["序号", "姓名", "病历号", "年龄", "性别", "检查日期", "预测脑龄", "处理模式", "状态", "操作"]
+    property var columnWidths: [0.07, 0.09, 0.11, 0.06, 0.06, 0.12, 0.09, 0.10, 0.09, 0.21]
     property bool allChecked: false
     property var allTasks: []
     property string scanSourcePath: ""
@@ -134,6 +134,18 @@ Rectangle {
         return text
     }
 
+    function formatCheckTypeText(checkType) {
+        if (checkType === "BrainAgeOnly")
+            return "仅脑龄"
+        if (checkType === "PrepOnly")
+            return "仅预处理"
+        if (checkType === "FullPipeline")
+            return "全流程"
+        if (checkType === "fMRIPrep" || checkType === "DeepPrep")
+            return "仅预处理"
+        return "-"
+    }
+
     function setScanSourcePath(path) {
         scanSourcePath = path
         if (scanPathField)
@@ -149,6 +161,11 @@ Rectangle {
         uploadOutputPath = defaultPaths.outputPath || ""
     }
 
+    function resetScanResultsBeforeModeSwitch() {
+        $MainViewController.resetScanState()
+        scanNoticePending = false
+    }
+
     function openUploadDialog() {
         showUploadDialog = true
         uploadTabIndex = 0
@@ -161,6 +178,24 @@ Rectangle {
 
     function closeUploadDialog() {
         showUploadDialog = false
+    }
+
+    function clearPanelInputs() {
+        scanSourcePath = ""
+        uploadBidsPath = ""
+        uploadOutputPath = ""
+        uploadLicensePath = ""
+
+        if (scanPathField)
+            scanPathField.text = ""
+        if (searchField)
+            searchField.text = ""
+
+        currentStatusFilter = "全部"
+        if (statusComboBox) {
+            statusComboBox.selectedIndices = [0]
+            statusComboBox.selectedText = root.statusOptions[0]
+        }
     }
 
     function loadTaskList() {
@@ -181,9 +216,10 @@ Rectangle {
                 genderText: formatSexText(row.sex),
                 inspectTime: formatDateText(row.examDate),
                 predictedBrainAgeText: !isNaN(brainAge) && brainAge >= 0 ? String(Math.round(brainAge)) : "-",
+                checkTypeText: formatCheckTypeText(row.checkType || ""),
                 statusText: statusText,
                 statusColorValue: statusColor(statusText),
-                detailEnabled: statusText === "分析完成" && (row.outputPath || "") !== "" && (row.checkType || "") !== "BrainAgeOnly",
+                detailEnabled: statusText === "分析完成" && hasPreprocessingCapability(row.checkType || ""),
                 dbId: row.dbId !== undefined ? row.dbId : -1,
                 source: row.source,
                 outputPath: row.outputPath || "",
@@ -205,8 +241,23 @@ Rectangle {
         return false
     }
 
+    function hasPreprocessingCapability(checkType) {
+        return checkType === "PrepOnly"
+            || checkType === "FullPipeline"
+            || checkType === "fMRIPrep"
+            || checkType === "DeepPrep"
+    }
+
+    function detailDisabledReason(task) {
+        if (task.statusText !== "分析完成")
+            return "未分析完成，无法查看"
+        if (!hasPreprocessingCapability(task.checkType))
+            return "仅进行了脑龄预测，暂无可查看的分析详情"
+        return "当前任务暂无可查看的分析详情"
+    }
+
     function canViewTaskDetail(task) {
-        return task.statusText === "分析完成" && task.outputPath !== "" && task.checkType !== "BrainAgeOnly"
+        return task.statusText === "分析完成" && hasPreprocessingCapability(task.checkType)
     }
 
     function appendTask(task) {
@@ -219,9 +270,11 @@ Rectangle {
             genderText: task.genderText,
             inspectTime: task.inspectTime,
             predictedBrainAgeText: task.predictedBrainAgeText,
+            checkTypeText: task.checkTypeText,
             statusText: task.statusText,
             statusColorValue: task.statusColorValue,
             detailEnabled: task.detailEnabled,
+            detailTooltip: detailDisabledReason(task),
             dbId: task.dbId,
             source: task.source,
             outputPath: task.outputPath,
@@ -410,8 +463,7 @@ Rectangle {
     }
 
     Component.onCompleted: {
-        refreshUploadPaths()
-        uploadLicensePath = $MainViewController.defaultLicenseFilePath()
+        clearPanelInputs()
         loadTaskList()
     }
 
@@ -806,9 +858,11 @@ Rectangle {
                                     genderText: model.genderText
                                     inspectTime: model.inspectTime
                                     predictedBrainAgeText: model.predictedBrainAgeText
+                                    checkTypeText: model.checkTypeText || "-"
                                     statusText: model.statusText
                                     statusColor: model.statusColorValue
                                     detailEnabled: model.detailEnabled
+                                    detailTooltip: model.detailTooltip || ""
                                     deleteEnabled: root.canDeleteTask(model)
                                     columnWidths: root.columnWidths
 
@@ -1006,7 +1060,16 @@ Rectangle {
                                         }
                                         MouseArea {
                                             anchors.fill: parent
-                                            onClicked: root.uploadProcessingMode = index
+                                            onClicked: {
+                                                if (root.uploadProcessingMode === index)
+                                                    return
+                                                if ($MainViewController.isScanning) {
+                                                    root.notifyWarning(qsTr("扫描尚未完成，暂不允许切换处理模式"))
+                                                    return
+                                                }
+                                                root.resetScanResultsBeforeModeSwitch()
+                                                root.uploadProcessingMode = index
+                                            }
                                         }
                                     }
                                     Text {
@@ -1017,7 +1080,16 @@ Rectangle {
                                         anchors.verticalCenter: parent.verticalCenter
                                         MouseArea {
                                             anchors.fill: parent
-                                            onClicked: root.uploadProcessingMode = index
+                                            onClicked: {
+                                                if (root.uploadProcessingMode === index)
+                                                    return
+                                                if ($MainViewController.isScanning) {
+                                                    root.notifyWarning(qsTr("扫描尚未完成，暂不允许切换处理模式"))
+                                                    return
+                                                }
+                                                root.resetScanResultsBeforeModeSwitch()
+                                                root.uploadProcessingMode = index
+                                            }
                                         }
                                     }
                                 }

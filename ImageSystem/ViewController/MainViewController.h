@@ -84,6 +84,7 @@ public:
     Q_INVOKABLE void importBrainData(const QString& url, const QString& subjectId = "sub-01", const QString& patientId = "sub-01");
     Q_INVOKABLE void selectBrainRegion(int row);
     Q_INVOKABLE void scanFolder(const QString& inputDir, int mode = 0);
+    Q_INVOKABLE void resetScanState();
     Q_INVOKABLE void startPreAnalysis(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile);
     Q_INVOKABLE void startBrainAgeOnly();
     Q_INVOKABLE void startPreprocessingOnly(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile);
@@ -197,6 +198,7 @@ private:
     BrainRegionProcessor* m_brainRegionProcessor = nullptr;
     void setupBrainRegionProcessor();  // 初始化脑区处理器
     void startBrainRegionProcessing(); // 预处理完成后开始脑区处理
+    void shutdownAllWorkers();         // 关闭时停止所有线程/进程
 
     // 日志文件轮询相关（用于读取 Docker 输出日志）
     QString m_prepLogFilePath;

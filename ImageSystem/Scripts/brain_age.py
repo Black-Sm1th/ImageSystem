@@ -23,7 +23,9 @@ import os
 import shutil
 import subprocess
 import tempfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import Any
 
 # JPEG 压缩的 DICOM Transfer Syntax UIDs
 COMPRESSED_TRANSFER_SYNTAXES = {
@@ -82,6 +84,38 @@ def is_compressed_dicom(dcm_path: Path) -> bool:
         return False
 
 
+def extract_patient_metadata_from_input(input_path: Path) -> tuple[str, str]:
+    """
+    尝试从输入中自动提取姓名与病历号（DICOM Tag: PatientName, PatientID）。
+    仅对 DICOM 输入有效；NIfTI 输入返回空字符串。
+    """
+    try:
+        import pydicom
+    except Exception:
+        return "", ""
+
+    dcm_candidates: list[Path] = []
+    if input_path.is_dir():
+        dcm_candidates = sorted(input_path.rglob("*.dcm"))
+        if not dcm_candidates:
+            # 兼容无扩展名 DICOM，尝试取目录下文件
+            dcm_candidates = [f for f in input_path.iterdir() if f.is_file()]
+    elif input_path.is_file() and input_path.suffix.lower() == ".dcm":
+        dcm_candidates = [input_path]
+
+    for dcm_file in dcm_candidates:
+        try:
+            ds = pydicom.dcmread(dcm_file, stop_before_pixels=True, force=True)
+            name = str(getattr(ds, "PatientName", "") or "").strip()
+            patient_id = str(getattr(ds, "PatientID", "") or "").strip()
+            if name or patient_id:
+                return name, patient_id
+        except Exception:
+            continue
+
+    return "", ""
+
+
 def decompress_dicom_folder(dicom_dir: Path, output_dir: Path) -> Path:
     """
     将压缩的 DICOM 文件解压到新目录。
@@ -133,40 +167,62 @@ def decompress_dicom_folder(dicom_dir: Path, output_dir: Path) -> Path:
     return output_dir
 
 
-def convert_dicom_to_nifti(dicom_dir: Path, work_dir: Path) -> list[Path]:
+def convert_dicom_to_nifti(
+    dicom_dir: Path,
+    work_dir: Path,
+    dcm2niix_format: str = "%i_%j",
+) -> list[Path]:
     """使用 dcm2niix 将 DICOM 转换为 .nii.gz，自动处理压缩的 DICOM。"""
     out_dir = work_dir / "dcm2niix_out"
     out_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # 先尝试解压 DICOM 文件（如果需要）
     decompressed_dir = work_dir / "decompressed_dicom"
     actual_dicom_dir = decompress_dicom_folder(dicom_dir, decompressed_dir)
-    
+
+    cmd = [
+        "dcm2niix",
+        "-z",
+        "y",  # 压缩输出
+        "-f",
+        dcm2niix_format,  # 默认使用 %i_%j，避免跨受试者重名冲突
+        "-o",
+        str(out_dir),
+        str(actual_dicom_dir),
+    ]
+
     try:
-        run_cmd(
-            [
-                "dcm2niix",
-                "-z",
-                "y",  # 压缩输出
-                "-f",
-                "%p_%s",  # 文件名：序列名_序列号
-                "-o",
-                str(out_dir),
-                str(actual_dicom_dir),
-            ]
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True)
     except FileNotFoundError as exc:  # pragma: no cover - 环境相关
         raise RuntimeError(
             "未检测到 dcm2niix，请安装后重试：https://github.com/rordenlab/dcm2niix"
         ) from exc
 
     nifti_files = sorted(out_dir.rglob("*.nii.gz"))
+
+    # 某些情况下 dcm2niix 会因部分序列异常返回非 0，但仍成功输出 NIfTI
+    if result.returncode != 0:
+        if nifti_files:
+            print("  警告: dcm2niix 返回非0，已忽略并继续（检测到可用 .nii.gz 输出）")
+            if result.stderr.strip():
+                print("  dcm2niix stderr:")
+                print(result.stderr.strip())
+        else:
+            raise RuntimeError(
+                f"命令失败: {' '.join(cmd)}\nstdout: {result.stdout}\nstderr: {result.stderr}"
+            )
+
     if not nifti_files:
         raise RuntimeError("dcm2niix 未生成任何 .nii.gz 文件，请检查 DICOM 输入。")
+
     return nifti_files
 
 
-def gather_nifti_inputs(input_path: Path, temp_dir: Path) -> list[Path]:
+def gather_nifti_inputs(
+    input_path: Path,
+    temp_dir: Path,
+    dcm2niix_format: str = "%i_%j",
+) -> list[Path]:
     """
     将输入转换/收集为 .nii.gz 列表。
     - 单个 .nii.gz 直接拷贝
@@ -190,6 +246,13 @@ def gather_nifti_inputs(input_path: Path, temp_dir: Path) -> list[Path]:
     nii_gz_files = sorted(input_path.rglob("*.nii.gz"))
     nii_files = sorted(input_path.rglob("*.nii"))
     dcm_files = sorted(input_path.rglob("*.dcm"))
+    if not dcm_files:
+        # 兼容无扩展名 DICOM：抽样检查目录内文件是否为 DICOM
+        candidate_files = [f for f in input_path.rglob("*") if f.is_file()]
+        for f in candidate_files[:200]:
+            if is_compressed_dicom(f):
+                dcm_files = [f]
+                break
 
     outputs: list[Path] = []
     if nii_gz_files or nii_files:
@@ -203,7 +266,7 @@ def gather_nifti_inputs(input_path: Path, temp_dir: Path) -> list[Path]:
 
     if dcm_files:
         # 将整个目录视为一个序列集合交给 dcm2niix
-        return convert_dicom_to_nifti(input_path, temp_dir)
+        return convert_dicom_to_nifti(input_path, temp_dir, dcm2niix_format)
 
     raise RuntimeError("目录中未找到 .nii/.nii.gz/.nii 或 .dcm 文件。")
 
@@ -281,11 +344,114 @@ def run_container(
     return workdir / "Output" / output_name
 
 
+def chunk_list(items: list[Path], chunk_count: int) -> list[list[Path]]:
+    if not items:
+        return []
+    chunk_count = max(1, min(chunk_count, len(items)))
+    buckets: list[list[Path]] = [[] for _ in range(chunk_count)]
+    for idx, item in enumerate(items):
+        buckets[idx % chunk_count].append(item)
+    return [b for b in buckets if b]
+
+
+def run_parallel_containers(
+    all_nifti_files: list[Path],
+    model_path: Path,
+    image: str,
+    preprocess: bool,
+    threshold: float | None,
+    parallel_jobs: int,
+    temp_root: Path,
+) -> list[dict[str, str]]:
+    """按分片并行运行多个 Docker，并合并预测结果。"""
+    shards = chunk_list(all_nifti_files, parallel_jobs)
+    if not shards:
+        return []
+
+    def run_one_shard(shard_idx: int, shard_files: list[Path]) -> list[dict[str, str]]:
+        shard_root = temp_root / f"shard_{shard_idx:02d}"
+        shard_root.mkdir(parents=True, exist_ok=True)
+        workdir, model_name = prepare_workdir(shard_files, model_path, shard_root)
+        output_name = f"Prediction_part_{shard_idx:02d}.csv"
+        output_csv = run_container(
+            workdir=workdir,
+            model_name=model_name,
+            image=image,
+            output_name=output_name,
+            preprocess=preprocess,
+            threshold=threshold,
+        )
+        return read_prediction(output_csv)
+
+    merged_rows: list[dict[str, str]] = []
+    max_workers = max(1, min(parallel_jobs, len(shards)))
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_map = {
+            executor.submit(run_one_shard, idx, shard_files): idx
+            for idx, shard_files in enumerate(shards)
+        }
+        for future in as_completed(future_map):
+            shard_idx = future_map[future]
+            shard_rows = future.result()
+            merged_rows.extend(shard_rows)
+            print(f"  分片 {shard_idx + 1}/{len(shards)} 完成，结果 {len(shard_rows)} 条")
+
+    return merged_rows
+
+
 def read_prediction(csv_path: Path) -> list[dict[str, str]]:
     """读取预测 CSV，返回行列表。"""
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         return list(reader)
+
+
+def resolve_output_csv_path(output_arg: str) -> Path:
+    """将输出参数规范为 CSV 文件路径；若传入目录则自动补 Prediction.csv。"""
+    p = Path(output_arg).expanduser().resolve()
+
+    # 已存在且是目录
+    if p.exists() and p.is_dir():
+        return p / "Prediction.csv"
+
+    # 不存在但像目录（无后缀，如 C:/test）也按目录处理
+    if p.suffix.lower() != ".csv":
+        return p / "Prediction.csv"
+
+    return p
+
+
+def rewrite_prediction_with_metadata(
+    output_csv_path: Path,
+    rows: list[dict[str, str]],
+    id_to_meta: dict[str, dict[str, str]],
+) -> list[dict[str, Any]]:
+    """
+    将预测结果补充姓名与病历号并重写输出文件。
+
+    输出列：ID, Name, PatientID, Pred_Age
+    """
+    merged_rows: list[dict[str, Any]] = []
+    for row in rows:
+        pred_id = (row.get("ID") or row.get("id") or row.get("subject") or "").strip()
+        pred_age = (row.get("Pred_Age") or row.get("predicted_age") or row.get("prediction") or "").strip()
+
+        meta = id_to_meta.get(pred_id, {})
+        merged_rows.append(
+            {
+                "ID": pred_id,
+                "Name": meta.get("name", ""),
+                "PatientID": meta.get("patient_id", ""),
+                "Pred_Age": pred_age,
+            }
+        )
+
+    with open(output_csv_path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.DictWriter(f, fieldnames=["ID", "Name", "PatientID", "Pred_Age"])
+        writer.writeheader()
+        writer.writerows(merged_rows)
+
+    return merged_rows
 
 
 def main() -> None:
@@ -318,9 +484,20 @@ def main() -> None:
         help="Docker 镜像名（默认 deepbrain）",
     )
     parser.add_argument(
+        "--dcm2niix-format",
+        default="%i_%j",
+        help="dcm2niix 输出命名模板（默认 %i_%j，可减少重名冲突）",
+    )
+    parser.add_argument(
         "--preprocess",
         action="store_true",
         help="对原始扫描执行去颅骨+配准；原始 DICOM 建议开启",
+    )
+    parser.add_argument(
+        "--parallel-docker",
+        type=int,
+        default=20,
+        help="并行 Docker 数量（默认 20）",
     )
     parser.add_argument(
         "--threshold",
@@ -342,7 +519,7 @@ def main() -> None:
         if args.model
         else DEFAULT_MODEL.resolve()
     )
-    output_path = Path(args.output).expanduser().resolve()
+    output_path = resolve_output_csv_path(args.output)
 
     # 处理自定义 ID
     if args.ids:
@@ -354,6 +531,15 @@ def main() -> None:
     else:
         # 默认使用输入文件夹名作为 ID
         custom_ids = [p.name for p in input_paths]
+
+    # 自动从输入 DICOM 中提取姓名与病历号
+    id_to_meta: dict[str, dict[str, str]] = {}
+    for i, input_path in enumerate(input_paths):
+        auto_name, auto_patient_id = extract_patient_metadata_from_input(input_path)
+        id_to_meta[custom_ids[i]] = {
+            "name": auto_name,
+            "patient_id": auto_patient_id,
+        }
 
     ensure_docker_image(args.docker_image)
 
@@ -371,7 +557,11 @@ def main() -> None:
         for idx, input_path in enumerate(input_paths):
             # 为每个输入路径创建独立的子目录，避免文件名冲突
             input_temp_dir = temp_root / "inputs" / f"input_{idx}"
-            nifti_files = gather_nifti_inputs(input_path, input_temp_dir)
+            nifti_files = gather_nifti_inputs(
+                input_path,
+                input_temp_dir,
+                args.dcm2niix_format,
+            )
             
             # 使用自定义 ID 作为文件名，便于对应原始数据
             subject_id = custom_ids[idx]
@@ -389,25 +579,28 @@ def main() -> None:
         if not all_nifti_files:
             raise RuntimeError("未从任何输入路径中找到有效的 NIfTI 或 DICOM 文件。")
         
-        nifti_files = all_nifti_files
-        workdir, model_name = prepare_workdir(nifti_files, model_path, temp_root)
-        output_csv = run_container(
-            workdir=workdir,
-            model_name=model_name,
+        parallel_jobs = max(1, args.parallel_docker)
+        print(f"开始并行推理，Docker 并发数: {parallel_jobs}")
+
+        rows = run_parallel_containers(
+            all_nifti_files=all_nifti_files,
+            model_path=model_path,
             image=args.docker_image,
-            output_name=output_path.name,
             preprocess=args.preprocess,
             threshold=args.threshold,
+            parallel_jobs=parallel_jobs,
+            temp_root=temp_root,
         )
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(output_csv, output_path)
-
-        rows = read_prediction(output_csv)
         if rows:
+            merged_rows = rewrite_prediction_with_metadata(output_path, rows, id_to_meta)
             print("预测结果：")
-            for row in rows:
-                print(f"ID={row.get('ID')}  Pred_Age={row.get('Pred_Age')}")
+            for row in merged_rows:
+                print(
+                    f"ID={row.get('ID')}  Name={row.get('Name')}  "
+                    f"PatientID={row.get('PatientID')}  Pred_Age={row.get('Pred_Age')}"
+                )
         else:
             print("输出 CSV 为空，请检查输入。")
 

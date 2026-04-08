@@ -366,14 +366,39 @@ MainViewController::MainViewController(QObject* parent)
     if (QCoreApplication::instance()) {
         connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit,
                 this, [this]() {
-                    stopFmriprepProcess();
-                    stopDeepprepProcess();
-                    if (m_dockerPrepRunner) {
-                        m_dockerPrepRunner->stopDeface();
-                        m_dockerPrepRunner->stopBap();
-                    }
+                    shutdownAllWorkers();
                 });
     }
+}
+
+void MainViewController::shutdownAllWorkers()
+{
+    // 1) 停止扫描线程
+    if (m_mriScanner) {
+        m_mriScanner->stopScan();
+    }
+
+    // 2) 停止队列继续调度与状态
+    m_queuePaused = true;
+    m_isProcessing = false;
+
+    // 3) 停止预处理相关 Docker 进程
+    stopFmriprepProcess();
+    stopDeepprepProcess();
+
+    if (m_dockerPrepRunner) {
+        m_dockerPrepRunner->stopDeface();
+        m_dockerPrepRunner->stopBap();
+        m_dockerPrepRunner->stop();
+    }
+
+    // 4) 停止脑区后处理
+    if (m_brainRegionProcessor && m_brainRegionProcessor->isProcessing()) {
+        m_brainRegionProcessor->cancel();
+    }
+
+    // 5) 停止日志轮询定时器
+    stopPrepLogTimer();
 }
 
 void MainViewController::setupDockerPrepRunner()
@@ -2687,6 +2712,22 @@ void MainViewController::scanFolder(const QString& inputDir, int mode)
     clearPreAnalysisLog();
     // mode: 0 = 配对模式 (T1W+BOLD), 1 = 脑龄模式 (仅T1W)
     m_mriScanner->startScan(inputDir, 5, mode);
+}
+
+void MainViewController::resetScanState()
+{
+    setscanTotalFolders(0);
+    setscanScannedFolders(0);
+    setscanFoundT1Count(0);
+    setscanFoundBoldCount(0);
+    setscanPairedCount(0);
+    setscanProgress(0.0);
+    setscanCurrentFolder("");
+    setisScanning(false);
+
+    if (m_mriPairResultModel) {
+        m_mriPairResultModel->clear();
+    }
 }
 
 void MainViewController::startPreAnalysis(int method, const QString& bidsPath, const QString& outputPath, const QString& licenseFile)
