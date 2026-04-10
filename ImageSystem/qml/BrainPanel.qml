@@ -1,4 +1,4 @@
-import QtQuick 2.15
+﻿import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Window 2.2
 import QtQuick.Dialogs 1.3
@@ -40,6 +40,7 @@ Rectangle {
     property string currentSubjectId: ""
     property var subjectsList: []
     property var subjectsMetadata: []  // 存储完整的 metadata subjects 数据
+    property var selectedCaseInfo: ({})
     
     // 监听 currentIndex 变化，重置 PDF 状态
     onCurrentIndexChanged: {
@@ -168,6 +169,8 @@ Rectangle {
     }
 
     function loadOutputDirectory(path, preferredCase) {
+        selectedCaseInfo = preferredCase || {}
+
         if (!path || path === "")
             return false
 
@@ -1149,8 +1152,14 @@ Rectangle {
                                 interval: 100
                                 repeat: false
                                 onTriggered: {
-                                    // 调用 C++ 函数生成 PDF
-                                    $MainViewController.generatePdfReport(reportSavePath.text)
+                                    // 调用 C++ 函数生成 PDF（传入当前选中病例标识，确保重启后也能精确命中数据库）
+                                    var preferredSeriesUid = selectedCaseInfo && selectedCaseInfo.seriesUid ? selectedCaseInfo.seriesUid : ""
+                                    var preferredPatientId = selectedCaseInfo && selectedCaseInfo.patientId ? selectedCaseInfo.patientId : ""
+                                    var preferredExamDate = selectedCaseInfo && selectedCaseInfo.examDate ? selectedCaseInfo.examDate : ""
+                                    $MainViewController.generatePdfReport(reportSavePath.text,
+                                                                          preferredSeriesUid,
+                                                                          preferredPatientId,
+                                                                          preferredExamDate)
                                     pdfGenerationState = 2
                                     if (messageManager) {
                                         messageManager.success(qsTr("PDF 报告生成成功！"), 2000)

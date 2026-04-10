@@ -92,7 +92,10 @@ public:
     Q_INVOKABLE QString defaultLicenseFilePath() const;
     Q_INVOKABLE void stopFmriprepProcess();
     Q_INVOKABLE void stopDeepprepProcess();
-    Q_INVOKABLE void generatePdfReport(const QString& savePath);
+    Q_INVOKABLE void generatePdfReport(const QString& savePath,
+                                       const QString& preferredSeriesUid = QString(),
+                                       const QString& preferredPatientId = QString(),
+                                       const QString& preferredExamDate = QString());
     Q_INVOKABLE bool isDeepprepOutput(const QString& outputPath);
     Q_INVOKABLE void updateAnnotationText(int orientation, int index, const QString& text);
     Q_INVOKABLE void deleteAnnotation(int orientation, int index);

@@ -19,7 +19,9 @@ python brain_age.py --input E:/dcm_folder1 E:/dcm_folder2 --ids patient001 patie
 import argparse
 import csv
 import gzip
+import hashlib
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -218,6 +220,84 @@ def convert_dicom_to_nifti(
     return nifti_files
 
 
+def can_read_dicom_file(path: Path) -> bool:
+    """尽量判断文件是否为 DICOM（兼容无扩展名且未压缩）。"""
+    try:
+        import pydicom
+        pydicom.dcmread(path, stop_before_pixels=True, force=True)
+        return True
+    except Exception:
+        return False
+
+
+def assess_case_directory(path: Path) -> tuple[bool, str]:
+    """判断目录是否可作为病例目录，并返回原因。"""
+    if not path.is_dir():
+        return False, "不是目录"
+
+    nii_gz_count = sum(1 for _ in path.rglob("*.nii.gz"))
+    nii_count = sum(1 for _ in path.rglob("*.nii"))
+    dcm_count = sum(1 for _ in path.rglob("*.dcm"))
+
+    if nii_gz_count > 0 or nii_count > 0:
+        return True, f"命中 NIfTI: nii.gz={nii_gz_count}, nii={nii_count}"
+
+    if dcm_count > 0:
+        return True, f"命中 DICOM(.dcm): {dcm_count}"
+
+    # 兼容无扩展名 DICOM：抽样若干文件尝试读取
+    candidates = [f for f in path.rglob("*") if f.is_file()]
+    for f in candidates[:100]:
+        if can_read_dicom_file(f):
+            return True, "命中无扩展名 DICOM（抽样可读）"
+
+    return False, "未发现 NIfTI/DICOM"
+
+
+def discover_case_directories(root_dir: Path) -> list[Path]:
+    """在总目录下递归自动发现病例目录（优先叶子目录），并打印过滤原因。"""
+    if not root_dir.is_dir():
+        return []
+
+    all_dirs = [p for p in root_dir.rglob("*") if p.is_dir()]
+    # 叶子目录优先，避免父目录吞掉子目录
+    all_dirs = sorted(all_dirs, key=lambda p: (-len(p.parts), str(p).lower()))
+
+    cases: list[Path] = []
+    skipped: list[tuple[Path, str]] = []
+
+    for d in all_dirs:
+        ok, reason = assess_case_directory(d)
+        if not ok:
+            skipped.append((d, reason))
+            continue
+
+        # 若 d 位于已识别病例目录内部，跳过，避免重复
+        if any(d.is_relative_to(existing) for existing in cases):
+            skipped.append((d, "已被更深层病例目录覆盖"))
+            continue
+
+        # 若 d 是已识别病例目录的父目录，移除旧条目，保留更深层（理论上很少触发）
+        cases = [c for c in cases if not c.is_relative_to(d)]
+        cases.append(d)
+
+    if not cases:
+        ok_root, reason_root = assess_case_directory(root_dir)
+        if ok_root:
+            return [root_dir]
+        print(f"自动发现失败: {root_dir} -> {reason_root}")
+        return []
+
+    # 打印部分被过滤目录原因，便于排查
+    print(f"自动发现共检查目录 {len(all_dirs)} 个，识别病例目录 {len(cases)} 个")
+    for p, reason in skipped[:30]:
+        print(f"  跳过: {p} -> {reason}")
+    if len(skipped) > 30:
+        print(f"  ... 其余跳过目录 {len(skipped) - 30} 个")
+
+    return sorted(cases, key=lambda p: str(p).lower())
+
+
 def gather_nifti_inputs(
     input_path: Path,
     temp_dir: Path,
@@ -247,10 +327,10 @@ def gather_nifti_inputs(
     nii_files = sorted(input_path.rglob("*.nii"))
     dcm_files = sorted(input_path.rglob("*.dcm"))
     if not dcm_files:
-        # 兼容无扩展名 DICOM：抽样检查目录内文件是否为 DICOM
+        # 兼容无扩展名 DICOM（含未压缩）：抽样检查是否可被 pydicom 读取
         candidate_files = [f for f in input_path.rglob("*") if f.is_file()]
-        for f in candidate_files[:200]:
-            if is_compressed_dicom(f):
+        for f in candidate_files[:300]:
+            if can_read_dicom_file(f):
                 dcm_files = [f]
                 break
 
@@ -344,6 +424,41 @@ def run_container(
     return workdir / "Output" / output_name
 
 
+def file_sha256(path: Path, chunk_size: int = 1024 * 1024) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        while True:
+            data = f.read(chunk_size)
+            if not data:
+                break
+            h.update(data)
+    return h.hexdigest()
+
+
+def deduplicate_nifti_files(nifti_files: list[Path]) -> tuple[list[Path], int]:
+    """按文件内容去重，返回 (去重后列表, 去重数量)。"""
+    seen: dict[str, Path] = {}
+    unique_files: list[Path] = []
+    duplicate_count = 0
+
+    for f in nifti_files:
+        try:
+            key = file_sha256(f)
+        except Exception:
+            # hash 失败时退化为路径+大小键，尽量不中断流程
+            stat = f.stat()
+            key = f"fallback:{f.name}:{stat.st_size}"
+
+        if key in seen:
+            duplicate_count += 1
+            continue
+
+        seen[key] = f
+        unique_files.append(f)
+
+    return unique_files, duplicate_count
+
+
 def chunk_list(items: list[Path], chunk_count: int) -> list[list[Path]]:
     if not items:
         return []
@@ -421,6 +536,14 @@ def resolve_output_csv_path(output_arg: str) -> Path:
     return p
 
 
+def normalize_subject_id(raw_id: str) -> str:
+    """将容器输出 ID 归一化（去掉并行分片后缀 _数字）。"""
+    text = raw_id.strip()
+    if not text:
+        return text
+    return re.sub(r"_\d+$", "", text)
+
+
 def rewrite_prediction_with_metadata(
     output_csv_path: Path,
     rows: list[dict[str, str]],
@@ -430,21 +553,28 @@ def rewrite_prediction_with_metadata(
     将预测结果补充姓名与病历号并重写输出文件。
 
     输出列：ID, Name, PatientID, Pred_Age
+    并按 ID 去重（保留最后一次结果）。
     """
-    merged_rows: list[dict[str, Any]] = []
+    merged_by_id: dict[str, dict[str, Any]] = {}
     for row in rows:
-        pred_id = (row.get("ID") or row.get("id") or row.get("subject") or "").strip()
+        raw_pred_id = (row.get("ID") or row.get("id") or row.get("subject") or "").strip()
+        pred_id = normalize_subject_id(raw_pred_id)
         pred_age = (row.get("Pred_Age") or row.get("predicted_age") or row.get("prediction") or "").strip()
 
         meta = id_to_meta.get(pred_id, {})
-        merged_rows.append(
-            {
-                "ID": pred_id,
-                "Name": meta.get("name", ""),
-                "PatientID": meta.get("patient_id", ""),
-                "Pred_Age": pred_age,
-            }
-        )
+        if not meta and raw_pred_id:
+            # 兼容未归一化键（兜底）
+            meta = id_to_meta.get(raw_pred_id, {})
+
+        merged_by_id[pred_id] = {
+            "ID": pred_id,
+            "Name": meta.get("name", ""),
+            "PatientID": meta.get("patient_id", ""),
+            "Pred_Age": pred_age,
+        }
+
+    merged_rows = list(merged_by_id.values())
+    merged_rows.sort(key=lambda x: x.get("ID", ""))
 
     with open(output_csv_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=["ID", "Name", "PatientID", "Pred_Age"])
@@ -496,8 +626,13 @@ def main() -> None:
     parser.add_argument(
         "--parallel-docker",
         type=int,
-        default=20,
-        help="并行 Docker 数量（默认 20）",
+        default=10,
+        help="并行 Docker 数量（默认 10）",
+    )
+    parser.add_argument(
+        "--auto-discover-cases",
+        action="store_true",
+        help="当 --input 只给一个总目录时，自动发现其下多个病例目录再批量处理",
     )
     parser.add_argument(
         "--threshold",
@@ -514,6 +649,15 @@ def main() -> None:
     args = parser.parse_args()
 
     input_paths = [Path(p).expanduser().resolve() for p in args.input]
+
+    # 可选：自动发现总目录下多个病例目录
+    if args.auto_discover_cases and len(input_paths) == 1 and input_paths[0].is_dir():
+        discovered = discover_case_directories(input_paths[0])
+        if discovered:
+            input_paths = discovered
+            print(f"自动发现病例目录 {len(input_paths)} 个")
+        else:
+            print("未在总目录下发现可处理病例，回退为按原输入路径处理")
     model_path = (
         Path(args.model).expanduser().resolve()
         if args.model
@@ -525,7 +669,7 @@ def main() -> None:
     if args.ids:
         if len(args.ids) != len(input_paths):
             raise RuntimeError(
-                f"--ids 数量 ({len(args.ids)}) 必须与 --input 数量 ({len(input_paths)}) 一致"
+                f"--ids 数量 ({len(args.ids)}) 必须与实际处理病例数量 ({len(input_paths)}) 一致"
             )
         custom_ids = args.ids
     else:
@@ -578,12 +722,18 @@ def main() -> None:
         
         if not all_nifti_files:
             raise RuntimeError("未从任何输入路径中找到有效的 NIfTI 或 DICOM 文件。")
-        
+
+        unique_nifti_files, duplicate_count = deduplicate_nifti_files(all_nifti_files)
+        if duplicate_count > 0:
+            print(f"检测到重复输入 {duplicate_count} 个，已按文件内容去重")
+        if not unique_nifti_files:
+            raise RuntimeError("去重后无可用 NIfTI 文件，请检查输入数据。")
+
         parallel_jobs = max(1, args.parallel_docker)
-        print(f"开始并行推理，Docker 并发数: {parallel_jobs}")
+        print(f"开始并行推理，Docker 并发数: {parallel_jobs}，样本数: {len(unique_nifti_files)}")
 
         rows = run_parallel_containers(
-            all_nifti_files=all_nifti_files,
+            all_nifti_files=unique_nifti_files,
             model_path=model_path,
             image=args.docker_image,
             preprocess=args.preprocess,

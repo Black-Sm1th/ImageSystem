@@ -1021,6 +1021,11 @@ void SliceVtkItemBase::onCrosshairEnabledChanged(bool enabled)
                 setupCamera(data->renderer);
                 applyParallelScale(data->imageSlice, data->renderer);
                 data->renderer->ResetCameraClippingRange();
+
+                // 相机缩放/重置后必须同步更新标尺长度与位置
+                if (data->interactorStyle) {
+                    data->interactorStyle->rescaleAxisActor();
+                }
             }
         }
         });

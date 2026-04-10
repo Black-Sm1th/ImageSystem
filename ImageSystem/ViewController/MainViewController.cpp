@@ -74,6 +74,14 @@ QDate parseDicomDate(const QString& rawDate)
     return date;
 }
 
+QString formatDisplayDate(const QString& rawDate)
+{
+    const QDate parsed = parseDicomDate(rawDate);
+    if (parsed.isValid())
+        return parsed.toString(QStringLiteral("yyyy/MM/dd"));
+    return rawDate.trimmed();
+}
+
 int calculateAgeFromDates(const QString& birthDateText, const QString& examDateText)
 {
     const QDate birthDate = parseDicomDate(birthDateText);
@@ -1338,7 +1346,10 @@ void MainViewController::processBrainNetworkAnalysis(const QString& boldPath, co
     });
 }
 
-void MainViewController::generatePdfReport(const QString& savePath)
+void MainViewController::generatePdfReport(const QString& savePath,
+                                           const QString& preferredSeriesUid,
+                                           const QString& preferredPatientId,
+                                           const QString& preferredExamDate)
 {
     QString pdfPath = savePath;
     if (pdfPath.startsWith("file:///")) {
@@ -1360,6 +1371,132 @@ void MainViewController::generatePdfReport(const QString& savePath)
         qWarning() << QStringLiteral("无法创建 PDF 文件");
         return;
     }
+
+    // 取真实病例信息（优先使用当前已导入/正在处理的病例）
+    auto pickCurrentPair = [this]() -> MriPairResult {
+        if (!m_currentProcessingPairs.isEmpty())
+            return m_currentProcessingPairs.first();
+        if (!m_currentQueuePairs.isEmpty())
+            return m_currentQueuePairs.first();
+        const QList<MriPairResult> checked = m_mriPairResultModel ? m_mriPairResultModel->getCheckedResults()
+                                                                  : QList<MriPairResult>();
+        if (!checked.isEmpty())
+            return checked.first();
+        return MriPairResult();
+    };
+
+    const MriPairResult reportPair = pickCurrentPair();
+
+    auto normalizeDateDigits = [](const QString& text) -> QString {
+        QString digits = text.trimmed();
+        digits.remove(QRegularExpression(QStringLiteral("[^0-9]")));
+        return digits.left(8);
+    };
+
+    QVariantMap matchedDbCase;
+    const QString reportSeriesUid = reportPair.primarySeriesUid().trimmed();
+    const QString reportPatientId = reportPair.patientId.trimmed();
+    const QString reportExamDate = normalizeDateDigits(reportPair.studyDate);
+
+    const QString preferredUid = preferredSeriesUid.trimmed();
+    const QString preferredPid = preferredPatientId.trimmed();
+    const QString preferredDate = normalizeDateDigits(preferredExamDate);
+
+    if (m_dbManager) {
+        const QList<QVariantMap> allCases = m_dbManager->getAllCompletedCases();
+
+        // 1) 优先使用界面显式传入的病例标识（最可靠）
+        if (!preferredUid.isEmpty()) {
+            for (const auto& c : allCases) {
+                if (c.value(QStringLiteral("series_uid")).toString().trimmed() == preferredUid) {
+                    matchedDbCase = c;
+                    break;
+                }
+            }
+        }
+        if (matchedDbCase.isEmpty() && !preferredPid.isEmpty() && !preferredDate.isEmpty()) {
+            for (const auto& c : allCases) {
+                const QString dbPid = c.value(QStringLiteral("patient_id")).toString().trimmed();
+                const QString dbDate = normalizeDateDigits(c.value(QStringLiteral("exam_date")).toString());
+                if (dbPid == preferredPid && dbDate == preferredDate) {
+                    matchedDbCase = c;
+                    break;
+                }
+            }
+        }
+
+        // 2) 再回退当前内存病例
+        if (matchedDbCase.isEmpty()) {
+            for (const auto& c : allCases) {
+                if (!reportSeriesUid.isEmpty()
+                    && c.value(QStringLiteral("series_uid")).toString().trimmed() == reportSeriesUid) {
+                    matchedDbCase = c;
+                    break;
+                }
+            }
+        }
+        if (matchedDbCase.isEmpty()) {
+            for (const auto& c : allCases) {
+                const QString dbPid = c.value(QStringLiteral("patient_id")).toString().trimmed();
+                const QString dbDate = normalizeDateDigits(c.value(QStringLiteral("exam_date")).toString());
+                if (!reportPatientId.isEmpty() && dbPid == reportPatientId
+                    && !reportExamDate.isEmpty() && dbDate == reportExamDate) {
+                    matchedDbCase = c;
+                    break;
+                }
+            }
+        }
+
+        // 3) 最后兜底最近一条
+        if (matchedDbCase.isEmpty() && !allCases.isEmpty()) {
+            matchedDbCase = allCases.first();
+            qDebug() << QStringLiteral("PDF报告未匹配到指定/当前病例，回退使用最近一条已完成病例：")
+                     << matchedDbCase.value(QStringLiteral("name")).toString()
+                     << matchedDbCase.value(QStringLiteral("patient_id")).toString();
+        }
+    }
+
+    const QString dbName = matchedDbCase.value(QStringLiteral("name")).toString().trimmed();
+    const QString dbPatientId = matchedDbCase.value(QStringLiteral("patient_id")).toString().trimmed();
+    const QString dbSex = matchedDbCase.value(QStringLiteral("sex")).toString().trimmed();
+    const QString dbExamDate = matchedDbCase.value(QStringLiteral("exam_date")).toString().trimmed();
+    const int dbAge = matchedDbCase.value(QStringLiteral("age")).toInt();
+    const double dbPredictedAge = matchedDbCase.value(QStringLiteral("predicted_brain_age")).toDouble();
+
+    const QString displayName = !dbName.isEmpty()
+            ? dbName
+            : (reportPair.patientName.trimmed().isEmpty() ? QStringLiteral("未填写") : reportPair.patientName.trimmed());
+    const QString displayPatientId = !dbPatientId.isEmpty()
+            ? dbPatientId
+            : (reportPair.patientId.trimmed().isEmpty() ? QStringLiteral("未填写") : reportPair.patientId.trimmed());
+
+    const QString displaySexRaw = !dbSex.isEmpty() ? dbSex : reportPair.patientSex;
+    const QString displaySex = normalizeDisplayedSex(displaySexRaw).trimmed().isEmpty()
+            ? QStringLiteral("未填写")
+            : normalizeDisplayedSex(displaySexRaw);
+
+    const int calculatedAge = calculateAgeFromDates(reportPair.patientBirthDate, reportPair.studyDate);
+    const int displayAge = dbAge > 0 ? dbAge : calculatedAge;
+    const QString displayAgeText = displayAge > 0 ? QString::number(displayAge) : QStringLiteral("未填写");
+
+    const QString examDateRaw = !dbExamDate.isEmpty() ? dbExamDate : reportPair.studyDate;
+    const QString displayExamDate = formatDisplayDate(examDateRaw).isEmpty()
+            ? QStringLiteral("未填写")
+            : formatDisplayDate(examDateRaw);
+
+    const int predictedAgeRounded = qRound(dbPredictedAge >= 0.0 ? dbPredictedAge : getpredictedBrainAge());
+    const bool hasValidActualAge = displayAge > 0;
+    const int ageDelta = hasValidActualAge ? (predictedAgeRounded - displayAge) : 0;
+    const QString deltaAgeBadgeText = hasValidActualAge
+            ? QStringLiteral("%1%2").arg(ageDelta >= 0 ? QStringLiteral("+") : QString(), QString::number(ageDelta))
+            : QStringLiteral("N/A");
+    const QString deltaAgeSentenceText = hasValidActualAge
+            ? QString::number(qAbs(ageDelta)) + QStringLiteral("年")
+            : QStringLiteral("未知");
+    const QString deltaAgeDirectionText = !hasValidActualAge
+            ? QStringLiteral("较实际年龄")
+            : (ageDelta >= 0 ? QStringLiteral("，较实际年龄长") : QStringLiteral("，较实际年龄短"));
+
     //背景图
     QRect targetRect = painter.viewport();
     QColor backgroundColor("#EFFAFF");
@@ -1376,6 +1513,8 @@ void MainViewController::generatePdfReport(const QString& savePath)
     QImage logo3(":/image/pdf-logo3.png");
     QRect targetRectLogo3(563, 867, logo3.width(), logo3.height());
     painter.drawImage(targetRectLogo3, logo3);
+
+
     //title1 - 创建列布局：上方图片，下方文字
     QImage title1(":/image/pdf-title1.png");
     int columnX = 90;  // 列的起始X坐标
@@ -1388,12 +1527,12 @@ void MainViewController::generatePdfReport(const QString& savePath)
     int textY = columnY + title1.height() + 13 + 30; 
     painter.setFont(QFont("Alibaba PuHuiTi 3.0", 15, QFont::Normal));
     painter.setPen(QColor("#273967"));
-    painter.drawText(columnX, textY, QStringLiteral("检测医院:") + QStringLiteral("xxxxx"));
+    painter.drawText(columnX, textY, QStringLiteral("检测医院:") + QStringLiteral("南京脑科"));
 
     textY = textY + 50 + 20  + 20;
     painter.setFont(QFont("Alibaba PuHuiTi 3.0", 15, QFont::Medium));
     painter.setPen(QColor("#273967"));
-    painter.drawText(columnX, textY, QStringLiteral("患者姓名: ") + QStringLiteral("xxxxx"));
+    painter.drawText(columnX, textY, QStringLiteral("患者姓名: ") + displayName);
 
     textY = textY + 13 + 20 + 20;
     painter.setFont(QFont("Alibaba PuHuiTi 3.0", 15, QFont::Medium));
@@ -1533,52 +1672,51 @@ void MainViewController::generatePdfReport(const QString& savePath)
     QColor keyColor("#86909C");
     QColor valueColor("#000000");
     
-    // 构建信息数据（带固定宽度）
+
+    // 构建信息数据（分两行，给姓名和ID更大宽度，避免显示不全）
     struct InfoItem {
         QString key;
         QString value;
         int fixedWidth; // 固定宽度
     };
-    
-    QVector<InfoItem> infoData = {  
-        {QStringLiteral("患者姓名："), QStringLiteral("xxx"), 130},
-        {QStringLiteral("ID："), QStringLiteral("xxxxxxxxxx"), 140},
-        {QStringLiteral("性别："), QStringLiteral("x"), 60},
-        {QStringLiteral("年龄："), QStringLiteral("xx"), 70},
-        {QStringLiteral("检查时间："), QStringLiteral("xxxx/xx/xx"), 170},
-        {QStringLiteral("报告时间："), QDate::currentDate().toString("yyyy/MM/dd"), 160}
+
+    QVector<InfoItem> row1Data = {
+        {QStringLiteral("患者姓名："), displayName, 250},
+        {QStringLiteral("ID："), displayPatientId, 250},
+        {QStringLiteral("性别："), displaySex, 90},
+        {QStringLiteral("年龄："), displayAgeText, 90}
     };
-    
+
+    QVector<InfoItem> row2Data = {
+        {QStringLiteral("检查时间："), displayExamDate, 240},
+        {QStringLiteral("报告时间："), QDate::currentDate().toString("yyyy/MM/dd"), 220}
+    };
+
     QFontMetrics keyFm(keyFont);
-    QFontMetrics valueFm(valueFont);
-    
-    // 计算总宽度（固定宽度之和）
-    int totalWidth = 0;
-    for (const auto& item : infoData) {
-        totalWidth += item.fixedWidth;
-    }
-    
-    // 起始x坐标（居中）
-    int currentX = (targetRect.width() - totalWidth) / 2;
-    
-    // 逐个绘制key-value对
-    for (const auto& item : infoData) {
-        // 绘制key
-        painter.setFont(keyFont);
-        painter.setPen(keyColor);
-        painter.drawText(currentX, infoY, item.key);
-        
-        // 计算value的起始位置（紧跟key后）
-        int valueX = currentX + keyFm.horizontalAdvance(item.key);
-        
-        // 绘制value
-        painter.setFont(valueFont);
-        painter.setPen(valueColor);
-        painter.drawText(valueX, infoY, item.value);
-        
-        // 移动到下一个固定宽度位置
-        currentX += item.fixedWidth;
-    }
+
+    auto drawInfoRow = [&](const QVector<InfoItem>& rowData, int rowY) {
+        int rowWidth = 0;
+        for (const auto& item : rowData) {
+            rowWidth += item.fixedWidth;
+        }
+
+        int currentX = (targetRect.width() - rowWidth) / 2;
+        for (const auto& item : rowData) {
+            painter.setFont(keyFont);
+            painter.setPen(keyColor);
+            painter.drawText(currentX, rowY, item.key);
+
+            const int valueX = currentX + keyFm.horizontalAdvance(item.key);
+            painter.setFont(valueFont);
+            painter.setPen(valueColor);
+            painter.drawText(valueX, rowY, item.value);
+
+            currentX += item.fixedWidth;
+        }
+    };
+
+    drawInfoRow(row1Data, infoY);
+    drawInfoRow(row2Data, infoY + 22);
 
     QImage title2(":/image/pdf-title2.png");
 
@@ -1604,7 +1742,7 @@ void MainViewController::generatePdfReport(const QString& savePath)
     // 绘制两位数数字（居中在logo4的X方向中心，Y=340）
     painter.setFont(QFont("Alibaba PuHuiTi 3.0", 24, QFont::Bold));
     painter.setPen(QColor("#FFFFFF"));
-    QString ageNumber = QString::number(qRound(getpredictedBrainAge())); // 示例两位数
+    QString ageNumber = QString::number(predictedAgeRounded);
     QFontMetrics ageNumberFm = painter.fontMetrics();
     int ageNumberWidth = ageNumberFm.horizontalAdvance(ageNumber);
     int ageNumberX = logo4CenterX - ageNumberWidth / 2; // 数字居中
@@ -1613,7 +1751,7 @@ void MainViewController::generatePdfReport(const QString& savePath)
     // 绘制delta值
     painter.setFont(QFont("Alibaba PuHuiTi 3.0", 10, QFont::Bold));
     painter.setPen(QColor("#FFFFFF"));
-    QString deltaAgeNumber = QStringLiteral("+x"); // 示例两位数
+    QString deltaAgeNumber = deltaAgeBadgeText;
     QFontMetrics deltaAgeNumberFm = painter.fontMetrics();
     int deltaAgeNumberWidth = deltaAgeNumberFm.horizontalAdvance(deltaAgeNumber);
     int deltaAgeNumberX = logo4CenterX - deltaAgeNumberWidth / 2; // 数字居中
@@ -1646,9 +1784,9 @@ void MainViewController::generatePdfReport(const QString& savePath)
     
     QVector<TextSegment> segments = {
         {QStringLiteral("根据系统监测，脑龄预测年龄为"), normalFont, normalColor},
-        {QString::number(qRound(getpredictedBrainAge())) + QStringLiteral("岁"), highlightFont, highlightColor},
-        {QStringLiteral("，较实际年龄长"), normalFont, normalColor},
-        {QStringLiteral("x年"), highlightFont, highlightColor}, 
+        {QString::number(predictedAgeRounded) + QStringLiteral("岁"), highlightFont, highlightColor},
+        {deltaAgeDirectionText, normalFont, normalColor},
+        {deltaAgeSentenceText, highlightFont, highlightColor}, 
         {QStringLiteral("。"), normalFont, normalColor},
     };
     

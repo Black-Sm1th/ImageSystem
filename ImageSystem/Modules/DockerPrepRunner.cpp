@@ -309,13 +309,20 @@ QStringList DockerPrepRunner::buildDeepPrepCommand(const DeepPrepParams& params)
     command << "--bold_sdc" << (params.boldSdc ? "true" : "false");
     command << "--device" << params.device;
     
-    // 被试参数
+    // 被试参数（DeepPrep 文档示例要求作为一个字符串值传入）
     if (!params.subjects.isEmpty()) {
-        command << "--participant_label";
+        QStringList labels;
         for (const QString& s : params.subjects) {
             QString label = s;
             label.remove("sub-");
-            command << label.trimmed();
+            label = label.trimmed();
+            if (!label.isEmpty()) {
+                labels << label;
+            }
+        }
+        if (!labels.isEmpty()) {
+            command << "--participant_label";
+            command << labels.join(" ");
         }
     }
     
