@@ -3520,12 +3520,17 @@ void MainViewController::addPendingTasks(const QList<MriPairResult>& pairs, int 
     else
         checkType = QStringLiteral("Unknown");
 
+    const QString preprocessMethod = runPreprocessing
+            ? preprocessMethodLabel(method)
+            : QString();
+
     for (const auto &pair : pairs) {
         HardwareScanResult item;
         item.name = pair.patientName;
         item.patientId = pair.patientId;
         item.examDate = pair.studyDate;
         item.checkType = checkType;
+        item.preprocessMethod = preprocessMethod;
         item.sex = normalizeDisplayedSex(pair.patientSex);
         item.age = calculateAgeFromDates(pair.patientBirthDate, pair.studyDate);
         item.seriesUid = pair.primarySeriesUid();

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QAbstractListModel>
 #include <QList>
@@ -10,6 +10,7 @@ struct HardwareScanResult {
     QString name;
     QString patientId;
     QString checkType;
+    QString preprocessMethod;
     QString examDate;
     QString sex;
     int age = 0;
@@ -31,6 +32,7 @@ struct UnifiedRecord {
     QString sex;
     int age = 0;
     QString checkType;
+    QString preprocessMethod;
     int sliceCount = 0;
     QString outputPath;
     QString bidsPath;

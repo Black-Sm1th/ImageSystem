@@ -1,4 +1,4 @@
-#include "AppDataModel.h"
+﻿#include "AppDataModel.h"
 #include <QDate>
 #include <QRegularExpression>
 
@@ -140,6 +140,7 @@ QVariantList AppDataModel::records() const
         row.insert("sex", r.sex);
         row.insert("age", r.age);
         row.insert("checkType", r.checkType);
+        row.insert("preprocessMethod", r.preprocessMethod);
         row.insert("sliceCount", r.sliceCount);
         row.insert("outputPath", r.outputPath);
         row.insert("bidsPath", r.bidsPath);
@@ -244,6 +245,7 @@ void AppDataModel::rebuildRecords()
         r.patientId  = p.patientId;
         r.examDate   = p.examDate;
         r.checkType  = p.checkType;
+        r.preprocessMethod = p.preprocessMethod;
         r.sex        = p.sex;
         r.age        = p.age;
         r.seriesUid  = p.seriesUid;
@@ -278,6 +280,7 @@ void AppDataModel::rebuildRecords()
         r.age        = c.value("age").toInt();
         r.sex        = c.value("sex").toString();
         r.checkType  = c.value("check_type").toString();
+        r.preprocessMethod = c.value("preprocess_method").toString();
         r.status     = c.value("status", "completed").toString();
         r.bidsPath   = c.value("bids_path").toString();
         r.outputPath = c.value("output_path").toString();

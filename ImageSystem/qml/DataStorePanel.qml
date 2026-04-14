@@ -27,6 +27,7 @@ Rectangle {
     property int contentHorizontalMargin: 24
     property int uploadProcessingMode: 0  // 0: 仅脑龄预测 1: 仅预处理 2: 全流程
     property bool scanNoticePending: false
+    readonly property bool uploadModeSwitchLocked: $MainViewController.isPreAnalysisRunning || $MainViewController.brainAgeProcessing
 
     signal viewAnalysisRequested(var caseInfo)
 
@@ -134,15 +135,27 @@ Rectangle {
         return text
     }
 
-    function formatCheckTypeText(checkType) {
+    function formatMethodText(preprocessMethod) {
+        if (preprocessMethod === "DeepPrep")
+            return "深度学习"
+        if (preprocessMethod === "fMRIPrep")
+            return "传统算法"
+        return ""
+    }
+
+    function formatCheckTypeText(checkType, preprocessMethod) {
+        var methodText = formatMethodText(preprocessMethod)
+
         if (checkType === "BrainAgeOnly")
-            return "仅脑龄"
+            return "仅脑龄预测"
         if (checkType === "PrepOnly")
-            return "仅预处理"
+            return methodText ? ("仅预处理/" + methodText) : "仅预处理"
         if (checkType === "FullPipeline")
-            return "全流程"
-        if (checkType === "fMRIPrep" || checkType === "DeepPrep")
-            return "仅预处理"
+            return methodText ? ("全流程/" + methodText) : "全流程"
+        if (checkType === "fMRIPrep")
+            return "仅预处理/传统算法"
+        if (checkType === "DeepPrep")
+            return "仅预处理/深度学习"
         return "-"
     }
 
@@ -216,7 +229,7 @@ Rectangle {
                 genderText: formatSexText(row.sex),
                 inspectTime: formatDateText(row.examDate),
                 predictedBrainAgeText: !isNaN(brainAge) && brainAge >= 0 ? String(Math.round(brainAge)) : "-",
-                checkTypeText: formatCheckTypeText(row.checkType || ""),
+                checkTypeText: formatCheckTypeText(row.checkType || "", row.preprocessMethod || ""),
                 statusText: statusText,
                 statusColorValue: statusColor(statusText),
                 detailEnabled: statusText === "分析完成" && hasPreprocessingCapability(row.checkType || ""),
@@ -1064,7 +1077,7 @@ Rectangle {
                                                 if (root.uploadProcessingMode === index)
                                                     return
                                                 if ($MainViewController.isScanning) {
-                                                    root.notifyWarning(qsTr("扫描尚未完成，暂不允许切换处理模式"))
+                                                    root.notifyWarning(qsTr("扫描中，暂不支持切换处理模式"))
                                                     return
                                                 }
                                                 root.resetScanResultsBeforeModeSwitch()
@@ -1083,6 +1096,10 @@ Rectangle {
                                             onClicked: {
                                                 if (root.uploadProcessingMode === index)
                                                     return
+                                                if (root.uploadModeSwitchLocked) {
+                                                    root.notifyWarning(qsTr("处理中，暂不允许切换处理模式"))
+                                                    return
+                                                }
                                                 if ($MainViewController.isScanning) {
                                                     root.notifyWarning(qsTr("扫描尚未完成，暂不允许切换处理模式"))
                                                     return

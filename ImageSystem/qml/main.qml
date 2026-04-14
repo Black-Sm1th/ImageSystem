@@ -35,10 +35,6 @@ ApplicationWindow {
         anchors.fill: parent
     }
 
-    LogWindow {
-        id: logWindow
-    }
-
     Window {
         id: dataStoreWindow
         width: 1824

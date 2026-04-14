@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QObject>
 #include <QString>
@@ -26,6 +26,9 @@ private:
     QString m_logText;
     QTimer* m_throttleTimer = nullptr;
     bool m_dirty = false;
+    QString m_currentLogFilePath;
 
     void scheduleUpdate();
+    QString resolveSessionLogFilePath();
+    void appendToDisk(const QString& text);
 };
